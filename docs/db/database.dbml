@@ -1,0 +1,175 @@
+// 1. NHÓM QUẢN LÝ NGƯỜI DÙNG & ĐỊNH DANH
+Table users {
+  id bigserial [pk]
+  username varchar(20) [unique, not null, note: '3-20 chars, _ và . không liên tiếp']
+  email varchar [unique, not null]
+  password_hash varchar(72) [not null, note: 'Bcrypt hash, yêu cầu 1 hoa, 1 số, 1 đặc biệt']
+  status varchar [default: 'PENDING', note: 'PENDING, ACTIVE, LOCKED']
+  
+  failed_attempts int [default: 0]
+  lockout_until timestamp [note: 'Khóa 5 phút nếu nhập sai > 5 lần']
+  
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+}
+
+Table profiles {
+  id bigserial [pk]
+  user_id bigint [unique, ref: - users.id, note: 'Quan hệ 1-1']
+  avatar_url varchar [note: 'Không bắt buộc']
+  dob date [not null, note: 'Bắt buộc, dùng để kiểm tra chính sách tuổi']
+  gender varchar [note: 'Nam, Nữ, Khác, Private - Không bắt buộc']
+  bio text [note: 'Mô tả ngắn bản thân - Không bắt buộc']
+  city_id bigint [ref: > cities.id, note: 'Khu vực người dùng']
+  
+  updated_at timestamp
+}
+
+Table otp_codes {
+  id bigserial [pk]
+  email varchar [not null, ref: > users.email] 
+  otp_code varchar(6) [not null]
+  type varchar [note: 'REGISTER, FORGOT_PASSWORD']
+  expires_at timestamp
+  is_used boolean [default: false]
+}
+
+// 2. NHÓM QUẢN LÝ NỘI DUNG (BÀI VIẾT) & TƯƠNG TÁC
+Table posts {
+  id bigserial [pk]
+  user_id bigint [ref: > users.id]
+  content text [note: 'Max 5000 ký tự, hỗ trợ Emoji']
+  topic_id bigint [ref: > topics.id, note: 'Chủ đề của bài viết (Dùng chung bảng topics)']
+  location_id bigint [ref: > cities.id]
+  privacy_status varchar [default: 'PUBLIC', note: 'PUBLIC, FRIENDS, PRIVATE']
+  
+  created_at timestamp [default: `now()`]
+  updated_at timestamp
+  is_deleted boolean [default: false]
+  engagement_label varchar [default: 'NEW', note:'Trending / Controversial / High quality / Cold']
+  upvote_count bigint [default: 0]
+  downvote_count bigint [default: 0]
+  cmt_count bigint [default: 0]
+}
+
+Table post_media {
+  id bigserial [pk]
+  post_id bigint [ref: > posts.id]
+  media_url varchar [not null]
+  media_type varchar [note: 'IMAGE, VIDEO']
+  file_size bigint [note: 'Video + Post < 50MB, Ảnh max 10 file/post']
+}
+
+Table hashtags {
+  id bigserial [pk]
+  tag_name varchar(30) [unique, not null, note: 'Max 30 ký tự, không lưu dấu #']
+}
+
+Table post_hashtags {
+  post_id bigint [ref: > posts.id]
+  hashtag_id bigint [ref: > hashtags.id]
+  primary key (post_id, hashtag_id)
+}
+
+// Bình luận lồng nhau nhiều cấp
+Table comments {
+  id bigserial [pk]
+  post_id bigint [ref: > posts.id]
+  user_id bigint [ref: > users.id, note: 'Người viết bình luận']
+  parent_id bigint [ref: > comments.id, note: 'Tự tham chiếu để làm Nested Reply. Null = Comment gốc']
+  message varchar(5000)
+  created_at timestamp [default: `now()`]
+  upvote_count bigint [default: 0]
+  downvote_count bigint [default: 0]
+  is_deleted boolean [default: false]
+}
+
+Table post_reactions {
+  id bigserial [pk]
+  user_id bigint [ref: > users.id]
+  post_id bigint [ref: > posts.id]
+  reaction_type boolean [note: 'true: upvote, false: downvote']
+  
+  indexes {
+    (user_id, post_id) [unique] // Đảm bảo 1 user chỉ vote 1 lần cho 1 post
+  }
+}
+
+Table comment_reactions {
+  id bigserial [pk]
+  comment_id bigint [ref: > comments.id]
+  user_id bigint [ref: > users.id]
+  reaction_type boolean [note: 'true: upvote, false: downvote']
+  
+  indexes {
+    (user_id, comment_id) [unique] // Đảm bảo 1 user chỉ vote 1 lần cho 1 comment
+  }
+}
+
+Table saved_posts {
+  user_id bigint [ref: > users.id]
+  post_id bigint [ref: > posts.id]
+  saved_at timestamp [default: `now()`]
+  
+  primary key (user_id, post_id) // Đảm bảo 1 user không thể lưu 1 bài 2 lần
+}
+
+Table follows {
+  id bigserial [pk]
+  follower_id bigint [ref: > users.id, note: 'ID người nhấn theo dõi']
+  following_id bigint [ref: > users.id, note: 'ID người được theo dõi']
+  status varchar [default: 'ACTIVE', note: 'ACTIVE, MUTED, BLOCKED']
+  created_at timestamp [default: `now()`]
+  
+  indexes {
+    (follower_id, following_id) [unique] // Đảm bảo không follow trùng lặp
+  }
+}
+
+Table notifications {
+  id bigserial [pk]
+  receiver_id bigint [ref: > users.id, note: 'Người nhận thông báo']
+  actor_id bigint [ref: > users.id, note: 'Người thực hiện hành động (VD: Người đã upvote)']
+  type varchar [note: 'UPVOTE_POST, COMMENT, FOLLOW, REPLY...']
+  target_id bigint [note: 'ID của post hoặc comment tương ứng (Không nối khóa ngoại cứng để tránh rườm rà)']
+  is_read boolean [default: false, note: 'Đánh dấu đã đọc chưa']
+  created_at timestamp [default: `now()`]
+}
+
+// 3. NHÓM DANH MỤC 
+Table cities {
+  id bigserial [pk]
+  name varchar [not null]
+  country varchar [not null]
+}
+
+// Bảng topics đóng 2 vai trò: Phân loại bài viết lúc đăng & Lưu sở thích user lúc đăng ký
+Table topics {
+  id bigserial [pk]
+  name varchar [unique, not null, note: 'Ví dụ: Công nghệ, Thể thao, Âm nhạc...']
+}
+
+Table user_topics {
+  user_id bigint [ref: > users.id]
+  topic_id bigint [ref: > topics.id]
+  primary key (user_id, topic_id)
+}
+
+// 4. NHÓM QUẢN TRỊ & KIỂM DUYỆT 
+Table reports {
+  id bigserial [pk]
+  reporter_id bigint [ref: > users.id, note: 'Người gửi tố cáo']
+  target_type varchar [note: 'POST, COMMENT, USER']
+  target_id bigint [note: 'ID của bài viết, bình luận hoặc người dùng bị tố cáo (Không nối khóa ngoại cứng)']
+  reason_category varchar [not null, note: 'SPAM, HATE_SPEECH, HARASSMENT, VIOLENCE, NUDITY, OTHER']
+  details text [note: 'Mô tả thêm của người tố cáo (Tùy chọn)']
+  
+  status varchar [default: 'PENDING', note: 'PENDING (Chờ duyệt), RESOLVED (Đã xử lý), REJECTED (Bỏ qua)']
+  resolved_by bigint [ref: > users.id, note: 'ID của Admin/Mod đã xử lý (nếu có)']
+  created_at timestamp [default: `now()`]
+  resolved_at timestamp
+  
+  indexes {
+    (reporter_id, target_type, target_id) [unique] // Chống spam: 1 người chỉ được report 1 đối tượng 1 lần
+  }
+}
