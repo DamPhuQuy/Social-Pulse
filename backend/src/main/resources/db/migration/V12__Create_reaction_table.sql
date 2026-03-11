@@ -1,4 +1,4 @@
-﻿-- Create reaction table
+-- Create reaction table
 CREATE TABLE reaction (
     id BIGSERIAL PRIMARY KEY,
     userid BIGINT UNIQUE NOT NULL,

@@ -1,4 +1,4 @@
-﻿-- Create user_topics table
+-- Create user_topics table
 CREATE TABLE user_topics (
     user_id BIGINT NOT NULL,
     topic_id BIGINT NOT NULL,

@@ -1,4 +1,4 @@
-﻿-- Create cities table
+-- Create cities table
 CREATE TABLE cities (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR NOT NULL,

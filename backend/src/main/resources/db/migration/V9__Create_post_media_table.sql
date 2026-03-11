@@ -1,4 +1,4 @@
-﻿-- Create post_media table
+-- Create post_media table
 CREATE TABLE post_media (
     id BIGSERIAL PRIMARY KEY,
     post_id BIGINT NOT NULL,

@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.social.entity;
+package com.socialpulse.app.social.entity;
 
 import java.time.LocalDateTime;
 
@@ -58,7 +58,7 @@ public class Follow {
 
     @Column(length = 20)
     @Builder.Default
-    private String status = "ACTIVE"; // ACTIVE, MUTED, BLOCKED
+    private FollowStatus status = FollowStatus.ACTIVE;
 
     @CreationTimestamp
     @Column(name = "created_at", nullable = false, updatable = false)

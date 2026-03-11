@@ -1,4 +1,4 @@
-﻿-- Create profiles table
+-- Create profiles table
 CREATE TABLE profiles (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT UNIQUE NOT NULL,

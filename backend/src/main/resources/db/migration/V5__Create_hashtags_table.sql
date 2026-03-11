@@ -1,4 +1,4 @@
-﻿-- Create hashtags table
+-- Create hashtags table
 CREATE TABLE hashtags (
     id BIGSERIAL PRIMARY KEY,
     tag_name VARCHAR(30) UNIQUE NOT NULL

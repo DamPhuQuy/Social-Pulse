@@ -1,4 +1,4 @@
-﻿-- Create comment table
+-- Create comment table
 CREATE TABLE comment (
     id BIGSERIAL PRIMARY KEY,
     post_id BIGINT NOT NULL,

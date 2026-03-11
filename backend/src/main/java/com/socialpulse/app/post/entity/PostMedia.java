@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.post.entity;
+package com.socialpulse.app.post.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
@@ -42,7 +42,7 @@ public class PostMedia {
     private String mediaUrl;
 
     @Column(name = "media_type", length = 20)
-    private String mediaType; // IMAGE, VIDEO, BOTH, NONE
+    private MediaType mediaType; // IMAGE, VIDEO, BOTH, NONE
 
     @Column(name = "file_size")
     private Long fileSize;
