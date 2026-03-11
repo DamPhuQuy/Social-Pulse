@@ -6,7 +6,8 @@ CREATE TABLE reactioncmt (
     reactiontype BOOLEAN,
 
     CONSTRAINT fk_reactioncmt_comment FOREIGN KEY (cmt_id) REFERENCES comment(id) ON DELETE CASCADE,
-    CONSTRAINT fk_reactioncmt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
+    CONSTRAINT fk_reactioncmt_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT uq_reactioncmt_user_cmt UNIQUE (user_id, cmt_id)
 );
 
 -- Create indexes
