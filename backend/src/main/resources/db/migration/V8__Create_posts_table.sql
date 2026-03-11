@@ -1,4 +1,4 @@
-﻿-- Create posts table
+-- Create posts table
 CREATE TABLE posts (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,

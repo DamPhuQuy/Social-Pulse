@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.user.entity;
+package com.socialpulse.app.user.entity;
 
 import java.io.Serializable;
 

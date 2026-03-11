@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.auth.entity;
+package com.socialpulse.app.auth.entity;
 
 import java.time.LocalDateTime;
 
@@ -38,7 +38,7 @@ public class OtpCode {
 
     @NotNull
     @Column(name = "otp_code", nullable = false, length = 6)
-    private String otpCode;
+    private String otp;
 
     @Column(length = 20)
     private String type; // REGISTER, FORGOT_PASSWORD

@@ -1,4 +1,4 @@
-﻿-- Create otp_codes table
+-- Create otp_codes table
 CREATE TABLE otp_codes (
     id BIGSERIAL PRIMARY KEY,
     email VARCHAR NOT NULL,

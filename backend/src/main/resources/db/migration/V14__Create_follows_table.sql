@@ -1,4 +1,4 @@
-﻿-- Create follows table
+-- Create follows table
 CREATE TABLE follows (
     id BIGSERIAL PRIMARY KEY,
     follower_id BIGINT NOT NULL,

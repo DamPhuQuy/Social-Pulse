@@ -1,4 +1,4 @@
-﻿-- Create reactioncmt table
+-- Create reactioncmt table
 CREATE TABLE reactioncmt (
     id BIGSERIAL PRIMARY KEY,
     cmt_id BIGINT NOT NULL,

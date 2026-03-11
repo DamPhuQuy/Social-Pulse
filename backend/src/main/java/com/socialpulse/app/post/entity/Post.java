@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.post.entity;
+package com.socialpulse.app.post.entity;
 
 import java.time.LocalDateTime;
 import java.util.HashSet;

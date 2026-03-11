@@ -1,4 +1,4 @@
-﻿-- Create post_hashtags table
+-- Create post_hashtags table
 CREATE TABLE post_hashtags (
     post_id BIGINT NOT NULL,
     hashtag_id BIGINT NOT NULL,

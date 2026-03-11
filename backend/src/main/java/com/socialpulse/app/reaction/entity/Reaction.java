@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.reaction.entity;
+package com.socialpulse.app.reaction.entity;
 
 import com.socialpulse.app.post.entity.Post;
 import com.socialpulse.app.user.entity.User;

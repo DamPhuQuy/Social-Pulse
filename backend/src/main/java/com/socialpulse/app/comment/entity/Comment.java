@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.comment.entity;
+package com.socialpulse.app.comment.entity;
 
 import java.time.LocalDateTime;
 

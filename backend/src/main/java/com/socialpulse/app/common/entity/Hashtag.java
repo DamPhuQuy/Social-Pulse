@@ -1,4 +1,4 @@
-﻿package com.socialpulse.app.common.entity;
+package com.socialpulse.app.common.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
