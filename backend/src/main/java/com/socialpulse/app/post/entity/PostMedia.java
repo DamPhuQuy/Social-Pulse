@@ -2,6 +2,8 @@ package com.socialpulse.app.post.entity;
 
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
+import jakarta.persistence.EnumType;
+import jakarta.persistence.Enumerated;
 import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
@@ -41,6 +43,7 @@ public class PostMedia {
     @Column(name = "media_url", nullable = false)
     private String mediaUrl;
 
+    @Enumerated(EnumType.STRING)
     @Column(name = "media_type", length = 20)
     private MediaType mediaType; // IMAGE, VIDEO, BOTH, NONE
 
