@@ -26,8 +26,8 @@ import lombok.Setter;
 
 @Entity
 @Table(name = "comment", indexes = {
-    @Index(name = "idx_comment_postid", columnList = "postid"),
-    @Index(name = "idx_comment_createat", columnList = "createat")
+    @Index(name = "idx_comment_postid", columnList = "post_id"),
+    @Index(name = "idx_comment_createat", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -42,7 +42,7 @@ public class Comment {
 
     @NotNull
     @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "postid", nullable = false)
+    @JoinColumn(name = "post_id", nullable = false)
     private Post post;
 
     @Size(max = 5000)
@@ -50,6 +50,6 @@ public class Comment {
     private String message;
 
     @CreationTimestamp
-    @Column(name = "createat", nullable = false, updatable = false)
+    @Column(name = "created_at", nullable = false, updatable = false)
     private LocalDateTime createAt;
 }
