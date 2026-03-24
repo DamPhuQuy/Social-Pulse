@@ -30,6 +30,16 @@ services:
     networks:
       - app-network
 
+  ai:
+    build: ./ai
+    ports:
+      - "8000:8000"
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - app-network
+
 volumes:
   postgres_data:
 
