@@ -3,10 +3,17 @@ package com.socialpulse.app.common.security;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 
 public class PasswordEncoder {
-    BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
+    private final BCryptPasswordEncoder encoder;
 
-    public static String encode(String rawPassword) {
-        BCryptPasswordEncoder passwordEncoder = new BCryptPasswordEncoder(12);
-        return passwordEncoder.encode(rawPassword);
+    public PasswordEncoder() {
+        encoder = new BCryptPasswordEncoder(12);
+    }
+
+    public String encode(String rawPassword) {
+        return encoder.encode(rawPassword);
+    }
+
+    public boolean matches(String rawPassword, String encodedPassword) {
+        return encoder.matches(rawPassword, encodedPassword);
     }
 }
