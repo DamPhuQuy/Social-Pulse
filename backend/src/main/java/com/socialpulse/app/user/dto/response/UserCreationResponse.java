@@ -1,0 +1,12 @@
+package com.socialpulse.app.user.dto.response;
+
+import lombok.Builder;
+import lombok.Getter;
+
+@Getter
+@Builder
+public class UserCreationResponse {
+    private Long id;
+    private String username;
+    private String message;
+}

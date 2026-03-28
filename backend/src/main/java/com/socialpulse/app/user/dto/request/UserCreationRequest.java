@@ -11,7 +11,7 @@ import lombok.Setter;
 @Getter
 @Setter
 @Builder
-public class UserCreation {
+public class UserCreationRequest {
     @NotBlank
     @Size(min = 6, max = 20, message = "Username must be between 6 and 20 characters")
     @Pattern(regexp = "^[a-zA-Z0-9]+$", message = "Username must be alphanumeric")

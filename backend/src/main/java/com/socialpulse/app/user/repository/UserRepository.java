@@ -1,5 +1,7 @@
 package com.socialpulse.app.user.repository;
 
+import java.util.Optional;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -11,18 +13,18 @@ import com.socialpulse.app.user.entity.UserProfile;
 
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    User findByUsername(String username);
+    Optional<User> findByUsername(String username);
 
-    User findByEmail(String email);
+    Optional<User> findByEmail(String email);
 
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
 
     @Query("select u.profile from User u where u.id = :userId")
-    UserProfile findProfileById(@Param("userId") Long userId);
+    Optional<UserProfile> findProfileById(@Param("userId") Long userId);
 
     @Query("select u.profile from User u where u.username = :username")
-    UserProfile findProfileByUsername(@Param("username") String username);
+    Optional<UserProfile> findProfileByUsername(@Param("username") String username);
 }
 
