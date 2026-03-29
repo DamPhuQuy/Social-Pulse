@@ -1,8 +1,9 @@
 package com.socialpulse.app.user.service;
 
+import java.util.Locale;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
-import org.springframework.web.bind.annotation.RequestBody;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.ErrorCode;
@@ -28,8 +29,14 @@ public class UserService {
     }
 
     @Transactional
-    public UserCreationResponse createUser(@Valid @RequestBody UserCreationRequest userCreation) {
+    public UserCreationResponse createUser(@Valid UserCreationRequest userCreation) {
+        String normalizedEmail = userCreation.getEmail().trim().toLowerCase(Locale.ROOT);
+
         if (userRepository.existsByUsername(userCreation.getUsername())) {
+            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+        }
+
+        if (userRepository.existsByEmail(normalizedEmail)) {
             throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
         }
 
@@ -38,7 +45,7 @@ public class UserService {
         }
 
         User user = User.builder().username(userCreation.getUsername())
-                .email(userCreation.getEmail())
+                .email(normalizedEmail)
                 .passwordHash(encoder.encode(userCreation.getRawPassword()))
                 .build();
         user = userRepository.save(user);
