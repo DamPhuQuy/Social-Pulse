@@ -1,5 +1,6 @@
 package com.socialpulse.app.user.entity;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 import jakarta.persistence.Column;
@@ -12,6 +13,8 @@ import jakarta.persistence.JoinColumn;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
+import jakarta.persistence.Table;
+import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -19,6 +22,7 @@ import lombok.NoArgsConstructor;
 import lombok.Setter;
 
 @Entity
+@Table(name = "profiles")
 @Getter
 @Setter
 @NoArgsConstructor
@@ -32,13 +36,13 @@ public class UserProfile {
     @JoinColumn(name = "user_id", unique = true)
     private User user;
 
-    @Column(nullable = false)
+    @Transient
     private String displayName;
 
-    @Column(length = 500)
+    @Column(columnDefinition = "TEXT")
     private String bio;
 
-    private LocalDateTime dob;
+    private LocalDate dob;
 
     @Enumerated(EnumType.STRING)
     private UserGender gender;
