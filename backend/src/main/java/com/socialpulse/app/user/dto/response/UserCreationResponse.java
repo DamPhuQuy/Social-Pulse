@@ -8,5 +8,6 @@ import lombok.Getter;
 public class UserCreationResponse {
     private Long id;
     private String username;
+    private String email;
     private String message;
 }

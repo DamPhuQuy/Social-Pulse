@@ -50,6 +50,11 @@ public class UserService {
                 .build();
         user = userRepository.save(user);
 
-        return UserCreationResponse.builder().id(user.getId()).username(user.getUsername()).message("User created successfully").build();
+        return UserCreationResponse.builder()
+                .id(user.getId())
+                .username(user.getUsername())
+                .email(user.getEmail())
+                .message("User created successfully for email: " + user.getEmail())
+                .build();
     }
 }
