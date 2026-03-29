@@ -38,9 +38,7 @@ public class AuthService {
 
         logger.info("User registered with email: {}", request.getEmail());
 
-        otpService.generateAndStoreOtp(request.getEmail());
-
-        logger.info("OTP generated and stored for email: {}", request.getEmail());
+        otpService.generateToStoreAndSendEmail(request.getEmail());
 
         return response;
     }

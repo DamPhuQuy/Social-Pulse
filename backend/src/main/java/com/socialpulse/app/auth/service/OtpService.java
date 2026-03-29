@@ -4,7 +4,6 @@ import java.security.SecureRandom;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Map;
-import java.util.Objects;
 import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
@@ -15,6 +14,7 @@ import org.springframework.stereotype.Service;
 import com.socialpulse.app.auth.entity.Otp;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.ErrorCode;
+import com.socialpulse.app.common.security.PasswordEncoder;
 
 @Service
 public class OtpService {
@@ -26,20 +26,31 @@ public class OtpService {
     private final StringRedisTemplate redisTemplate;
     private final SecureRandom secureRandom;
     private final Logger logger;
+    private final EmailService emailService;
+    PasswordEncoder passwordEncoder;
 
-    public OtpService(StringRedisTemplate redisTemplate) {
+    public OtpService(StringRedisTemplate redisTemplate, EmailService emailService, PasswordEncoder passwordEncoder) {
         this.redisTemplate = redisTemplate;
+        this.emailService = emailService;
+        this.passwordEncoder = passwordEncoder;
         this.secureRandom = new SecureRandom();
         this.logger = LoggerFactory.getLogger(OtpService.class);
     }
 
-    public void generateAndStoreOtp(String email) {
+    public void generateToStoreAndSendEmail(String email) {
+        String normalizedEmail = normalizeEmail(email);
+        String otpCode = generateOtpCode();
+        saveToRedis(normalizedEmail, otpCode);
+        emailService.sendOtpEmail(normalizedEmail, otpCode);
+    }
+
+    public void saveToRedis(String email, String code) {
         String normalizedEmail = normalizeEmail(email);
         String key = buildOtpKey(normalizedEmail);
 
         Otp otp = Otp.builder()
                 .email(normalizedEmail)
-                .otpCode(generateOtpCode())
+                .otpCode(passwordEncoder.encode(code))
                 .expiredAt(Instant.now().plusSeconds(OTP_TTL_SECONDS).toEpochMilli())
                 .attemptCount(0L)
                 .build();
@@ -49,9 +60,6 @@ public class OtpService {
                 "expiredAt", String.valueOf(otp.getExpiredAt()),
                 "attemptCount", String.valueOf(otp.getAttemptCount())));
         redisTemplate.expire(key, Duration.ofSeconds(OTP_TTL_SECONDS));
-
-        // Placeholder for email sending integration.
-        logger.info("Email verification OTP for {}: {}", normalizedEmail, otp.getOtpCode());
     }
 
     public void verifyOtp(String email, String otpCode) {
@@ -68,7 +76,7 @@ public class OtpService {
             throw new AppException(ErrorCode.OTP_TOO_MANY_ATTEMPTS);
         }
 
-        if (!Objects.equals(otp.getOtpCode(), otpCode == null ? null : otpCode.trim())) {
+        if (!passwordEncoder.matches(otpCode.trim(), otp.getOtpCode())) {
             long updatedAttempts = otp.getAttemptCount() + 1;
             redisTemplate.opsForHash().put(key, "attemptCount", String.valueOf(updatedAttempts));
 

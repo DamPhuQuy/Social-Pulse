@@ -13,6 +13,7 @@ import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 
+import io.swagger.v3.oas.annotations.Operation;
 import jakarta.validation.Valid;
 
 @RestController
@@ -38,6 +39,7 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
+    @Operation(summary = "Verify email with OTP", description = "Verifies the user's email using the provided OTP code")
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
         authService.verifyEmail(request);
 
