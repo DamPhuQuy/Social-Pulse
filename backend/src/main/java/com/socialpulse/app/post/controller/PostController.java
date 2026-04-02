@@ -14,7 +14,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 @RestController
-@RequestMapping("/api/posts")
+@RequestMapping("/api/v1/posts")
 public class PostController {
     private final PostService postService;
 
@@ -22,7 +22,7 @@ public class PostController {
         this.postService = postService;
     }
 
-    @PostMapping("/posts")
+    @PostMapping
     public ResponseEntity<PostCreationResponse> createPost(
             @RequestBody @Valid PostCreationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
