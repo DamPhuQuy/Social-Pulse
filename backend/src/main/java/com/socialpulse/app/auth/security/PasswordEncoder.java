@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.security;
+package com.socialpulse.app.auth.security;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.stereotype.Component;

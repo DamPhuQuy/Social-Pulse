@@ -1,5 +1,7 @@
 package com.socialpulse.app.common.exception;
 
+import com.socialpulse.app.common.status.ErrorCode;
+
 public class AppException extends RuntimeException {
     private final ErrorCode errorCode;
 

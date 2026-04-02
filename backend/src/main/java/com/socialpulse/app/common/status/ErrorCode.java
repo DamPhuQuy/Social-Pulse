@@ -1,5 +1,8 @@
-package com.socialpulse.app.common.exception;
+package com.socialpulse.app.common.status;
 
+import lombok.Getter;
+
+@Getter
 public enum ErrorCode {
     USER_ALREADY_EXISTS(400, "User already exists"),
     USER_NOT_FOUND(404, "User not found"),

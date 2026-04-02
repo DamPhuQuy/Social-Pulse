@@ -2,10 +2,7 @@ package com.socialpulse.app.auth.controller;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.PostMapping;
-import org.springframework.web.bind.annotation.RequestBody;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.bind.annotation.*;
 
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.service.AuthService;
@@ -27,14 +24,16 @@ public class AuthController {
     }
 
     @PostMapping("/register")
+    @Operation(summary = "Register a new user", description = "Registers a new user and sends an OTP code to their email for verification")
     public ResponseEntity<ApiResponse<UserCreationResponse>> registerUser(@Valid @RequestBody UserCreationRequest request) {
         UserCreationResponse result = authService.register(request);
 
         ApiResponse<UserCreationResponse> response = ApiResponse.<UserCreationResponse>builder()
                 .code(201)
-                .message("User registered successfully. OTP has been sent to your email")
+                .message("User registered successfully. Please check your email for the OTP code to verify your account.")
                 .data(result)
                 .build();
+
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
@@ -45,10 +44,10 @@ public class AuthController {
 
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(200)
-                .message("Email verified successfully")
+                .message("Email verified successfully.")
                 .data(null)
                 .build();
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

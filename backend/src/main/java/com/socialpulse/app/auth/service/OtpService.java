@@ -13,8 +13,8 @@ import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.auth.entity.Otp;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.exception.ErrorCode;
-import com.socialpulse.app.common.security.PasswordEncoder;
+import com.socialpulse.app.common.status.ErrorCode;
+import com.socialpulse.app.auth.security.PasswordEncoder;
 
 @Service
 public class OtpService {

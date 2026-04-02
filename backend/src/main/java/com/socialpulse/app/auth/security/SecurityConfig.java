@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.security;
+package com.socialpulse.app.auth.security;
 
 import java.util.List;
 
@@ -19,7 +19,7 @@ import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 public class SecurityConfig {
 
     @Bean
-    SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
+    SecurityFilterChain securityFilterChain(HttpSecurity http) {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(Customizer.withDefaults())

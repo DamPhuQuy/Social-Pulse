@@ -9,7 +9,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.exception.ErrorCode;
+import com.socialpulse.app.common.status.ErrorCode;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.entity.User;
@@ -61,6 +61,7 @@ public class AuthService {
 
         otpService.verifyOtp(normalizedEmail, request.getOtpCode());
         user.activeAccount();
+        user.verifyAccount();
         userRepository.save(user);
         otpService.invalidateOtp(normalizedEmail);
 

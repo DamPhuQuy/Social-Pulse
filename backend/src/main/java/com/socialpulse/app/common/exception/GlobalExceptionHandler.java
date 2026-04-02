@@ -2,6 +2,7 @@ package com.socialpulse.app.common.exception;
 
 import java.time.LocalDateTime;
 
+import com.socialpulse.app.common.status.ErrorCode;
 import org.springframework.dao.DataIntegrityViolationException;
 import org.springframework.http.ResponseEntity;
 import org.springframework.validation.FieldError;
