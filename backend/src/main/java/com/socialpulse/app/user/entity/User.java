@@ -51,7 +51,7 @@ public class User {
     @Column(nullable = false)
     private UserRole role;
 
-    @Enumerated
+    @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private VerificationStatus verification;
 

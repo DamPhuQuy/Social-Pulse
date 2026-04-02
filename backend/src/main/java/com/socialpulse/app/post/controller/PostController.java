@@ -5,6 +5,7 @@ import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.service.PostService;
 import jakarta.validation.Valid;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -25,6 +26,6 @@ public class PostController {
     public ResponseEntity<PostCreationResponse> createPost(
             @RequestBody @Valid PostCreationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        return ResponseEntity.ok(postService.createPost(request, currentUser.getUserId()));
+        return ResponseEntity.status(HttpStatus.CREATED).body(postService.createPost(request, currentUser.getId()));
     }
 }
