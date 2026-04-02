@@ -5,6 +5,7 @@ CREATE TABLE users (
     email VARCHAR(255) UNIQUE NOT NULL,
     password_hash VARCHAR(72) NOT NULL,
     status VARCHAR(20) NOT NULL DEFAULT 'PENDING',
+    role VARCHAR(20) NOT NULL DEFAULT 'GUEST',
     failed_attempts INT NOT NULL DEFAULT 0,
     lockout_until TIMESTAMP,
     last_login_at TIMESTAMP,

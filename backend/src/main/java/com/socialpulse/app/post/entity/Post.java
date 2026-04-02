@@ -1,6 +1,5 @@
 package com.socialpulse.app.post.entity;
 
-import com.socialpulse.app.common.entity.Topic;
 import com.socialpulse.app.user.entity.User;
 import jakarta.persistence.*;
 import lombok.*;
@@ -28,12 +27,10 @@ public class Post {
     @JoinColumn(name = "user_id", nullable = false)
     private User user;
 
-    @ManyToOne(fetch = FetchType.LAZY)
-    @JoinColumn(name = "topic_id")
-    private Topic topic;
-
     @Lob
     private String content;
+
+    private String imageUrl;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

@@ -47,6 +47,16 @@ public class User {
     @Column(nullable = false)
     private UserStatus status;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private UserRole role;
+
+    @Enumerated
+    @Column(nullable = false)
+    private VerificationStatus verification;
+
+    private boolean isLocked; 
+
     @Column(name = "failed_attempts", nullable = false)
     private int failedLoginAttempts;
 
@@ -71,6 +81,8 @@ public class User {
     public void activeAccount() {
         this.status = UserStatus.ACTIVE;
     }
+
+    public void verifyAccount() { this.verification = VerificationStatus.VERIFIED; }
 
     public void lockAccount() {
         this.status = UserStatus.LOCKED;
