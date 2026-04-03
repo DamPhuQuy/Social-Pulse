@@ -24,7 +24,7 @@ spring:
     password: ${EMAIL_PASSWORD}
     properties:
       mail:
-        smpt:
+        smtp:
           auth: true
           starttls:
             enable: true

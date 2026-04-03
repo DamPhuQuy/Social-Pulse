@@ -90,9 +90,20 @@ public class User {
 
     @PrePersist
     public void prePersist() {
+        if (this.role == null) {
+            this.role = UserRole.USER;
+        }
+
+        if (this.verification == null) {
+            this.verification = VerificationStatus.NOT_VERIFIED;
+        }
+
+        if (this.status == null) {
+            this.status = UserStatus.PENDING;
+        }
+
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.status = UserStatus.PENDING; // Default status when creating a new user
     }
 
     @PreUpdate
