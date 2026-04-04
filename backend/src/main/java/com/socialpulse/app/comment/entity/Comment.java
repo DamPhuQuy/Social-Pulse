@@ -14,7 +14,7 @@ import java.util.List;
         @Index(name = "idx_comment_post", columnList = "post_id"),
         @Index(name = "idx_comment_user", columnList = "user_id"),
         @Index(name = "idx_comment_parent", columnList = "parent_id"),
-        @Index(name = "idx_comment_created", columnList = "createdAt")
+        @Index(name = "idx_comment_created", columnList = "created_at")
 })
 @Getter
 @Setter
@@ -47,10 +47,13 @@ public class Comment {
     @CreationTimestamp
     private LocalDateTime createdAt;
 
+    @Builder.Default
     private Long upvoteCount = 0L;
 
+    @Builder.Default
     private Long downVoteCount = 0L;
 
     @Column(nullable = false)
+    @Builder.Default
     private boolean deleted = false;
 }
