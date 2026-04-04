@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @SQLDelete(sql = "UPDATE posts SET deleted_at = NOW() WHERE id = ?")
 @Table(name = "posts", indexes = {
+        @Index(name = "idx_hot_score", columnList = "hotScore"),
         @Index(name = "idx_post_user", columnList = "user_id"),
         @Index(name = "idx_post_created", columnList = "createdAt")
 })
@@ -49,6 +50,7 @@ public class Post {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
+
 
     @PrePersist
     public void prePersist() {

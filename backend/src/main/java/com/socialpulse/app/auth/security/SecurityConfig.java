@@ -52,6 +52,7 @@ public class SecurityConfig {
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
+<<<<<<< HEAD
                         // FIX BUG: path cũ "/api/auth/**" sai, đúng là "/api/v1/auth/**"
                         .requestMatchers(
                                 "/api/v1/auth/**",
@@ -59,6 +60,9 @@ public class SecurityConfig {
                                 "/swagger-ui/**",
                                 "/swagger-ui.html"
                         ).permitAll()
+=======
+                        .requestMatchers("/api/v1/auth/**", "/v3/api-docs/**", "/swagger-ui/**", "/swagger-ui.html").permitAll()
+>>>>>>> 74fc2338c64975b991c750647ed6296afb610a77
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
