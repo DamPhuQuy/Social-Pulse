@@ -75,6 +75,11 @@ public class User {
         this.failedLoginAttempts = 0;
     }
 
+    // Ghi lại thời điểm đăng nhập thành công gần nhất
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
     public void pendingAccount() {
         this.status = UserStatus.PENDING;
     }

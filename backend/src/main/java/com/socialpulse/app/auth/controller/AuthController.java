@@ -5,6 +5,8 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
+import com.socialpulse.app.auth.dto.request.LoginRequest;
+import com.socialpulse.app.auth.dto.response.LoginResponse;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
@@ -49,5 +51,26 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
+    }
+
+    /**
+     * POST /api/v1/auth/login
+     *
+     * Nhận email + password → xác thực → trả JWT access token.
+     * Client lưu token và gửi kèm mọi request protected:
+     *   Header: "Authorization: Bearer <accessToken>"
+     */
+    @PostMapping("/login")
+    @Operation(summary = "Login", description = "Authenticate with email/password and receive JWT access token")
+    public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
+        LoginResponse result = authService.login(request);
+
+        ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
+                .code(200)
+                .message("Login successful.")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
     }
 }
