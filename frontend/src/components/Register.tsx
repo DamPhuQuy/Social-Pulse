@@ -90,6 +90,7 @@ export default function RegisterForm() {
       username,
       email,
       password: form.password,
+      confirmPassword: form.confirmPassword,
     });
 
     setResponseType(result.ok ? "success" : "error");
