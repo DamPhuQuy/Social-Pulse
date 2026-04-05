@@ -1,31 +1,13 @@
+import Header from "@/components/Header";
 import { PATHS } from "@/constants/paths";
-import { useNavigate } from "react-router-dom";
+import { Link } from "react-router-dom";
 
 export default function OnboardingPage() {
-  const navigate = useNavigate();
-
   return (
     <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
-      {/* HEADER */}
-      <header className="fixed top-0 w-full z-50 bg-slate-50/80 backdrop-blur-2xl">
-        <div className="flex justify-between items-center px-8 py-6 max-w-screen-2xl mx-auto">
-          <div className="text-2xl font-extrabold text-slate-800 tracking-tighter font-headline">
-            Social Pulse
-          </div>
+      <Header isHomePage={true} />
 
-          <div className="flex items-center gap-6">
-            <span className="text-sm">Already a member?</span>
-            <button
-              onClick={() => navigate(PATHS.LOGIN)}
-              className="px-6 py-2 rounded-full border hover:bg-gray-100 transition"
-            >
-              Sign In
-            </button>
-          </div>
-        </div>
-      </header>
-
-      <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6">
+      <main className="grow flex items-center justify-center pt-24 pb-12 px-6">
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="flex flex-col space-y-10">
             <div>
@@ -41,16 +23,19 @@ export default function OnboardingPage() {
             </div>
 
             <div className="flex gap-4">
-              <button
-                onClick={() => navigate(PATHS.REGISTER)}
-                className="bg-primary text-white px-6 py-3 rounded-full"
+              <Link
+                to={PATHS.REGISTER}
+                className="bg-primary text-white px-6 py-3 rounded-full hover:bg-primary-dark transition"
               >
                 Get Started
-              </button>
+              </Link>
 
-              <button className="px-6 py-3 rounded-full border">
+              <Link
+                to={PATHS.LEARN_MORE}
+                className="px-6 py-3 rounded-full border hover:bg-gray-100 transition"
+              >
                 Learn more
-              </button>
+              </Link>
             </div>
           </div>
 
