@@ -1,15 +1,11 @@
-export const PATHS: {
-  readonly ONBOARDING: "/";
-  readonly HOME: "/home";
-  readonly LOGIN: "/login";
-  readonly REGISTER: "/register";
-  readonly VERIFY_EMAIL: "/verify-email";
-} = {
+export const PATHS = {
   ONBOARDING: "/",
-  HOME: "/home",
   LOGIN: "/login",
   REGISTER: "/register",
   VERIFY_EMAIL: "/verify-email",
+  LEARN_MORE: "/learn-more",
+  TERMS: "/terms",
+  PRIVACY: "/privacy",
 } as const;
 
 export type AppPaths = (typeof PATHS)[keyof typeof PATHS];
