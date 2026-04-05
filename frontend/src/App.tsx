@@ -1,10 +1,31 @@
+import { ProtectedRoute } from "@/routes/ProtectedRoute";
+import { Route, Routes } from "react-router-dom";
 import "./App.css";
+import { routesConfig } from "./routes/routesConfig";
 
 function App() {
   return (
-    <div className="App">
-      <h1 className="text-3xl font-bold underline">Hello world!</h1>
-    </div>
+    <Routes>
+      {routesConfig.map((route) => {
+        const Element: React.ComponentType = route.element;
+
+        return (
+          <Route
+            key={route.path}
+            path={route.path}
+            element={
+              route.isPrivate ? (
+                <ProtectedRoute>
+                  <Element />
+                </ProtectedRoute>
+              ) : (
+                <Element />
+              )
+            }
+          />
+        );
+      })}
+    </Routes>
   );
 }
 
