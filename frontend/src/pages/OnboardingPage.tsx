@@ -25,7 +25,7 @@ export default function OnboardingPage() {
         </div>
       </header>
 
-      <main className="flex-grow flex items-center justify-center pt-24 pb-12 px-6">
+      <main className="grow flex items-center justify-center pt-24 pb-12 px-6">
         <div className="max-w-6xl w-full grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
           <div className="flex flex-col space-y-10">
             <div>
