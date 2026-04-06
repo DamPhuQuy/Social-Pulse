@@ -1,4 +1,3 @@
-import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Checkbox } from "@/components/ui/checkbox";
@@ -9,7 +8,8 @@ import { PATHS } from "@/constants/paths";
 import { registerUser } from "@/services/authService";
 import type { ComponentProps } from "react";
 import { useState } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 
 type RegisterFormState = {
   username: string;
@@ -31,26 +31,10 @@ const INITIAL_FORM: RegisterFormState = {
   acceptedTerms: false,
 };
 
-function extractResponsePreview(data: unknown): string | null {
-  if (!data) {
-    return null;
-  }
-
-  try {
-    return JSON.stringify(data, null, 2);
-  } catch {
-    return null;
-  }
-}
-
 export default function RegisterForm() {
+  const navigate = useNavigate();
   const [form, setForm] = useState<RegisterFormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [responseType, setResponseType] = useState<"success" | "error" | null>(
-    null,
-  );
-  const [responseMessage, setResponseMessage] = useState<string | null>(null);
-  const [responsePreview, setResponsePreview] = useState<string | null>(null);
 
   const handleSubmit = async (event: FormSubmitEvent) => {
     event.preventDefault();
@@ -59,32 +43,21 @@ export default function RegisterForm() {
     const email = form.email.trim();
 
     if (!username || !email || !form.password || !form.confirmPassword) {
-      setResponseType("error");
-      setResponseMessage("Please fill in all required fields.");
-      setResponsePreview(null);
+      toast.error("Please fill in all required fields.");
       return;
     }
 
     if (form.password !== form.confirmPassword) {
-      setResponseType("error");
-      setResponseMessage("Password and confirmation do not match.");
-      setResponsePreview(null);
+      toast.error("Password and confirmation do not match.");
       return;
     }
 
     if (!form.acceptedTerms) {
-      setResponseType("error");
-      setResponseMessage(
-        "You must accept Terms and Privacy Policy to continue.",
-      );
-      setResponsePreview(null);
+      toast.error("You must accept Terms and Privacy Policy to continue.");
       return;
     }
 
     setIsSubmitting(true);
-    setResponseType(null);
-    setResponseMessage(null);
-    setResponsePreview(null);
 
     const result = await registerUser({
       username,
@@ -93,9 +66,21 @@ export default function RegisterForm() {
       confirmPassword: form.confirmPassword,
     });
 
-    setResponseType(result.ok ? "success" : "error");
-    setResponseMessage(result.message);
-    setResponsePreview(extractResponsePreview(result.data));
+    if (result.ok) {
+      toast.success("Registration successful.", {
+        description: "Please check your email and verify OTP.",
+      });
+      sessionStorage.setItem("pendingVerificationEmail", email);
+      setIsSubmitting(false);
+      navigate(`${PATHS.VERIFY_EMAIL}?email=${encodeURIComponent(email)}`, {
+        state: { email },
+      });
+      return;
+    }
+
+    toast.error("Registration failed.", {
+      description: result.message,
+    });
     setIsSubmitting(false);
   };
 
@@ -267,31 +252,6 @@ export default function RegisterForm() {
               GitHub
             </Button>
           </div>
-
-          {responseType && responseMessage ? (
-            <Alert
-              variant={responseType === "error" ? "destructive" : "default"}
-              className={
-                responseType === "success"
-                  ? "border-primary/25 bg-primary-fixed/20 text-on-surface"
-                  : ""
-              }
-            >
-              <AlertTitle>
-                {responseType === "success"
-                  ? "Registration response"
-                  : "Registration failed"}
-              </AlertTitle>
-              <AlertDescription className="mt-1 text-on-surface-variant space-y-2">
-                <p>{responseMessage}</p>
-                {responsePreview ? (
-                  <pre className="overflow-auto rounded-md border border-outline-variant bg-surface-container px-3 py-2 text-xs text-on-surface">
-                    {responsePreview}
-                  </pre>
-                ) : null}
-              </AlertDescription>
-            </Alert>
-          ) : null}
         </form>
 
         {/* Footer */}
