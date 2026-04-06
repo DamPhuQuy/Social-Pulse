@@ -7,6 +7,13 @@ export type RegisterRequest = {
   confirmPassword: string;
 };
 
+type RegisterApiRequest = {
+  username: string;
+  email: string;
+  rawPassword: string;
+  confirmPassword: string;
+};
+
 export type RegisterResult = {
   ok: boolean;
   status?: number;
@@ -14,7 +21,7 @@ export type RegisterResult = {
   data?: unknown;
 };
 
-const DEFAULT_REGISTER_ENDPOINT = "/auth/v1/register";
+const DEFAULT_REGISTER_ENDPOINT = "/auth/register";
 
 function getRegisterUrl(): string {
   const baseUrl = (import.meta.env.VITE_API_BASE_URL ?? "").trim();
@@ -56,9 +63,15 @@ export async function registerUser(
   payload: RegisterRequest,
 ): Promise<RegisterResult> {
   const registerUrl = getRegisterUrl();
+  const requestBody: RegisterApiRequest = {
+    username: payload.username,
+    email: payload.email,
+    rawPassword: payload.password,
+    confirmPassword: payload.confirmPassword,
+  };
 
   try {
-    const response = await axios.post(registerUrl, payload);
+    const response = await axios.post(registerUrl, requestBody);
 
     return {
       ok: true,
