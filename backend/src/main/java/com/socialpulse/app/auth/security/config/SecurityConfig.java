@@ -18,25 +18,10 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Cấu hình Spring Security.
- *
- * Các thay đổi so với version cũ:
- * 1. SessionCreationPolicy.STATELESS — API không dùng session, mỗi request phải mang JWT
- * 2. addFilterBefore(jwtFilter) — thêm JWT filter trước filter xử lý username/password
- * 3. AuthenticationManager bean — cho AuthService dùng để authenticate
- * 4. Fix whitelist: "/api/auth/**" → "/api/v1/auth/**" (bug cũ: prefix sai)
- *
- * Tại sao không cần khai báo DaoAuthenticationProvider thủ công?
- * → Spring Security tự detect PasswordEncoder bean (implements Spring interface)
- *   và CustomUserDetailsService bean (implements UserDetailsService),
- *   rồi tự wire chúng vào DaoAuthenticationProvider.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
 
-    // JwtAuthenticationFilter được inject để thêm vào filter chain
     private final JwtAuthenticationFilter jwtAuthenticationFilter;
 
     public SecurityConfig(JwtAuthenticationFilter jwtAuthenticationFilter) {
@@ -48,7 +33,6 @@ public class SecurityConfig {
         http
                 .csrf(AbstractHttpConfigurer::disable)
                 .cors(cors -> cors.configurationSource(corsConfigurationSource()))
-                // STATELESS: không tạo/dùng HttpSession — bắt buộc cho REST API với JWT
                 .sessionManagement(session ->
                         session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
                 .authorizeHttpRequests(auth -> auth
@@ -57,18 +41,11 @@ public class SecurityConfig {
                         .anyRequest().authenticated())
                 .httpBasic(AbstractHttpConfigurer::disable)
                 .formLogin(AbstractHttpConfigurer::disable)
-                // JWT filter chạy TRƯỚC UsernamePasswordAuthenticationFilter
-                // để set Authentication vào SecurityContext từ token
                 .addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
 
-    /**
-     * Expose AuthenticationManager để AuthService.login() gọi authenticate().
-     * AuthenticationConfiguration tự build manager từ các bean có sẵn:
-     * → CustomUserDetailsService + PasswordEncoder → DaoAuthenticationProvider
-     */
     @Bean
     AuthenticationManager authenticationManager(AuthenticationConfiguration config) throws Exception {
         return config.getAuthenticationManager();
@@ -79,8 +56,15 @@ public class SecurityConfig {
         CorsConfiguration config = new CorsConfiguration();
         config.setAllowedOrigins(List.of("http://localhost:5173", "http://127.0.0.1:5173"));
         config.setAllowedMethods(List.of("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS"));
-        config.setAllowedHeaders(List.of("*"));
+        config.setAllowedHeaders(List.of(
+                "Authorization",
+                "Content-Type",
+                "X-Requested-With"
+        ));
+        config.setExposedHeaders(List.of("Authorization"));
+
         config.setAllowCredentials(true);
+        config.setMaxAge(3600L);
 
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", config);

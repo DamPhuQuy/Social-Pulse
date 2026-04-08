@@ -1,25 +1,35 @@
 package com.socialpulse.app.common;
 
-import io.swagger.v3.oas.annotations.OpenAPIDefinition;
-import io.swagger.v3.oas.annotations.enums.SecuritySchemeType;
-import io.swagger.v3.oas.annotations.info.Info;
-import io.swagger.v3.oas.annotations.security.SecurityScheme;
+import io.swagger.v3.oas.models.Components;
+import io.swagger.v3.oas.models.OpenAPI;
+
+import io.swagger.v3.oas.models.info.Info;
+import io.swagger.v3.oas.models.info.License;
+import io.swagger.v3.oas.models.security.SecurityRequirement;
+import io.swagger.v3.oas.models.security.SecurityScheme;
+import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-/**
- * Cấu hình Swagger/OpenAPI.
- *
- * @SecurityScheme khai báo scheme "bearerAuth" kiểu Bearer token.
- * Khi có annotation này, Swagger UI sẽ hiển thị nút "Authorize 🔒"
- * cho phép nhập JWT token để test các route protected.
- */
 @Configuration
-@OpenAPIDefinition(info = @Info(title = "Social Pulse API", version = "v1"))
-@SecurityScheme(
-        name = "bearerAuth",
-        type = SecuritySchemeType.HTTP,
-        scheme = "bearer",
-        bearerFormat = "JWT"
-)
 public class OpenApiConfig {
+
+    @Bean
+    public OpenAPI customOpenAPI(@Value("${app.version}") String appVersion) {
+        var securitySchemeName = "bearer-key";
+        return new OpenAPI()
+                .info(new Info().title("API documentation for SocialPulse backend").version(appVersion)
+                        .license(new License().name("Apache 2.0").url("https://springdoc.org"))
+                        .description("JWT authentication using Bearer token"))
+                .addSecurityItem(new SecurityRequirement().addList(securitySchemeName))
+                .components(new Components()
+                        .addSecuritySchemes(securitySchemeName,
+                            new SecurityScheme()
+                                    .name(securitySchemeName)
+                                    .type(SecurityScheme.Type.HTTP)
+                                    .scheme("bearer")
+                                    .bearerFormat("JWT")))
+                ;
+    }
 }
