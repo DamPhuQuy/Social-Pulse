@@ -1,4 +1,4 @@
-package com.socialpulse.app.auth.security;
+package com.socialpulse.app.auth.security.user;
 
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.entity.UserRole;

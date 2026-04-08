@@ -1,7 +1,8 @@
-package com.socialpulse.app.auth.security;
+package com.socialpulse.app.auth.security.config;
 
 import java.util.List;
 
+import com.socialpulse.app.auth.security.jwt.JwtAuthenticationFilter;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;

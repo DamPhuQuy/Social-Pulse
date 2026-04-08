@@ -1,9 +1,11 @@
-package com.socialpulse.app.auth.security;
+package com.socialpulse.app.auth.service.jwt;
 
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
+import com.socialpulse.app.auth.security.jwt.JwtProperties;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
-import org.springframework.beans.factory.annotation.Value;
+import lombok.Getter;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.stereotype.Service;
 
@@ -15,23 +17,20 @@ import java.util.Map;
 import java.util.function.Function;
 
 /**
- * Chịu trách nhiệm toàn bộ việc tạo và xác thực JWT.
- *
- * Cấu trúc JWT gồm 3 phần: header.payload.signature
- *   - Header: thuật toán ký (HS256)
- *   - Payload (claims): subject=email, userId, role, iat, exp
+ * jwt structure: header.payload.signature
+ *   - Header: HS256
+ *   - Payload: email (subject), userId, role, iat, exp
  *   - Signature: HMAC-SHA256(base64(header) + "." + base64(payload), secret)
  */
 @Service
+@Getter
 public class JwtService {
 
-    // Đọc từ app.jwt.secret trong application-dev.yaml
-    @Value("${app.jwt.secret}")
-    private String secret;
+    private JwtProperties jwtProperties;
 
-    // Đọc từ app.jwt.expiration-ms (86400000 = 24h)
-    @Value("${app.jwt.expiration-ms}")
-    private long expirationMs;
+    public JwtService(JwtProperties jwtProperties) {
+        this.jwtProperties = jwtProperties;
+    }
 
     /**
      * Tạo JWT cho user đã xác thực thành công.
@@ -49,7 +48,7 @@ public class JwtService {
                 // subject = email — đây là "username" trong Spring Security context
                 .subject(userDetails.getUsername())
                 .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + expirationMs))
+                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
                 // signWith tự chọn HS256 khi key là SecretKey HMAC
                 .signWith(getSigningKey())
                 .compact();
@@ -74,10 +73,6 @@ public class JwtService {
     public boolean isTokenValid(String token, UserDetails userDetails) {
         final String email = extractEmail(token);
         return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    public long getExpirationMs() {
-        return expirationMs;
     }
 
     private boolean isTokenExpired(String token) {
@@ -105,13 +100,10 @@ public class JwtService {
                 .getPayload();
     }
 
-    /**
-     * Tạo HMAC-SHA256 signing key từ secret string.
-     * Keys.hmacShaKeyFor() tự chọn HS256/HS384/HS512 dựa vào độ dài key.
-     * Secret >= 32 bytes → HS256; >= 48 → HS384; >= 64 → HS512.
-     */
+    // create hmac from the secret key string
+    // hmacShaKeyFor automatically choose the HMAC algorithm based on the key length (HS256, HS384, HS512)
     private SecretKey getSigningKey() {
-        byte[] keyBytes = secret.getBytes(StandardCharsets.UTF_8);
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
     }
 }
