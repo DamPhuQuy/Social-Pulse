@@ -38,7 +38,6 @@ public class AuthService {
     private final JwtService jwtService;
     private final Logger logger;
 
-    // Giới hạn số lần đăng nhập sai trước khi khóa tài khoản
     private static final int MAX_FAILED_ATTEMPTS = 5;
 
     public AuthService(UserService userService,
@@ -84,29 +83,14 @@ public class AuthService {
         logger.info("Email verified for: {}", normalizedEmail);
     }
 
-    /**
-     * Xử lý đăng nhập và trả JWT access token.
-     *
-     * Luồng:
-     * 1. Kiểm tra user tồn tại + trạng thái tài khoản (trước khi gọi AuthManager
-     *    để trả thông báo lỗi rõ ràng hơn)
-     * 2. Gọi AuthenticationManager.authenticate() — Spring Security tự verify password
-     * 3. Thành công → cập nhật lastLoginAt, tạo JWT
-     * 4. Thất bại → tăng failed attempts, có thể lock account
-     *
-     * noRollbackFor=AppException.class: đảm bảo việc cập nhật
-     * failedLoginAttempts được commit dù method ném AppException.
-     */
     @Transactional(noRollbackFor = AppException.class)
     public String login(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
-        // Bước 1: Tìm user — trả INVALID_CREDENTIALS (không phải USER_NOT_FOUND)
-        // để tránh lộ thông tin "email này có tồn tại không"
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
 
-        // Kiểm tra trạng thái trước khi xác thực password
+
         if (user.isLocked() || user.getStatus() == UserStatus.LOCKED) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);
         }
@@ -117,30 +101,22 @@ public class AuthService {
         }
 
         try {
-            // Bước 2: Spring Security authenticate
-            // → gọi CustomUserDetailsService.loadUserByUsername(email)
-            // → gọi PasswordEncoder.matches(rawPassword, hash)
-            // → kiểm tra isEnabled(), isAccountNonLocked()
             Authentication authentication = authenticationManager.authenticate(
                     new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword())
             );
 
-            // Bước 3: Thành công
             CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
 
-            // Cập nhật tracking (reset failed attempts, ghi thời gian login)
             user.resetFailedLoginAttempts();
             user.updateLastLoginAt();
             userRepository.save(user);
 
-            // Tạo JWT
             String token = jwtService.generateToken(userDetails);
             logger.info("Login successful for: {}", normalizedEmail);
 
             return token;
 
         } catch (BadCredentialsException e) {
-            // Bước 4: Sai password → tăng counter, có thể lock
             handleFailedLoginAttempt(user);
             throw new AppException(ErrorCode.INVALID_CREDENTIALS);
 
@@ -152,10 +128,6 @@ public class AuthService {
         }
     }
 
-    /**
-     * Tăng số lần đăng nhập thất bại.
-     * Nếu đạt giới hạn MAX_FAILED_ATTEMPTS → khóa tài khoản.
-     */
     private void handleFailedLoginAttempt(User user) {
         user.incrementFailedLoginAttempts();
         if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
