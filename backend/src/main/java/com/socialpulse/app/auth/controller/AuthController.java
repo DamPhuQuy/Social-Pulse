@@ -1,12 +1,16 @@
 package com.socialpulse.app.auth.controller;
 
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
+import org.springframework.http.HttpHeaders;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.*;
 
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
+import com.socialpulse.app.auth.security.JwtService;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
@@ -19,10 +23,14 @@ import jakarta.validation.Valid;
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private final AuthService authService;
+    private static final String ACCESS_TOKEN_COOKIE_NAME = "sp_access_token";
 
-    public AuthController(AuthService authService) {
+    private final AuthService authService;
+    private final JwtService jwtService;
+
+    public AuthController(AuthService authService, JwtService jwtService) {
         this.authService = authService;
+        this.jwtService = jwtService;
     }
 
     @PostMapping("/register")
@@ -56,14 +64,26 @@ public class AuthController {
     /**
      * POST /api/v1/auth/login
      *
-     * Nhận email + password → xác thực → trả JWT access token.
-     * Client lưu token và gửi kèm mọi request protected:
-     *   Header: "Authorization: Bearer <accessToken>"
+     * Nhận email + password → xác thực → set JWT vào HttpOnly cookie.
      */
     @PostMapping("/login")
-    @Operation(summary = "Login", description = "Authenticate with email/password and receive JWT access token")
+    @Operation(summary = "Login", description = "Authenticate with email/password and set JWT HttpOnly cookie")
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        LoginResponse result = authService.login(request);
+        String accessToken = authService.login(request);
+        long expiresInMs = jwtService.getExpirationMs();
+
+        ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, accessToken)
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(expiresInMs / 1000)
+                .build();
+
+        LoginResponse result = LoginResponse.builder()
+                .tokenType("Bearer")
+                .expiresIn(expiresInMs)
+                .build();
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -71,6 +91,54 @@ public class AuthController {
                 .data(result)
                 .build();
 
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, authCookie.toString())
+                .body(response);
+    }
+
+    @PostMapping("/logout")
+    @Operation(summary = "Logout", description = "Clear JWT HttpOnly cookie")
+    public ResponseEntity<ApiResponse<Void>> logout() {
+        ResponseCookie clearCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
+                .build();
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("Logout successful.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .body(response);
+    }
+
+    @GetMapping("/session")
+    @Operation(summary = "Session status", description = "Check current authentication status from HttpOnly cookie")
+    public ResponseEntity<ApiResponse<Boolean>> getSession(Authentication authentication) {
+        boolean authenticated = authentication != null
+                && authentication.isAuthenticated()
+                && !"anonymousUser".equals(authentication.getPrincipal());
+
+        if (!authenticated) {
+            ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
+                    .code(401)
+                    .message("Unauthenticated")
+                    .data(false)
+                    .build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
+                .code(200)
+                .message("Authenticated")
+                .data(true)
+                .build();
         return ResponseEntity.ok(response);
     }
 }

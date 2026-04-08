@@ -24,37 +24,6 @@ const INITIAL_FORM: LoginFormState = {
   password: "",
 };
 
-function extractToken(
-  data: unknown,
-): { accessToken: string; tokenType: string } | null {
-  if (!data || typeof data !== "object") {
-    return null;
-  }
-
-  const payload = data as Record<string, unknown>;
-  const nestedData = payload.data;
-
-  if (!nestedData || typeof nestedData !== "object") {
-    return null;
-  }
-
-  const tokenPayload = nestedData as Record<string, unknown>;
-
-  if (
-    typeof tokenPayload.accessToken === "string" &&
-    tokenPayload.accessToken.trim() &&
-    typeof tokenPayload.tokenType === "string" &&
-    tokenPayload.tokenType.trim()
-  ) {
-    return {
-      accessToken: tokenPayload.accessToken,
-      tokenType: tokenPayload.tokenType,
-    };
-  }
-
-  return null;
-}
-
 export default function LoginPage() {
   const location = useLocation();
   const prefilledEmail = useMemo(
@@ -83,12 +52,6 @@ export default function LoginPage() {
     const result = await loginUser({ email, password: form.password });
 
     if (result.ok) {
-      const tokenPayload = extractToken(result.data);
-
-      if (tokenPayload) {
-        localStorage.setItem("authAccessToken", tokenPayload.accessToken);
-        localStorage.setItem("authTokenType", tokenPayload.tokenType);
-      }
 
       toast.success("Login successful.", {
         description: "Welcome back to Social Pulse.",

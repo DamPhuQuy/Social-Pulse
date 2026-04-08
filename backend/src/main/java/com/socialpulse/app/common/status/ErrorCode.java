@@ -19,7 +19,9 @@ public enum ErrorCode {
 
     OTP_EXPIRED(400, "OTP has expired"),
     OTP_INVALID(400, "Invalid OTP"),
-    OTP_TOO_MANY_ATTEMPTS(429, "Too many OTP attempts");
+    OTP_TOO_MANY_ATTEMPTS(429, "Too many OTP attempts"),
+
+    EMAIL_SENDS_FAILED(500, "Failed to send email");
 
     private final int code;
     private final String message;
