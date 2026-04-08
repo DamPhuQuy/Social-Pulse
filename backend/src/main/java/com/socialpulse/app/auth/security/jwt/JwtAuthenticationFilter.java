@@ -17,20 +17,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 
-/**
- * Filter chạy MỘT LẦN mỗi request (OncePerRequestFilter).
- *
- * Luồng xử lý:
- * 1. Đọc header "Authorization: Bearer <token>"
- * 2. Nếu không có → bỏ qua (request tiếp tục đến Spring Security)
- * 3. Nếu có → extract email từ JWT
- * 4. Load UserDetails từ DB
- * 5. Verify token (chữ ký + expiry + email khớp)
- * 6. Set Authentication vào SecurityContext → Spring Security biết user đã auth
- *
- * Lưu ý: Filter KHÔNG ném exception khi token sai. Nó chỉ NOT set
- * authentication. Spring Security sẽ tự trả 401 nếu route yêu cầu auth.
- */
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
@@ -53,41 +39,36 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
         final String jwt = resolveToken(request);
 
+        // Request → Filter → (jwt == null) → accept to go → Controller
         if (jwt == null || jwt.isBlank()) {
-            filterChain.doFilter(request, response);
+            filterChain.doFilter(request, response); // accept
             return;
         }
 
         try {
             final String email = jwtService.extractEmail(jwt);
 
-            // Chỉ xử lý nếu có email VÀ chưa có authentication trong context
-            // (tránh xử lý lại nếu filter chain đã set authentication trước đó)
+            // avoid handling if filter chain have set authentication in advanced in SecurityContextHolder
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-                // Load user từ DB — nếu user bị xóa sau khi token được cấp,
-                // UsernameNotFoundException sẽ được ném → token không hợp lệ
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
                 if (jwtService.isTokenValid(jwt, userDetails)) {
-                    // Tạo Authentication object với authorities (roles/permissions)
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
-                                    null, // credentials = null vì đã xác thực qua JWT
+                                    null,
                                     userDetails.getAuthorities()
                             );
-                    // Gắn thêm request info (IP, session) vào authentication
+
+                    // attach request info
                     authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
 
-                    // ĐẶT VÀO SECURITY CONTEXT — từ đây Spring Security biết user đã auth
+                    // push into SecurityContextHolder
                     SecurityContextHolder.getContext().setAuthentication(authToken);
                 }
             }
         } catch (Exception e) {
-            // Token sai chữ ký, hết hạn, hoặc user không tồn tại
-            // → không set authentication → Spring Security tự trả 401
-            // Không ném exception để tránh bypass các filter còn lại
         }
 
         filterChain.doFilter(request, response);
@@ -98,14 +79,15 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         if (cookies != null) {
             for (Cookie cookie : cookies) {
                 if (ACCESS_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
-                    return cookie.getValue();
+                    return cookie.getValue().trim();
                 }
             }
         }
 
+        // extract header
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
-            return authHeader.substring(7);
+            return authHeader.substring(7).trim();
         }
 
         return null;
