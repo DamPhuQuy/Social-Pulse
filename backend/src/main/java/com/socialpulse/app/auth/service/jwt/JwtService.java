@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.UUID;
 import java.util.function.Function;
 
 /**
@@ -32,66 +33,39 @@ public class JwtService {
         this.jwtProperties = jwtProperties;
     }
 
-    /**
-     * Tạo JWT cho user đã xác thực thành công.
-     * Nhúng thêm userId và role vào claims để frontend dùng
-     * mà không cần gọi thêm API /me.
-     */
+    // inject userId and role into claims to let frontend use
     public String generateToken(CustomUserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
+
         extraClaims.put("userId", userDetails.getId());
-        // Lấy role đầu tiên (ROLE_USER / ROLE_ADMIN)
-        extraClaims.put("role", userDetails.getUser().getRole());
+        extraClaims.put("role", userDetails.getUser().getRole().name());
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + jwtProperties.getExpirationMs());
 
         return Jwts.builder()
+                .id(UUID.randomUUID().toString())
                 .claims(extraClaims)
-                // subject = email — đây là "username" trong Spring Security context
-                .subject(userDetails.getUsername())
-                .issuedAt(new Date())
-                .expiration(new Date(System.currentTimeMillis() + jwtProperties.getExpirationMs()))
-                // signWith tự chọn HS256 khi key là SecretKey HMAC
+                .subject(userDetails.getUsername()) // sub
+                .issuedAt(now)
+                .expiration(expiry)
                 .signWith(getSigningKey())
+                .issuer("social-pulse-api")
                 .compact();
     }
 
-    /**
-     * Trích xuất email từ JWT (không verify signature).
-     * Chỉ dùng để biết tìm user nào, verify ở bước tiếp theo.
-     */
-    public String extractEmail(String token) {
-        return extractClaim(token, Claims::getSubject);
-    }
-
-    /**
-     * Kiểm tra token có hợp lệ không:
-     * 1. Email trong token phải khớp với email của userDetails
-     * 2. Token chưa hết hạn
-     *
-     * Signature đã được verify tự động bên trong extractAllClaims()
-     * — nếu sai chữ ký, JwtException sẽ được ném.
-     */
-    public boolean isTokenValid(String token, UserDetails userDetails) {
-        final String email = extractEmail(token);
-        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
-    }
-
-    private boolean isTokenExpired(String token) {
-        return extractExpiration(token).before(new Date());
-    }
-
-    private Date extractExpiration(String token) {
-        return extractClaim(token, Claims::getExpiration);
+    // create hmac from the secret key string
+    // hmacShaKeyFor automatically choose the HMAC algorithm based on the key length (HS256, HS384, HS512)
+    private SecretKey getSigningKey() {
+        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
+        return Keys.hmacShaKeyFor(keyBytes);
     }
 
     private <T> T extractClaim(String token, Function<Claims, T> claimsResolver) {
         return claimsResolver.apply(extractAllClaims(token));
     }
 
-    /**
-     * Parse và verify JWT.
-     * Nếu signature sai hoặc token bị tamper → JwsException (runtime).
-     * Nếu token hết hạn → ExpiredJwtException (extends JwtException).
-     */
+    // parse and verify, throw exception if there are errors
     private Claims extractAllClaims(String token) {
         return Jwts.parser()
                 .verifyWith(getSigningKey())
@@ -100,10 +74,22 @@ public class JwtService {
                 .getPayload();
     }
 
-    // create hmac from the secret key string
-    // hmacShaKeyFor automatically choose the HMAC algorithm based on the key length (HS256, HS384, HS512)
-    private SecretKey getSigningKey() {
-        byte[] keyBytes = jwtProperties.getSecret().getBytes(StandardCharsets.UTF_8);
-        return Keys.hmacShaKeyFor(keyBytes);
+    // extract email and expiration from jwt
+    // signature and expiration is verified in the process of extracting
+    public String extractEmail(String token) {
+        return extractClaim(token, Claims::getSubject);
+    }
+
+    private Date extractExpiration(String token) {
+        return extractClaim(token, Claims::getExpiration);
+    }
+
+    public boolean isTokenValid(String token, UserDetails userDetails) {
+        final String email = extractEmail(token);
+        return email.equals(userDetails.getUsername()) && !isTokenExpired(token);
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractExpiration(token).before(new Date());
     }
 }
