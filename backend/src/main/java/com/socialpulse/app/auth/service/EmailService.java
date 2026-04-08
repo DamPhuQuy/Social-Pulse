@@ -1,5 +1,7 @@
 package com.socialpulse.app.auth.service;
 
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.status.ErrorCode;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
@@ -32,7 +34,7 @@ public class EmailService {
             mailSender.send(message);
 
         } catch (Exception e) {
-            throw new RuntimeException("Failed to send email", e);
+            throw new AppException(ErrorCode.EMAIL_SENDS_FAILED);
         }
     }
 

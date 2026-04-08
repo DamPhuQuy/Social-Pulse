@@ -49,6 +49,8 @@ const DEFAULT_API_BASE_URL = "http://localhost:8080/api/v1";
 const DEFAULT_REGISTER_ENDPOINT = "/auth/register";
 const DEFAULT_VERIFY_EMAIL_ENDPOINT = "/auth/verify-email";
 const DEFAULT_LOGIN_ENDPOINT = "/auth/login";
+const DEFAULT_LOGOUT_ENDPOINT = "/auth/logout";
+const DEFAULT_SESSION_ENDPOINT = "/auth/session";
 
 function buildAuthUrl(endpointValue: string, defaultEndpoint: string): string {
   const baseUrl = (
@@ -86,6 +88,20 @@ function getLoginUrl(): string {
   return buildAuthUrl(
     import.meta.env.VITE_LOGIN_ENDPOINT ?? "",
     DEFAULT_LOGIN_ENDPOINT,
+  );
+}
+
+function getLogoutUrl(): string {
+  return buildAuthUrl(
+    import.meta.env.VITE_LOGOUT_ENDPOINT ?? "",
+    DEFAULT_LOGOUT_ENDPOINT,
+  );
+}
+
+function getSessionUrl(): string {
+  return buildAuthUrl(
+    import.meta.env.VITE_SESSION_ENDPOINT ?? "",
+    DEFAULT_SESSION_ENDPOINT,
   );
 }
 
@@ -203,7 +219,9 @@ export async function loginUser(payload: LoginRequest): Promise<LoginResult> {
   const loginUrl = getLoginUrl();
 
   try {
-    const response = await axios.post(loginUrl, payload);
+    const response = await axios.post(loginUrl, payload, {
+      withCredentials: true,
+    });
 
     return {
       ok: true,
@@ -235,3 +253,86 @@ export async function loginUser(payload: LoginRequest): Promise<LoginResult> {
     };
   }
 }
+
+export async function logoutUser(): Promise<LoginResult> {
+  const logoutUrl = getLogoutUrl();
+
+  try {
+    const response = await axios.post(
+      logoutUrl,
+      {},
+      {
+        withCredentials: true,
+      },
+    );
+
+    return {
+      ok: true,
+      status: response.status,
+      message:
+        readMessage(response.data) ??
+        `Logout request succeeded with status ${response.status}.`,
+      data: response.data,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      return {
+        ok: false,
+        status,
+        message:
+          readMessage(data) ??
+          error.message ??
+          "Logout request failed. Please try again.",
+        data,
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Unexpected error occurred while sending logout request.",
+    };
+  }
+}
+
+export async function getAuthSession(): Promise<LoginResult> {
+  const sessionUrl = getSessionUrl();
+
+  try {
+    const response = await axios.get(sessionUrl, {
+      withCredentials: true,
+    });
+
+    return {
+      ok: true,
+      status: response.status,
+      message:
+        readMessage(response.data) ??
+        `Session check succeeded with status ${response.status}.`,
+      data: response.data,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      return {
+        ok: false,
+        status,
+        message:
+          readMessage(data) ??
+          error.message ??
+          "Session check failed.",
+        data,
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Unexpected error occurred while checking session.",
+    };
+  }
+}
+

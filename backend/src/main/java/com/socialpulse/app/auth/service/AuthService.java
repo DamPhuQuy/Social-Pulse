@@ -14,7 +14,6 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.request.LoginRequest;
-import com.socialpulse.app.auth.dto.response.LoginResponse;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.security.CustomUserDetails;
 import com.socialpulse.app.auth.security.JwtService;
@@ -98,7 +97,7 @@ public class AuthService {
      * failedLoginAttempts được commit dù method ném AppException.
      */
     @Transactional(noRollbackFor = AppException.class)
-    public LoginResponse login(LoginRequest request) {
+    public String login(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         // Bước 1: Tìm user — trả INVALID_CREDENTIALS (không phải USER_NOT_FOUND)
@@ -137,11 +136,7 @@ public class AuthService {
             String token = jwtService.generateToken(userDetails);
             logger.info("Login successful for: {}", normalizedEmail);
 
-            return LoginResponse.builder()
-                    .accessToken(token)
-                    .tokenType("Bearer")
-                    .expiresIn(jwtService.getExpirationMs())
-                    .build();
+            return token;
 
         } catch (BadCredentialsException e) {
             // Bước 4: Sai password → tăng counter, có thể lock
