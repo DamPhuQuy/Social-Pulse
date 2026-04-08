@@ -1,6 +1,7 @@
 package com.socialpulse.app.auth.controller;
 
 import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
@@ -46,17 +47,51 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "201",
                             description = "User registered successfully",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.UserCreation.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.UserCreation.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 201,
+                                              "message": "User registered successfully. Please check your email for the OTP code to verify your account.",
+                                              "data": {
+                                                "id": 1,
+                                                "username": "phuquy123",
+                                                "email": "phuquydam06@gmail.com",
+                                                "message": "User created successfully"
+                                              }
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "400",
                             description = "Validation failed, passwords do not match, or user already exists",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 400,
+                                              "message": "User already exists",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "500",
                             description = "Unexpected server error",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                                "status": 500,
+                                                "message": "User already exists", 
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """))
                     )
             }
     )
@@ -80,27 +115,77 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
                             description = "Email verified successfully",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Email verified successfully.",
+                                              "data": null
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "400",
                             description = "Invalid request, invalid OTP, or OTP expired",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 400,
+                                              "message": "Invalid OTP",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "404",
                             description = "User not found",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject("""
+                                            {
+                                                "status": 404,
+                                                "message": "User not found",
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "429",
                             description = "Too many OTP verification attempts",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject("""
+                                            {
+                                                "status": 429,
+                                                "message": "Too many OTP verification attempts. Please try again later.",
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "500",
                             description = "Unexpected server error",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                                "status": 500,
+                                                "message": "Unexpected server error",
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     )
             }
     )
@@ -131,32 +216,95 @@ public class AuthController {
                                             description = "HttpOnly access token cookie (sp_access_token)"
                                     )
                             },
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Login.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Login.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Login successful.",
+                                              "data": {
+                                                "tokenType": "Bearer",
+                                                "expiresIn": 86400000
+                                              }
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "400",
                             description = "Validation failed",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 400,
+                                              "message": "Validation failed: email must be a well-formed email address",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "403",
                             description = "Account is not verified",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 403,
+                                              "message": "Account is not verified. Please verify your email before logging in.",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "404",
                             description = "Invalid username or password",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 404,
+                                              "message": "Invalid username or password",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "423",
                             description = "Account is locked",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 423,
+                                              "message": "Account is locked due to too many failed login attempts. Please try again later.",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "500",
                             description = "Unexpected server error",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                                "status": 500,
+                                                "message": "Unexpected server error",
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     )
             }
     )
@@ -202,12 +350,32 @@ public class AuthController {
                                             description = "Clears HttpOnly access token cookie (sp_access_token)"
                                     )
                             },
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Logout successful.",
+                                              "data": null
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "500",
                             description = "Unexpected server error",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                                "status": 500,
+                                                "message": "Unexpected server error",
+                                                "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
                     )
             }
     )
@@ -239,12 +407,32 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
                             description = "Authenticated session",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Authenticated",
+                                              "data": true
+                                            }
+                                            """)
+                            )
                     ),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "401",
                             description = "Unauthenticated session",
-                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class))
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 401,
+                                              "message": "Unauthenticated",
+                                              "data": false
+                                            }
+                                            """)
+                            )
                     )
             }
     )

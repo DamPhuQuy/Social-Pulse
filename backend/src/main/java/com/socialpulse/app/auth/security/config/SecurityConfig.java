@@ -18,20 +18,6 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
-/**
- * Cấu hình Spring Security.
- *
- * Các thay đổi so với version cũ:
- * 1. SessionCreationPolicy.STATELESS — API không dùng session, mỗi request phải mang JWT
- * 2. addFilterBefore(jwtFilter) — thêm JWT filter trước filter xử lý username/password
- * 3. AuthenticationManager bean — cho AuthService dùng để authenticate
- * 4. Fix whitelist: "/api/auth/**" → "/api/v1/auth/**" (bug cũ: prefix sai)
- *
- * Tại sao không cần khai báo DaoAuthenticationProvider thủ công?
- * → Spring Security tự detect PasswordEncoder bean (implements Spring interface)
- *   và CustomUserDetailsService bean (implements UserDetailsService),
- *   rồi tự wire chúng vào DaoAuthenticationProvider.
- */
 @Configuration
 @EnableWebSecurity
 public class SecurityConfig {
