@@ -1,20 +1,12 @@
 package com.socialpulse.app.user.entity;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
-import jakarta.persistence.CascadeType;
-import jakarta.persistence.Column;
-import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
-import jakarta.persistence.Id;
-import jakarta.persistence.OneToOne;
-import jakarta.persistence.PrePersist;
-import jakarta.persistence.PreUpdate;
-import jakarta.persistence.Table;
+import com.socialpulse.app.comment.entity.Comment;
+import com.socialpulse.app.comment.entity.CommentReaction;
+import com.socialpulse.app.post.entity.Post;
+import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -34,8 +26,17 @@ public class User {
     @Column(nullable = false, unique = true)
     private String username;
 
-    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfile profile;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Post> posts;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<Comment> comments;
+
+    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
+    private List<CommentReaction> commentReactions;
 
     @Column(nullable = false, unique = true)
     private String email;
@@ -74,6 +75,11 @@ public class User {
         this.failedLoginAttempts = 0;
     }
 
+    // Ghi lại thời điểm đăng nhập thành công gần nhất
+    public void updateLastLoginAt() {
+        this.lastLoginAt = LocalDateTime.now();
+    }
+
     public void pendingAccount() {
         this.status = UserStatus.PENDING;
     }
@@ -90,9 +96,20 @@ public class User {
 
     @PrePersist
     public void prePersist() {
+        if (this.role == null) {
+            this.role = UserRole.USER;
+        }
+
+        if (this.verification == null) {
+            this.verification = VerificationStatus.NOT_VERIFIED;
+        }
+
+        if (this.status == null) {
+            this.status = UserStatus.PENDING;
+        }
+
         this.createdAt = LocalDateTime.now();
         this.updatedAt = LocalDateTime.now();
-        this.status = UserStatus.PENDING; // Default status when creating a new user
     }
 
     @PreUpdate

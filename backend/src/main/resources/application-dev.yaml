@@ -24,7 +24,17 @@ spring:
     password: ${EMAIL_PASSWORD}
     properties:
       mail:
-        smpt:
+        smtp:
           auth: true
           starttls:
             enable: true
+
+# Custom app config — đọc từ env JWT_SECRET, fallback về dev key nếu không có
+app:
+  jwt:
+    # Secret phải >= 32 ký tự (256 bit) cho HMAC-SHA256
+    # Production: đặt JWT_SECRET trong env, không dùng fallback này
+    secret: ${JWT_SECRET:dev-only-super-secret-key-for-socialpulse-2024}
+    # 86400000ms = 24 giờ
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+  version: 1.0.0
