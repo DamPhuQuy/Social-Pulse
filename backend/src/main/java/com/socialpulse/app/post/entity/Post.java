@@ -35,16 +35,25 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Privacy privacy = Privacy.PUBLIC;
 
+    @Builder.Default
     private Long upvoteCount = 0L;
+    @Builder.Default
     private Long downvoteCount = 0L;
+    @Builder.Default
     private Long cmtCount = 0L;
+    @Builder.Default
     private Long viewCount = 0L;
+    @Builder.Default
     private Long shareCount = 0L;
+    @Builder.Default
     private Double hotScore = 0.0D;
 
-    private boolean toxic;
+    @Builder.Default
+    private boolean toxic = false;
+    @Builder.Default
     private Double toxicScore = 0.0D;
 
     private LocalDateTime createdAt;

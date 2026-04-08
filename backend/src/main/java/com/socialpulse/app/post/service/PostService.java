@@ -5,6 +5,7 @@ import com.socialpulse.app.common.status.ErrorCode;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.entity.Post;
+import com.socialpulse.app.post.entity.Privacy;
 import com.socialpulse.app.post.repository.PostRepository;
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.repository.UserRepository;
@@ -28,7 +29,7 @@ public class PostService {
         Post post = Post.builder()
                 .content(request.getContent())
                 .imageUrl(request.getImageUrl())
-                .privacy(request.getPrivacy())
+                .privacy(request.getPrivacy() == null ? Privacy.PUBLIC : request.getPrivacy())
                 .user(currentUser)
                 .build();
 

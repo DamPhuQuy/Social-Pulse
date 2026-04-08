@@ -1,14 +1,19 @@
 package com.socialpulse.app.auth.controller;
 
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.jwt.SessionService;
+import com.socialpulse.app.user.dto.response.UserAuthorizedResponse;
+import com.socialpulse.app.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
+import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.Authentication;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
@@ -25,6 +30,9 @@ import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import io.swagger.v3.oas.annotations.Operation;
 
 import jakarta.validation.Valid;
+
+import java.util.HashMap;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
@@ -454,6 +462,17 @@ public class AuthController {
                 .message("Authenticated")
                 .data(true)
                 .build();
+        return ResponseEntity.ok(response);
+    }
+
+    @GetMapping("/me")
+    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
+        UserAuthorizedResponse response = UserAuthorizedResponse.builder()
+                .id(user.getUser().getId())
+                .email(user.getUser().getEmail())
+                .role(user.getUser().getRole())
+                .build();
+
         return ResponseEntity.ok(response);
     }
 }
