@@ -1,5 +1,6 @@
 package com.socialpulse.app.auth.controller;
 
+import com.socialpulse.app.auth.service.jwt.SessionService;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -33,10 +34,12 @@ public class AuthController {
 
     private final AuthService authService;
     private final JwtService jwtService;
+    private final SessionService sessionService;
 
-    public AuthController(AuthService authService, JwtService jwtService) {
+    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService) {
         this.authService = authService;
         this.jwtService = jwtService;
+        this.sessionService = sessionService;
     }
 
     @PostMapping("/register")
@@ -437,11 +440,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<Boolean>> getSession(Authentication authentication) {
-        boolean authenticated = authentication != null
-                && authentication.isAuthenticated()
-                && !"anonymousUser".equals(authentication.getPrincipal());
-
-        if (!authenticated) {
+        if (!sessionService.isSessionValid(authentication)) {
             ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
                     .code(401)
                     .message("Unauthenticated")
