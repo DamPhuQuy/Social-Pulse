@@ -1,5 +1,7 @@
 package com.socialpulse.app.auth.controller;
 
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.Schema;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
@@ -13,10 +15,13 @@ import com.socialpulse.app.auth.dto.response.LoginResponse;
 import com.socialpulse.app.auth.service.jwt.JwtService;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.common.dto.response.ApiResponse;
+import com.socialpulse.app.common.dto.response.AuthApiResponseSchemas;
+import com.socialpulse.app.common.exception.ErrorResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
+
 import jakarta.validation.Valid;
 
 @RestController
@@ -34,7 +39,27 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    @Operation(summary = "Register a new user", description = "Registers a new user and sends an OTP code to their email for verification")
+    @Operation(
+            summary = "Register a new user",
+            description = "Registers a new user and sends an OTP code to their email for verification",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "201",
+                            description = "User registered successfully",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.UserCreation.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Validation failed, passwords do not match, or user already exists",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Unexpected server error",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     public ResponseEntity<ApiResponse<UserCreationResponse>> registerUser(@Valid @RequestBody UserCreationRequest request) {
         UserCreationResponse result = authService.register(request);
 
@@ -48,7 +73,37 @@ public class AuthController {
     }
 
     @PostMapping("/verify-email")
-    @Operation(summary = "Verify email with OTP", description = "Verifies the user's email using the provided OTP code")
+    @Operation(
+            summary = "Verify email with OTP",
+            description = "Verifies the user's email using the provided OTP code",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Email verified successfully",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid request, invalid OTP, or OTP expired",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "User not found",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "429",
+                            description = "Too many OTP verification attempts",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Unexpected server error",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     public ResponseEntity<ApiResponse<Void>> verifyEmail(@Valid @RequestBody EmailVerificationRequest request) {
         authService.verifyEmail(request);
 
@@ -61,16 +116,53 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    /**
-     * POST /api/v1/auth/login
-     *
-     * Nhận email + password → xác thực → set JWT vào HttpOnly cookie.
-     */
+    // take email, password; authenticate; set jwt to httpOnly
     @PostMapping("/login")
-    @Operation(summary = "Login", description = "Authenticate with email/password and set JWT HttpOnly cookie")
+    @Operation(
+            summary = "Login",
+            description = "Authenticate with email/password and set JWT HttpOnly cookie",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Login successful",
+                            headers = {
+                                    @io.swagger.v3.oas.annotations.headers.Header(
+                                            name = HttpHeaders.SET_COOKIE,
+                                            description = "HttpOnly access token cookie (sp_access_token)"
+                                    )
+                            },
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Login.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Validation failed",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "403",
+                            description = "Account is not verified",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "Invalid username or password",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "423",
+                            description = "Account is locked",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Unexpected server error",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         String accessToken = authService.login(request);
-        long expiresInMs = jwtService.getExpirationMs();
+        long expiresInMs = jwtService.getJwtProperties().getExpirationMs();
 
         ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, accessToken)
                 .httpOnly(true)
@@ -97,7 +189,28 @@ public class AuthController {
     }
 
     @PostMapping("/logout")
-    @Operation(summary = "Logout", description = "Clear JWT HttpOnly cookie")
+    @Operation(
+            summary = "Logout",
+            description = "Clear JWT HttpOnly cookie",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Logout successful",
+                            headers = {
+                                    @io.swagger.v3.oas.annotations.headers.Header(
+                                            name = HttpHeaders.SET_COOKIE,
+                                            description = "Clears HttpOnly access token cookie (sp_access_token)"
+                                    )
+                            },
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Empty.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "500",
+                            description = "Unexpected server error",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = ErrorResponse.class))
+                    )
+            }
+    )
     public ResponseEntity<ApiResponse<Void>> logout() {
         ResponseCookie clearCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
@@ -119,7 +232,22 @@ public class AuthController {
     }
 
     @GetMapping("/session")
-    @Operation(summary = "Session status", description = "Check current authentication status from HttpOnly cookie")
+    @Operation(
+            summary = "Session status",
+            description = "Check current authentication status from HttpOnly cookie",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Authenticated session",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class))
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "401",
+                            description = "Unauthenticated session",
+                            content = @Content(mediaType = "application/json", schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class))
+                    )
+            }
+    )
     public ResponseEntity<ApiResponse<Boolean>> getSession(Authentication authentication) {
         boolean authenticated = authentication != null
                 && authentication.isAuthenticated()
