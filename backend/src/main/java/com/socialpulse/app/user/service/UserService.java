@@ -7,7 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;
-import com.socialpulse.app.auth.security.PasswordEncoder;
+import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.entity.User;

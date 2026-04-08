@@ -36,4 +36,4 @@ app:
     # Production: đặt JWT_SECRET trong env, không dùng fallback này
     secret: ${JWT_SECRET:dev-only-super-secret-key-for-socialpulse-2024}
     # 86400000ms = 24 giờ
-    expiration-ms: 86400000
+    expiration-ms: ${JWT_EXPIRATION_MS:86400000}

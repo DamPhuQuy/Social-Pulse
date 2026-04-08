@@ -1,4 +1,4 @@
-package com.socialpulse.app.auth.service;
+package com.socialpulse.app.auth.service.otp;
 
 import java.security.SecureRandom;
 import java.time.Duration;
@@ -6,6 +6,7 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
+import com.socialpulse.app.auth.service.email.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -14,7 +15,7 @@ import org.springframework.stereotype.Service;
 import com.socialpulse.app.auth.entity.Otp;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;
-import com.socialpulse.app.auth.security.PasswordEncoder;
+import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 
 @Service
 public class OtpService {

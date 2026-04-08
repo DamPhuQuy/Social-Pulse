@@ -10,7 +10,7 @@ import org.springframework.web.bind.annotation.*;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
-import com.socialpulse.app.auth.security.JwtService;
+import com.socialpulse.app.auth.service.jwt.JwtService;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;

@@ -1,4 +1,4 @@
-package com.socialpulse.app.auth.service;
+package com.socialpulse.app.auth.service.email;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;

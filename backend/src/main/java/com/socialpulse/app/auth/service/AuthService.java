@@ -2,6 +2,8 @@ package com.socialpulse.app.auth.service;
 
 import java.util.Locale;
 
+import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.service.otp.OtpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -15,8 +17,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
-import com.socialpulse.app.auth.security.CustomUserDetails;
-import com.socialpulse.app.auth.security.JwtService;
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;

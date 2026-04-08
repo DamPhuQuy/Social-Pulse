@@ -1,6 +1,7 @@
-package com.socialpulse.app.auth.security;
+package com.socialpulse.app.auth.security.jwt;
 
-import com.socialpulse.app.auth.service.CustomUserDetailsService;
+import com.socialpulse.app.auth.service.user.CustomUserDetailsService;
+import com.socialpulse.app.auth.service.jwt.JwtService;
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.Cookie;
