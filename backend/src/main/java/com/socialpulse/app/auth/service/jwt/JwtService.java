@@ -39,6 +39,7 @@ public class JwtService {
 
         extraClaims.put("userId", userDetails.getId());
         extraClaims.put("role", userDetails.getUser().getRole().name());
+        extraClaims.put("type", "access");
 
         Date now = new Date();
         Date expiry = new Date(now.getTime() + jwtProperties.getExpirationMs());
@@ -47,6 +48,28 @@ public class JwtService {
                 .id(UUID.randomUUID().toString())
                 .claims(extraClaims)
                 .subject(userDetails.getUsername()) // sub
+                .issuedAt(now)
+                .expiration(expiry)
+                .signWith(getSigningKey())
+                .issuer("social-pulse-api")
+                .compact();
+    }
+
+    /**
+     * Refresh Token — payload gọn (chỉ sub + type=refresh).
+     * TTL lấy từ refreshExpirationMs (default: 7 ngày).
+     */
+    public String generateRefreshToken(CustomUserDetails userDetails) {
+        Map<String, Object> extraClaims = new HashMap<>();
+        extraClaims.put("type", "refresh");
+
+        Date now = new Date();
+        Date expiry = new Date(now.getTime() + jwtProperties.getRefreshExpirationMs());
+
+        return Jwts.builder()
+                .id(UUID.randomUUID().toString())
+                .claims(extraClaims)
+                .subject(userDetails.getUsername())
                 .issuedAt(now)
                 .expiration(expiry)
                 .signWith(getSigningKey())

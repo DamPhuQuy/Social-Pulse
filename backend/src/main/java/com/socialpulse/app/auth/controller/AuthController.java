@@ -1,18 +1,16 @@
 package com.socialpulse.app.auth.controller;
 
+import com.socialpulse.app.auth.dto.TokenPair;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
-import com.socialpulse.app.auth.service.jwt.SessionService;
+import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
 import com.socialpulse.app.user.dto.response.UserAuthorizedResponse;
-import com.socialpulse.app.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.ExampleObject;
 import io.swagger.v3.oas.annotations.media.Schema;
-import org.apache.coyote.Response;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.HttpHeaders;
-import org.springframework.security.core.Authentication;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -29,25 +27,26 @@ import com.socialpulse.app.user.dto.response.UserCreationResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
 
+import jakarta.servlet.http.Cookie;
+import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
-
-import java.util.HashMap;
-import java.util.Map;
 
 @RestController
 @RequestMapping("/api/v1/auth")
 public class AuthController {
 
-    private static final String ACCESS_TOKEN_COOKIE_NAME = "sp_access_token";
+    // returns access token with json body, sets refresh token in HttpOnly cookie
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "sp_refresh_token";
 
     private final AuthService authService;
     private final JwtService jwtService;
-    private final SessionService sessionService;
+    private final RefreshTokenService refreshTokenService;
 
-    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService) {
+    public AuthController(AuthService authService, JwtService jwtService,
+                          RefreshTokenService refreshTokenService) {
         this.authService = authService;
         this.jwtService = jwtService;
-        this.sessionService = sessionService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @PostMapping("/register")
@@ -99,7 +98,7 @@ public class AuthController {
                                     examples = @ExampleObject(value = """
                                             {
                                                 "status": 500,
-                                                "message": "User already exists", 
+                                                "message": "User already exists",
                                                 "timestamp": "2026-04-08T11:30:00"
                                             }
                                             """))
@@ -212,11 +211,11 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    // take email, password; authenticate; set jwt to httpOnly
+    // Hybrid: Access Token → JSON body | Refresh Token → HttpOnly cookie
     @PostMapping("/login")
     @Operation(
             summary = "Login",
-            description = "Authenticate with email/password and set JWT HttpOnly cookie",
+            description = "Authenticate with email/password. Returns Access Token in JSON body and sets Refresh Token as HttpOnly cookie.",
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
@@ -224,7 +223,7 @@ public class AuthController {
                             headers = {
                                     @io.swagger.v3.oas.annotations.headers.Header(
                                             name = HttpHeaders.SET_COOKIE,
-                                            description = "HttpOnly access token cookie (sp_access_token)"
+                                            description = "HttpOnly Refresh Token cookie (sp_refresh_token)"
                                     )
                             },
                             content = @Content(
@@ -235,8 +234,9 @@ public class AuthController {
                                               "code": 200,
                                               "message": "Login successful.",
                                               "data": {
+                                                "accessToken": "eyJhbGci...",
                                                 "tokenType": "Bearer",
-                                                "expiresIn": 86400000
+                                                "expiresIn": 900000
                                               }
                                             }
                                             """)
@@ -320,20 +320,26 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        String accessToken = authService.login(request);
-        long expiresInMs = jwtService.getJwtProperties().getExpirationMs();
+        TokenPair tokens = authService.login(request);
+        long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
+        long refreshExpiresInMs = jwtService.getJwtProperties().getRefreshExpirationMs();
 
-        ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, accessToken)
+        // Refresh Token → HttpOnly cookie
+        // Fe can not read, only sends to server when /refresh
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, tokens.refreshToken())
                 .httpOnly(true)
-                .secure(false)
-                .path("/")
+                .secure(false) // TODO: set true khi deploy HTTPS
+                .path("/api/v1/auth/refresh")  // Chỉ gửi cookie lên /refresh endpoint
                 .sameSite("Lax")
-                .maxAge(expiresInMs / 1000)
+                .maxAge(refreshExpiresInMs / 1000)
                 .build();
 
+        // Access Token → JSON body
+        // store in memory and send with Authorization header for subsequent requests
         LoginResponse result = LoginResponse.builder()
+                .accessToken(tokens.accessToken())
                 .tokenType("Bearer")
-                .expiresIn(expiresInMs)
+                .expiresIn(accessExpiresInMs)
                 .build();
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
@@ -343,14 +349,89 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, authCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(response);
+    }
+
+    // new access token from refresh token in HttpOnly cookie
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Refresh Access Token",
+            description = "Reads sp_refresh_token HttpOnly cookie and issues a new short-lived Access Token in the JSON body.",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Access Token refreshed successfully",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Token refreshed.",
+                                              "data": {
+                                                "accessToken": "eyJhbGci...",
+                                                "tokenType": "Bearer",
+                                                "expiresIn": 900000
+                                              }
+                                            }
+                                            """)
+                            )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "401",
+                            description = "Missing, invalid, or expired Refresh Token",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 401,
+                                              "message": "Invalid or expired refresh token",
+                                              "timestamp": "2026-04-09T00:00:00"
+                                            }
+                                            """)
+                            )
+                    )
+            }
+    )
+    public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(HttpServletRequest request) {
+        String refreshToken = extractRefreshTokenFromCookie(request);
+
+        String newAccessToken = refreshTokenService.rotateAccessToken(refreshToken);
+        long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
+
+        LoginResponse result = LoginResponse.builder()
+                .accessToken(newAccessToken)
+                .tokenType("Bearer")
+                .expiresIn(accessExpiresInMs)
+                .build();
+
+        ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
+                .code(200)
+                .message("Token refreshed.")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    private String extractRefreshTokenFromCookie(HttpServletRequest request) {
+        Cookie[] cookies = request.getCookies();
+
+        if (cookies != null) {
+            for (Cookie cookie : cookies) {
+                if (REFRESH_TOKEN_COOKIE_NAME.equals(cookie.getName())) {
+                    return cookie.getValue();
+                }
+            }
+        }
+        return null;
     }
 
     @PostMapping("/logout")
     @Operation(
             summary = "Logout",
-            description = "Clear JWT HttpOnly cookie",
+            description = "Clears the Refresh Token HttpOnly cookie (sp_refresh_token).",
             responses = {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(
                             responseCode = "200",
@@ -358,7 +439,7 @@ public class AuthController {
                             headers = {
                                     @io.swagger.v3.oas.annotations.headers.Header(
                                             name = HttpHeaders.SET_COOKIE,
-                                            description = "Clears HttpOnly access token cookie (sp_access_token)"
+                                            description = "Clears HttpOnly Refresh Token cookie (sp_refresh_token)"
                                     )
                             },
                             content = @Content(
@@ -391,10 +472,11 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<Void>> logout() {
-        ResponseCookie clearCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
+        // remove refresh token cookie by setting maxAge=0
+        ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(false)
-                .path("/")
+                .path("/api/v1/auth/refresh")
                 .sameSite("Lax")
                 .maxAge(0)
                 .build();
@@ -406,63 +488,8 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie.toString())
                 .body(response);
-    }
-
-    @GetMapping("/session")
-    @Operation(
-            summary = "Session status",
-            description = "Check current authentication status from HttpOnly cookie",
-            responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "200",
-                            description = "Authenticated session",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class),
-                                    examples = @ExampleObject(value = """
-                                            {
-                                              "code": 200,
-                                              "message": "Authenticated",
-                                              "data": true
-                                            }
-                                            """)
-                            )
-                    ),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                            responseCode = "401",
-                            description = "Unauthenticated session",
-                            content = @Content(
-                                    mediaType = "application/json",
-                                    schema = @Schema(implementation = AuthApiResponseSchemas.Bool.class),
-                                    examples = @ExampleObject(value = """
-                                            {
-                                              "code": 401,
-                                              "message": "Unauthenticated",
-                                              "data": false
-                                            }
-                                            """)
-                            )
-                    )
-            }
-    )
-    public ResponseEntity<ApiResponse<Boolean>> getSession(Authentication authentication) {
-        if (!sessionService.isSessionValid(authentication)) {
-            ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
-                    .code(401)
-                    .message("Unauthenticated")
-                    .data(false)
-                    .build();
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
-        }
-
-        ApiResponse<Boolean> response = ApiResponse.<Boolean>builder()
-                .code(200)
-                .message("Authenticated")
-                .data(true)
-                .build();
-        return ResponseEntity.ok(response);
     }
 
     @GetMapping("/me")
