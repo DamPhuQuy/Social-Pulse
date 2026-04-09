@@ -4,10 +4,12 @@ import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PATHS } from "@/constants/paths";
+import { useAuth } from "@/hooks/useAuth";
+import { setApiClientToken } from "@/lib/axiosClient";
 import { loginUser } from "@/services/authService";
 import type { ComponentProps } from "react";
 import { useMemo, useState } from "react";
-import { Link, useLocation } from "react-router-dom";
+import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
 type LoginFormState = {
@@ -26,6 +28,8 @@ const INITIAL_FORM: LoginFormState = {
 
 export default function LoginPage() {
   const location = useLocation();
+  const navigate = useNavigate();
+  const { setAccessToken } = useAuth();
   const prefilledEmail = useMemo(
     () => new URLSearchParams(location.search).get("email")?.trim() ?? "",
     [location.search],
@@ -49,13 +53,18 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
 
-    const result = await loginUser({ email, password: form.password });
+    const result = await loginUser({ email: email, password: form.password });
 
-    if (result.ok) {
+    if (result.ok && result.accessToken) {
+      // Lưu Access Token vào React state (in-memory) và axios client
+      setAccessToken(result.accessToken);
+      setApiClientToken(result.accessToken);
 
       toast.success("Login successful.", {
         description: "Welcome back to Social Pulse.",
       });
+
+      navigate(PATHS.ONBOARDING);
     } else {
       toast.error("Login failed.", {
         description: result.message,

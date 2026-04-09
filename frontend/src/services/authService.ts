@@ -42,7 +42,17 @@ export type LoginResult = {
   ok: boolean;
   status?: number;
   message: string;
+  /** Access Token ngắn hạn trả về từ JSON body */
+  accessToken?: string;
   data?: unknown;
+};
+
+export type RefreshResult = {
+  ok: boolean;
+  status?: number;
+  message: string;
+  /** Access Token mới sau khi refresh thành công */
+  accessToken?: string;
 };
 
 const DEFAULT_API_BASE_URL = "http://localhost:8080/api/v1";
@@ -50,6 +60,7 @@ const DEFAULT_REGISTER_ENDPOINT = "/auth/register";
 const DEFAULT_VERIFY_EMAIL_ENDPOINT = "/auth/verify-email";
 const DEFAULT_LOGIN_ENDPOINT = "/auth/login";
 const DEFAULT_LOGOUT_ENDPOINT = "/auth/logout";
+const DEFAULT_REFRESH_ENDPOINT = "/auth/refresh";
 const DEFAULT_SESSION_ENDPOINT = "/auth/session";
 
 function buildAuthUrl(endpointValue: string, defaultEndpoint: string): string {
@@ -95,6 +106,13 @@ function getLogoutUrl(): string {
   return buildAuthUrl(
     import.meta.env.VITE_LOGOUT_ENDPOINT ?? "",
     DEFAULT_LOGOUT_ENDPOINT,
+  );
+}
+
+function getRefreshUrl(): string {
+  return buildAuthUrl(
+    import.meta.env.VITE_REFRESH_ENDPOINT ?? "",
+    DEFAULT_REFRESH_ENDPOINT,
   );
 }
 
@@ -215,13 +233,21 @@ export async function verifyEmailOtp(
   }
 }
 
+/**
+ * Gọi POST /auth/login.
+ * Trả về Access Token từ JSON body (data.accessToken).
+ * Refresh Token được set tự động vào cookie sp_refresh_token bởi server.
+ */
 export async function loginUser(payload: LoginRequest): Promise<LoginResult> {
   const loginUrl = getLoginUrl();
 
   try {
     const response = await axios.post(loginUrl, payload, {
-      withCredentials: true,
+      withCredentials: true, // Cần để nhận Set-Cookie từ server
     });
+
+    const accessToken: string | undefined =
+      response.data?.data?.accessToken ?? undefined;
 
     return {
       ok: true,
@@ -229,6 +255,7 @@ export async function loginUser(payload: LoginRequest): Promise<LoginResult> {
       message:
         readMessage(response.data) ??
         `Login request succeeded with status ${response.status}.`,
+      accessToken,
       data: response.data,
     };
   } catch (error) {
@@ -254,6 +281,59 @@ export async function loginUser(payload: LoginRequest): Promise<LoginResult> {
   }
 }
 
+/**
+ * Gọi POST /auth/refresh với cookie sp_refresh_token.
+ * Server validate RT và trả về Access Token mới trong JSON body.
+ * Dùng để silent-refresh khi AT hết hạn hoặc khi app khởi động.
+ */
+export async function refreshToken(): Promise<RefreshResult> {
+  const refreshUrl = getRefreshUrl();
+
+  try {
+    const response = await axios.post(
+      refreshUrl,
+      {},
+      { withCredentials: true }, // Gửi cookie RT lên server
+    );
+
+    const accessToken: string | undefined =
+      response.data?.data?.accessToken ?? undefined;
+
+    return {
+      ok: true,
+      status: response.status,
+      message:
+        readMessage(response.data) ??
+        `Token refresh succeeded with status ${response.status}.`,
+      accessToken,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      return {
+        ok: false,
+        status,
+        message:
+          readMessage(data) ??
+          error.message ??
+          "Token refresh failed. Please log in again.",
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Unexpected error occurred while refreshing token.",
+    };
+  }
+}
+
+/**
+ * Gọi POST /auth/logout.
+ * Server xóa cookie sp_refresh_token.
+ * FE đồng thời phải xóa Access Token khỏi memory (qua useAuth hook).
+ */
 export async function logoutUser(): Promise<LoginResult> {
   const logoutUrl = getLogoutUrl();
 
@@ -335,4 +415,3 @@ export async function getAuthSession(): Promise<LoginResult> {
     };
   }
 }
-
