@@ -3,6 +3,8 @@ package com.socialpulse.app.auth.service;
 import java.util.Locale;
 
 import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
+import com.socialpulse.app.auth.dto.response.TokenPair;
 import com.socialpulse.app.auth.service.otp.OtpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -36,6 +38,7 @@ public class AuthService {
     private final OtpService otpService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final Logger logger;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
@@ -44,12 +47,14 @@ public class AuthService {
                        UserRepository userRepository,
                        OtpService otpService,
                        AuthenticationManager authenticationManager,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       RefreshTokenService refreshTokenService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.otpService = otpService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
         this.logger = LoggerFactory.getLogger(AuthService.class);
     }
 
@@ -84,7 +89,7 @@ public class AuthService {
     }
 
     @Transactional(noRollbackFor = AppException.class)
-    public String login(LoginRequest request) {
+    public TokenPair login(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         User user = userRepository.findByEmail(normalizedEmail)
@@ -112,9 +117,16 @@ public class AuthService {
             userRepository.save(user);
 
             String token = jwtService.generateToken(userDetails);
+            String refreshToken = refreshTokenService.generateRefreshToken(normalizedEmail);
+            long expiresIn = jwtService.getJwtProperties().getExpirationMs();
+            
             logger.info("Login successful for: {}", normalizedEmail);
 
-            return token;
+            return TokenPair.builder()
+                    .accessToken(token)
+                    .refreshToken(refreshToken)
+                    .expiresIn(expiresIn)
+                    .build();
 
         } catch (BadCredentialsException e) {
             handleFailedLoginAttempt(user);
@@ -136,5 +148,31 @@ public class AuthService {
                     MAX_FAILED_ATTEMPTS, user.getEmail());
         }
         userRepository.save(user);
+    }
+    
+    @Transactional
+    public TokenPair refreshAccessToken(String refreshToken) {
+        String email = refreshTokenService.verifyRefreshToken(refreshToken);
+        if (email == null) {
+            throw new AppException(ErrorCode.UNAUTHENTICATED);
+        }
+        
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                
+        if (user.isLocked() || user.getStatus() == UserStatus.LOCKED) {
+            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+        }
+
+        CustomUserDetails userDetails = new CustomUserDetails(user);
+        String newAccessToken = jwtService.generateToken(userDetails);
+        
+        // Return new access token along with the existing refresh token
+        // Token rotation can be added here if desired (invalidating old refresh and generating new)
+        return TokenPair.builder()
+                .accessToken(newAccessToken)
+                .refreshToken(refreshToken)
+                .expiresIn(jwtService.getJwtProperties().getExpirationMs())
+                .build();
     }
 }

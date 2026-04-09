@@ -37,4 +37,6 @@ app:
     secret: ${JWT_SECRET:dev-only-super-secret-key-for-socialpulse-2024}
     # 86400000ms = 24 giờ
     expiration-ms: ${JWT_EXPIRATION_MS:86400000}
+    # 604800000ms = 7 ngày
+    refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   version: 1.0.0

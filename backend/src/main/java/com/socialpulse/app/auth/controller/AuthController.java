@@ -2,6 +2,8 @@ package com.socialpulse.app.auth.controller;
 
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.jwt.SessionService;
+import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
+import com.socialpulse.app.auth.dto.response.TokenPair;
 import com.socialpulse.app.user.dto.response.UserAuthorizedResponse;
 import com.socialpulse.app.user.entity.User;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -39,15 +41,18 @@ import java.util.Map;
 public class AuthController {
 
     private static final String ACCESS_TOKEN_COOKIE_NAME = "sp_access_token";
+    private static final String REFRESH_TOKEN_COOKIE_NAME = "sp_refresh_token";
 
     private final AuthService authService;
     private final JwtService jwtService;
     private final SessionService sessionService;
+    private final RefreshTokenService refreshTokenService;
 
-    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService) {
+    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService, RefreshTokenService refreshTokenService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.sessionService = sessionService;
+        this.refreshTokenService = refreshTokenService;
     }
 
     @PostMapping("/register")
@@ -320,15 +325,23 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        String accessToken = authService.login(request);
-        long expiresInMs = jwtService.getJwtProperties().getExpirationMs();
+        TokenPair tokenPair = authService.login(request);
+        long expiresInMs = tokenPair.getExpiresIn();
 
-        ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, accessToken)
+        ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, tokenPair.getAccessToken())
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
                 .sameSite("Lax")
                 .maxAge(expiresInMs / 1000)
+                .build();
+                
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, tokenPair.getRefreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(jwtService.getJwtProperties().getRefreshExpirationMs() / 1000)
                 .build();
 
         LoginResponse result = LoginResponse.builder()
@@ -344,6 +357,7 @@ public class AuthController {
 
         return ResponseEntity.ok()
                 .header(HttpHeaders.SET_COOKIE, authCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(response);
     }
 
@@ -390,8 +404,20 @@ public class AuthController {
                     )
             }
     )
-    public ResponseEntity<ApiResponse<Void>> logout() {
-        ResponseCookie clearCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
+    public ResponseEntity<ApiResponse<Void>> logout(@CookieValue(value = REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
+        if (refreshToken != null) {
+            refreshTokenService.invalidateRefreshToken(refreshToken);
+        }
+
+        ResponseCookie clearAuthCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, "")
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(0)
+                .build();
+
+        ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(false)
                 .path("/")
@@ -406,7 +432,100 @@ public class AuthController {
                 .build();
 
         return ResponseEntity.ok()
-                .header(HttpHeaders.SET_COOKIE, clearCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearAuthCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, clearRefreshCookie.toString())
+                .body(response);
+    }
+
+    @PostMapping("/refresh")
+    @Operation(
+            summary = "Refresh Access Token",
+            description = "Get a new access token using a valid HttpOnly refresh token cookie",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Refresh successful",
+                            headers = {
+                                    @io.swagger.v3.oas.annotations.headers.Header(
+                                            name = HttpHeaders.SET_COOKIE,
+                                            description = "HttpOnly access token cookie (sp_access_token)"
+                                    )
+                            },
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = AuthApiResponseSchemas.Login.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "code": 200,
+                                              "message": "Token refreshed successfully.",
+                                              "data": {
+                                                "tokenType": "Bearer",
+                                                "expiresIn": 86400000
+                                              }
+                                            }
+                                            """)
+                            )
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "401",
+                            description = "Invalid or expired refresh token",
+                            content = @Content(
+                                    mediaType = "application/json",
+                                    schema = @Schema(implementation = ErrorResponse.class),
+                                    examples = @ExampleObject(value = """
+                                            {
+                                              "status": 401,
+                                              "message": "Unauthenticated",
+                                              "timestamp": "2026-04-08T11:30:00"
+                                            }
+                                            """)
+                            )
+                    )
+            }
+    )
+    public ResponseEntity<ApiResponse<LoginResponse>> refresh(@CookieValue(value = REFRESH_TOKEN_COOKIE_NAME, required = false) String refreshToken) {
+        if (refreshToken == null) {
+            ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
+                    .code(401)
+                    .message("No refresh token found")
+                    .data(null)
+                    .build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(response);
+        }
+
+        TokenPair tokenPair = authService.refreshAccessToken(refreshToken);
+
+        ResponseCookie authCookie = ResponseCookie.from(ACCESS_TOKEN_COOKIE_NAME, tokenPair.getAccessToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(tokenPair.getExpiresIn() / 1000)
+                .build();
+
+        // Optional: Re-issue refresh token as well for rotation, keeping lifetime same
+        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, tokenPair.getRefreshToken())
+                .httpOnly(true)
+                .secure(false)
+                .path("/")
+                .sameSite("Lax")
+                .maxAge(jwtService.getJwtProperties().getRefreshExpirationMs() / 1000)
+                .build();
+
+        LoginResponse result = LoginResponse.builder()
+                .tokenType("Bearer")
+                .expiresIn(tokenPair.getExpiresIn())
+                .build();
+
+        ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
+                .code(200)
+                .message("Token refreshed successfully.")
+                .data(result)
+                .build();
+
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, authCookie.toString())
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
                 .body(response);
     }
 
