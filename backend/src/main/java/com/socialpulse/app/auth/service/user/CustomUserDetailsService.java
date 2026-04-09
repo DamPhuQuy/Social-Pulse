@@ -1,17 +1,12 @@
-package com.socialpulse.app.auth.service;
+package com.socialpulse.app.auth.service.user;
 
-import com.socialpulse.app.auth.security.CustomUserDetails;
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.user.entity.User;
-import com.socialpulse.app.user.entity.UserStatus;
-import com.socialpulse.app.user.entity.VerificationStatus;
 import com.socialpulse.app.user.repository.UserRepository;
-import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
-
-import java.util.List;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {

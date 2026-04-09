@@ -1,4 +1,4 @@
-package com.socialpulse.app.auth.security;
+package com.socialpulse.app.auth.security.user;
 
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.entity.UserRole;
@@ -44,9 +44,16 @@ public class CustomUserDetails implements UserDetails {
         return user.getPasswordHash();
     }
 
+    // QUAN TRọNG: trả email (không phải username) vì project xác thực bằng email.
+    // Spring Security dùng giá trị này làm "principal" và JJWT lưu vào JWT subject.
     @Override
     public String getUsername() {
-        return user.getUsername();
+        return user.getEmail();
+    }
+
+    // Expose User entity để AuthService khỏi tạo JWT claims (userId, role)
+    public User getUser() {
+        return user;
     }
 
     @Override

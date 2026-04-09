@@ -10,6 +10,7 @@ import java.time.LocalDateTime;
 @Entity
 @SQLDelete(sql = "UPDATE posts SET deleted_at = NOW() WHERE id = ?")
 @Table(name = "posts", indexes = {
+        @Index(name = "idx_hot_score", columnList = "hotScore"),
         @Index(name = "idx_post_user", columnList = "user_id"),
         @Index(name = "idx_post_created", columnList = "createdAt")
 })
@@ -34,21 +35,31 @@ public class Post {
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
+    @Builder.Default
     private Privacy privacy = Privacy.PUBLIC;
 
+    @Builder.Default
     private Long upvoteCount = 0L;
+    @Builder.Default
     private Long downvoteCount = 0L;
+    @Builder.Default
     private Long cmtCount = 0L;
+    @Builder.Default
     private Long viewCount = 0L;
+    @Builder.Default
     private Long shareCount = 0L;
+    @Builder.Default
     private Double hotScore = 0.0D;
 
-    private boolean toxic;
+    @Builder.Default
+    private boolean toxic = false;
+    @Builder.Default
     private Double toxicScore = 0.0D;
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
+
 
     @PrePersist
     public void prePersist() {

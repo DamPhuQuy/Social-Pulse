@@ -1,6 +1,6 @@
 package com.socialpulse.app.post.controller;
 
-import com.socialpulse.app.auth.security.CustomUserDetails;
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.service.PostService;

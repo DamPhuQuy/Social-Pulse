@@ -7,10 +7,12 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;
-import com.socialpulse.app.auth.security.PasswordEncoder;
+import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.entity.User;
+import com.socialpulse.app.user.entity.UserRole;
+import com.socialpulse.app.user.entity.VerificationStatus;
 import com.socialpulse.app.user.repository.UserProfileRepository;
 import com.socialpulse.app.user.repository.UserRepository;
 
@@ -44,10 +46,22 @@ public class UserService {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
         }
 
-        User user = User.builder().username(userCreation.getUsername())
+        /**
+         * BUG FIX: Trước đây không set role và verification → null → DB NOT NULL constraint violation
+         * → Spring catch DataIntegrityViolationException → GlobalExceptionHandler map sang "User already exists"
+         * → Thông báo sai hoàn toàn!
+         *
+         * Fix: set role = USER (mặc định cho user thường) và verification = NOT_VERIFIED
+         * (chưa xác thực email, cần qua OTP flow).
+         */
+        User user = User.builder()
+                .username(userCreation.getUsername())
                 .email(normalizedEmail)
                 .passwordHash(encoder.encode(userCreation.getRawPassword()))
+                .role(UserRole.USER)                        // FIX: set default role
+                .verification(VerificationStatus.NOT_VERIFIED)  // FIX: chưa verify email
                 .build();
+
         user = userRepository.save(user);
 
         return UserCreationResponse.builder()
