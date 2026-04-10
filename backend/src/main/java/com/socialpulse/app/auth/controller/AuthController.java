@@ -45,12 +45,15 @@ public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final PasswordResetService passwordResetService;
 
     public AuthController(AuthService authService, JwtService jwtService,
-                          RefreshTokenService refreshTokenService) {
+                          RefreshTokenService refreshTokenService,
+                          PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
