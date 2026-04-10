@@ -15,6 +15,7 @@ import org.springframework.security.core.Authentication;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.socialpulse.app.auth.dto.TokenPair;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
@@ -84,12 +85,11 @@ public class AuthService {
     }
 
     @Transactional(noRollbackFor = AppException.class)
-    public String login(LoginRequest request) {
+    public TokenPair login(LoginRequest request) {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         User user = userRepository.findByEmail(normalizedEmail)
                 .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
-
 
         if (user.isLocked() || user.getStatus() == UserStatus.LOCKED) {
             throw new AppException(ErrorCode.ACCOUNT_LOCKED);
@@ -111,10 +111,11 @@ public class AuthService {
             user.updateLastLoginAt();
             userRepository.save(user);
 
-            String token = jwtService.generateToken(userDetails);
+            String accessToken = jwtService.generateToken(userDetails);
+            String refreshToken = jwtService.generateRefreshToken(userDetails);
             logger.info("Login successful for: {}", normalizedEmail);
 
-            return token;
+            return new TokenPair(accessToken, refreshToken);
 
         } catch (BadCredentialsException e) {
             handleFailedLoginAttempt(user);

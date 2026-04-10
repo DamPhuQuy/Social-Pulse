@@ -15,6 +15,8 @@ public enum ErrorCode {
     ACCOUNT_NOT_VERIFIED(403, "Account is not verified. Please verify your email first."),
     // JWT không hợp lệ hoặc hết hạn → 401 Unauthorized
     INVALID_TOKEN(401, "Invalid or expired token"),
+    // Refresh Token không hợp lệ, hết hạn, hoặc không đúng loại → 401 Unauthorized
+    INVALID_REFRESH_TOKEN(401, "Invalid or expired refresh token"),
     INTERNAL_SERVER_ERROR(500, "Internal server error"),
 
     OTP_EXPIRED(400, "OTP has expired"),

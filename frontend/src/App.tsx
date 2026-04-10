@@ -3,10 +3,11 @@ import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import { routesConfig } from "./routes/routesConfig";
+import { AuthProvider } from "@/hooks/useAuth";
 
 function App() {
   return (
-    <>
+    <AuthProvider>
       <Routes>
         {routesConfig.map((route) => {
           const Element: React.ComponentType = route.element;
@@ -29,7 +30,7 @@ function App() {
         })}
       </Routes>
       <Toaster position="top-right" richColors />
-    </>
+    </AuthProvider>
   );
 }
 
