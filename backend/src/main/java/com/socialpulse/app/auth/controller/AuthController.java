@@ -26,6 +26,10 @@ import com.socialpulse.app.common.dto.response.AuthApiResponseSchemas;
 import com.socialpulse.app.common.exception.ErrorResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
+import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
+import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
+import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
+import com.socialpulse.app.auth.service.password.PasswordResetService;
 
 import io.swagger.v3.oas.annotations.Operation;
 
@@ -43,11 +47,14 @@ public class AuthController {
     private final AuthService authService;
     private final JwtService jwtService;
     private final SessionService sessionService;
+    private final PasswordResetService passwordResetService;
 
-    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService) {
+    // Đã sửa lỗi Constructor ở đây
+    public AuthController(AuthService authService, JwtService jwtService, SessionService sessionService, PasswordResetService passwordResetService) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.sessionService = sessionService;
+        this.passwordResetService = passwordResetService;
     }
 
     @PostMapping("/register")
@@ -99,7 +106,7 @@ public class AuthController {
                                     examples = @ExampleObject(value = """
                                             {
                                                 "status": 500,
-                                                "message": "User already exists", 
+                                                "message": "Unexpected server error", 
                                                 "timestamp": "2026-04-08T11:30:00"
                                             }
                                             """))
@@ -212,7 +219,6 @@ public class AuthController {
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 
-    // take email, password; authenticate; set jwt to httpOnly
     @PostMapping("/login")
     @Operation(
             summary = "Login",
@@ -471,6 +477,87 @@ public class AuthController {
                 .id(user.getUser().getId())
                 .email(user.getUser().getEmail())
                 .role(user.getUser().getRole())
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/forgot-password")
+    @Operation(
+            summary = "Request password reset",
+            description = "Sends an OTP to the user's email to reset their password",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "OTP sent successfully"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "404",
+                            description = "Email not found"
+                    )
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> forgotPassword(@Valid @RequestBody ForgotPasswordRequest request) {
+        passwordResetService.processForgotPassword(request);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("Mã OTP đã được gửi đến email của bạn.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/resend-otp")
+    @Operation(
+            summary = "Resend OTP",
+            description = "Resends a new OTP to the user's email",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "New OTP sent successfully"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "429",
+                            description = "Too many requests (Cooldown active)"
+                    )
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> resendOtp(@Valid @RequestBody ResendOtpRequest request) {
+        passwordResetService.processResendOtp(request);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("Mã OTP mới đã được gửi thành công.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/reset-password")
+    @Operation(
+            summary = "Reset password",
+            description = "Verifies the OTP and updates the user's password",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "200",
+                            description = "Password reset successfully"
+                    ),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                            responseCode = "400",
+                            description = "Invalid or expired OTP"
+                    )
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> resetPassword(@Valid @RequestBody ResetPasswordRequest request) {
+        passwordResetService.processResetPassword(request);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("Đặt lại mật khẩu thành công. Bạn có thể đăng nhập bằng mật khẩu mới.")
+                .data(null)
                 .build();
 
         return ResponseEntity.ok(response);
