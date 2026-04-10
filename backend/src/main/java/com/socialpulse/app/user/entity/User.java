@@ -93,6 +93,9 @@ public class User {
     public void lockAccount() {
         this.status = UserStatus.LOCKED;
     }
+    public void setPassword(String newPassword) {
+        this.passwordHash = newPassword;
+    }
 
     @PrePersist
     public void prePersist() {
