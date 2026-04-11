@@ -26,6 +26,7 @@ public class PostController {
     public ResponseEntity<PostCreationResponse> createPost(
             @RequestBody @Valid PostCreationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(postService.createPost(request, currentUser.getId()));
+        return ResponseEntity.status(HttpStatus.CREATED)
+                .body(postService.createPost(request, currentUser.getId()));
     }
 }
