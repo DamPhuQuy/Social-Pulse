@@ -1,5 +1,5 @@
 import { PATHS } from "@/constants/paths";
-import { getAuthSession } from "@/services/authService";
+import { getMeAuth } from "@/services/auth/authService";
 import { useEffect, useState } from "react";
 import { Navigate } from "react-router";
 
@@ -15,7 +15,7 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
     let isMounted = true;
 
     const validateSession = async () => {
-      const result = await getAuthSession();
+      const result = await getMeAuth();
 
       if (isMounted) {
         setIsAuthenticated(result.ok);

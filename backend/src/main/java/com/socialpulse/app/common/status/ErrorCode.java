@@ -23,7 +23,9 @@ public enum ErrorCode {
     OTP_INVALID(400, "Invalid OTP"),
     OTP_TOO_MANY_ATTEMPTS(429, "Too many OTP attempts"),
 
-    EMAIL_SENDS_FAILED(500, "Failed to send email");
+    EMAIL_SENDS_FAILED(500, "Failed to send email"),
+
+    UPLOAD_FAILED(500, "Failed to upload file to Cloudinary");
 
     private final int code;
     private final String message;

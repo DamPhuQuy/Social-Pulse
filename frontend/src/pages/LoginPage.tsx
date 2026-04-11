@@ -6,7 +6,9 @@ import { Label } from "@/components/ui/label";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { setApiClientToken } from "@/lib/axiosClient";
-import { loginUser } from "@/services/authService";
+import { loginUser } from "@/services/auth/authService";
+import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ComponentProps } from "react";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
@@ -40,6 +42,7 @@ export default function LoginPage() {
     email: prefilledEmail,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: FormSubmitEvent) => {
     event.preventDefault();
@@ -56,7 +59,7 @@ export default function LoginPage() {
     const result = await loginUser({ email: email, password: form.password });
 
     if (result.ok && result.accessToken) {
-      // Lưu Access Token vào React state (in-memory) và axios client
+      // Lưu Access Token vào React state và axios client
       setAccessToken(result.accessToken);
       setApiClientToken(result.accessToken);
 
@@ -115,24 +118,57 @@ export default function LoginPage() {
                   </div>
 
                   <div className="space-y-2">
-                    <Label htmlFor="login-password" className="text-on-surface">
-                      Password
-                    </Label>
-                    <Input
-                      id="login-password"
-                      type="password"
-                      autoComplete="current-password"
-                      value={form.password}
-                      onChange={(event) =>
-                        setForm((previous) => ({
-                          ...previous,
-                          password: event.target.value,
-                        }))
-                      }
-                      disabled={isSubmitting}
-                      placeholder="P@ssw0rd"
-                      className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60"
-                    />
+                    <div className="flex items-center justify-between">
+                      <Label
+                        htmlFor="login-password"
+                        className="text-on-surface"
+                      >
+                        Password
+                      </Label>
+                      <Link
+                        to={
+                          form.email.trim()
+                            ? `${PATHS.FORGOT_PASSWORD}?email=${encodeURIComponent(form.email.trim())}`
+                            : PATHS.FORGOT_PASSWORD
+                        }
+                        className="text-xs text-primary font-semibold hover:underline"
+                        tabIndex={-1}
+                      >
+                        Forgot password?
+                      </Link>
+                    </div>
+                    <div className="relative">
+                      <Input
+                        id="login-password"
+                        type={showPassword ? "text" : "password"}
+                        autoComplete="current-password"
+                        value={form.password}
+                        onChange={(event) =>
+                          setForm((previous) => ({
+                            ...previous,
+                            password: event.target.value,
+                          }))
+                        }
+                        disabled={isSubmitting}
+                        placeholder="P@ssw0rd"
+                        className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60 pr-10"
+                      />
+                      <button
+                        type="button"
+                        tabIndex={-1}
+                        aria-label={
+                          showPassword ? "Hide password" : "Show password"
+                        }
+                        onClick={() => setShowPassword((prev) => !prev)}
+                        className="absolute inset-y-0 right-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors"
+                      >
+                        <HugeiconsIcon
+                          icon={showPassword ? ViewOffSlashIcon : ViewIcon}
+                          strokeWidth={2}
+                          className="size-4"
+                        />
+                      </button>
+                    </div>
                   </div>
 
                   <Button

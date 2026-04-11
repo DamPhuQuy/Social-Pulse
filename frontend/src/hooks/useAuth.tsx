@@ -1,3 +1,5 @@
+import { setApiClientToken } from "@/lib/axiosClient";
+import { refreshToken as refreshTokenApi } from "@/services/auth/authService";
 import React, {
   createContext,
   useCallback,
@@ -6,8 +8,6 @@ import React, {
   useRef,
   useState,
 } from "react";
-import { refreshToken as refreshTokenApi } from "@/services/authService";
-import { setApiClientToken } from "@/lib/axiosClient";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
