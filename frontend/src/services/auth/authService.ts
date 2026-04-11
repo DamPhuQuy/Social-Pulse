@@ -26,6 +26,7 @@ const DEFAULT_ME_ENDPOINT = "/auth/me";
 const DEFAULT_FORGOT_PASSWORD_ENDPOINT = "/auth/forgot-password";
 const DEFAULT_RESEND_OTP_ENDPOINT = "/auth/resend-otp";
 const DEFAULT_RESET_PASSWORD_ENDPOINT = "/auth/reset-password";
+const DEFAULT_VERIFY_OTP_ENDPOINT = "/auth/verify-otp";
 
 function buildAuthUrl(endpointValue: string, defaultEndpoint: string): string {
   const baseUrl = (
@@ -108,6 +109,13 @@ function getResetPasswordUrl(): string {
   );
 }
 
+function getVerifyOtpUrl(): string {
+  return buildAuthUrl(
+    import.meta.env.VITE_VERIFY_OTP_ENDPOINT ?? "",
+    DEFAULT_VERIFY_OTP_ENDPOINT,
+  );
+}
+
 function readMessage(data: unknown): string | null {
   if (!data || typeof data !== "object") {
     return null;
@@ -137,14 +145,11 @@ function readMessage(data: unknown): string | null {
 /** JSON headers dùng chung cho các request có body */
 const JSON_HEADERS = {
   "Content-Type": "application/json",
-  "Accept": "application/json",
+  Accept: "application/json",
   "Accept-Encoding": "gzip, deflate, br",
-  "Connection": "keep-alive",
+  Connection: "keep-alive",
 };
 
-// ---------------------------------------------------------------------------
-// POST /auth/register
-// ---------------------------------------------------------------------------
 export async function registerUser(
   payload: RegisterRequest,
 ): Promise<RegisterResponse> {
@@ -192,9 +197,6 @@ export async function registerUser(
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/verify-email
-// ---------------------------------------------------------------------------
 export async function verifyEmailOtp(
   payload: VerifyEmailOtpRequest,
 ): Promise<VerifyEmailOtpResponse> {
@@ -236,11 +238,6 @@ export async function verifyEmailOtp(
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/login
-// Backend trả về: ApiResponse<{ accessToken, tokenType, expiresIn }>
-// Refresh Token được set tự động vào HttpOnly cookie "sp_refresh_token"
-// ---------------------------------------------------------------------------
 export async function loginUser(payload: LoginRequest): Promise<LoginResponse> {
   const loginUrl = getLoginUrl();
 
@@ -286,11 +283,6 @@ export async function loginUser(payload: LoginRequest): Promise<LoginResponse> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/refresh
-// Gửi HttpOnly cookie "sp_refresh_token" (tự động do trình duyệt)
-// Backend trả về: ApiResponse<{ accessToken, tokenType, expiresIn }>
-// ---------------------------------------------------------------------------
 export async function refreshToken(): Promise<RefreshResponse> {
   const refreshUrl = getRefreshUrl();
 
@@ -338,10 +330,6 @@ export async function refreshToken(): Promise<RefreshResponse> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/logout
-// Backend xóa cookie "sp_refresh_token" bằng cách set maxAge=0
-// ---------------------------------------------------------------------------
 export async function logoutUser(): Promise<LogoutResponse> {
   const logoutUrl = getLogoutUrl();
 
@@ -384,9 +372,6 @@ export async function logoutUser(): Promise<LogoutResponse> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// GET /auth/me  (cần Access Token trong Authorization header)
-// ---------------------------------------------------------------------------
 export async function getCurrentUser(accessToken: string): Promise<MeResponse> {
   const meUrl = getMeUrl();
 
@@ -416,9 +401,7 @@ export async function getCurrentUser(accessToken: string): Promise<MeResponse> {
         ok: false,
         status,
         message:
-          readMessage(data) ??
-          error.message ??
-          "Failed to fetch current user.",
+          readMessage(data) ?? error.message ?? "Failed to fetch current user.",
         data: undefined,
       };
     }
@@ -430,9 +413,6 @@ export async function getCurrentUser(accessToken: string): Promise<MeResponse> {
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/forgot-password
-// ---------------------------------------------------------------------------
 export async function forgotPassword(
   payload: ForgotPasswordRequest,
 ): Promise<PasswordResponse> {
@@ -467,14 +447,12 @@ export async function forgotPassword(
 
     return {
       ok: false,
-      message: "Unexpected error occurred while sending forgot password request.",
+      message:
+        "Unexpected error occurred while sending forgot password request.",
     };
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/resend-otp
-// ---------------------------------------------------------------------------
 export async function resendOtp(
   payload: ResendOtpRequest,
 ): Promise<PasswordResponse> {
@@ -514,9 +492,6 @@ export async function resendOtp(
   }
 }
 
-// ---------------------------------------------------------------------------
-// POST /auth/reset-password
-// ---------------------------------------------------------------------------
 export async function resetPassword(
   payload: ResetPasswordRequest,
 ): Promise<PasswordResponse> {
@@ -556,6 +531,46 @@ export async function resetPassword(
   }
 }
 
+export async function verifyResetOtp(payload: {
+  email: string;
+  otp: string;
+}): Promise<PasswordResponse> {
+  const url = getVerifyOtpUrl();
+
+  try {
+    const response = await axios.post(url, payload, {
+      headers: JSON_HEADERS,
+    });
+
+    return {
+      ok: true,
+      status: response.status,
+      message:
+        readMessage(response.data) ??
+        `OTP verified successfully with status ${response.status}.`,
+    };
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+
+      return {
+        ok: false,
+        status,
+        message:
+          readMessage(data) ??
+          error.message ??
+          "OTP verification failed. Please try again.",
+      };
+    }
+
+    return {
+      ok: false,
+      message: "Unexpected error occurred while verifying OTP.",
+    };
+  }
+}
+
 export async function getMeAuth(): Promise<LoginResponse> {
   const sessionUrl = getMeUrl();
 
@@ -564,9 +579,9 @@ export async function getMeAuth(): Promise<LoginResponse> {
       headers: {
         "Content-Type": "application/json",
         "Content-Length": JSON.stringify({}).length,
-        "Accept": "application/json",
+        Accept: "application/json",
         "Accept-Encoding": "gzip, deflate, br",
-        "Connection": "keep-alive", // persistent connection
+        Connection: "keep-alive", // persistent connection
       },
       withCredentials: true,
     });
@@ -587,10 +602,7 @@ export async function getMeAuth(): Promise<LoginResponse> {
       return {
         ok: false,
         status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Session check failed.",
+        message: readMessage(data) ?? error.message ?? "Session check failed.",
         data,
       };
     }

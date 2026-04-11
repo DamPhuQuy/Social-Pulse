@@ -3,6 +3,7 @@ import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
 import LoginPage from "@/pages/LoginPage";
 import OnboardingPage from "@/pages/OnboardingPage";
 import RegisterPage from "@/pages/RegisterPage";
+import ResetPasswordOtpPage from "@/pages/ResetPasswordOtpPage";
 import ResetPasswordPage from "@/pages/ResetPasswordPage";
 import VerifyOtpPage from "@/pages/VerifyOtpPage";
 
@@ -40,6 +41,11 @@ export const routesConfig: RouteConfig[] = [
   },
   {
     path: PATHS.RESET_PASSWORD,
+    element: ResetPasswordOtpPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.RESET_PASSWORD_NEW,
     element: ResetPasswordPage,
     isPrivate: false,
   },
