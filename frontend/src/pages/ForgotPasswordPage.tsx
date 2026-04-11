@@ -5,12 +5,16 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { PATHS } from "@/constants/paths";
 import { forgotPassword } from "@/services/auth/authService";
+import {
+  ArrowRight01Icon,
+  Loading03Icon,
+  Mail01Icon,
+} from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ComponentProps } from "react";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
-import { Mail01Icon, ArrowRight01Icon, Loading03Icon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
 
 type FormSubmitEvent = Parameters<
   NonNullable<ComponentProps<"form">["onSubmit"]>
@@ -43,11 +47,14 @@ export default function ForgotPasswordPage() {
     const result = await forgotPassword({ email: trimmedEmail });
 
     if (result.ok) {
+      sessionStorage.setItem("pendingResetEmail", trimmedEmail);
+      sessionStorage.removeItem("pendingResetVerified");
+
       toast.success("OTP sent!", {
         description:
           "Please check your email inbox for the password reset code.",
       });
-      // Chuyển sang ResetPasswordPage, truyền email qua state và query string
+      // Chuyển sang ResetPasswordOtpPage để verify OTP
       navigate(
         `${PATHS.RESET_PASSWORD}?email=${encodeURIComponent(trimmedEmail)}`,
         { state: { email: trimmedEmail } },
@@ -72,7 +79,11 @@ export default function ForgotPasswordPage() {
               {/* Icon */}
               <div className="flex justify-center">
                 <div className="flex size-16 items-center justify-center rounded-full bg-primary/10">
-                  <HugeiconsIcon icon={Mail01Icon} strokeWidth={1.5} className="size-8 text-primary" />
+                  <HugeiconsIcon
+                    icon={Mail01Icon}
+                    strokeWidth={1.5}
+                    className="size-8 text-primary"
+                  />
                 </div>
               </div>
 
@@ -113,13 +124,21 @@ export default function ForgotPasswordPage() {
                 >
                   {isSubmitting ? (
                     <>
-                      <HugeiconsIcon icon={Loading03Icon} strokeWidth={2} className="size-4 animate-spin" />
+                      <HugeiconsIcon
+                        icon={Loading03Icon}
+                        strokeWidth={2}
+                        className="size-4 animate-spin"
+                      />
                       Sending OTP...
                     </>
                   ) : (
                     <>
                       Send Reset Code
-                      <HugeiconsIcon icon={ArrowRight01Icon} strokeWidth={2} className="size-4" />
+                      <HugeiconsIcon
+                        icon={ArrowRight01Icon}
+                        strokeWidth={2}
+                        className="size-4"
+                      />
                     </>
                   )}
                 </Button>
