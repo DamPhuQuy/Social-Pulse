@@ -5,7 +5,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PATHS } from "@/constants/paths";
-import { registerUser } from "@/services/authService";
+import { registerUser } from "@/services/auth/authService";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";

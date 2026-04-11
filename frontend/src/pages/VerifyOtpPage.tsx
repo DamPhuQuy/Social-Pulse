@@ -7,7 +7,7 @@ import {
   InputOTPSlot,
 } from "@/components/ui/input-otp";
 import { PATHS } from "@/constants/paths";
-import { verifyEmailOtp } from "@/services/authService";
+import { verifyEmailOtp } from "@/services/auth/authService";
 import { useCallback, useEffect, useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
