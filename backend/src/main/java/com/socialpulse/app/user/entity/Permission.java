@@ -6,4 +6,6 @@ public enum Permission {
     DELETE_POSTS,
     MANAGE_USERS,
     MODERATE_USERS,
+    VIEW_PROFILE,
+    VIEW_OTHER_PROFILE
 }

@@ -5,12 +5,14 @@ import java.util.Locale;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.ErrorCode;
-import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
+import com.socialpulse.app.user.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.entity.User;
+import com.socialpulse.app.user.entity.UserProfile;
 import com.socialpulse.app.user.entity.UserRole;
 import com.socialpulse.app.user.entity.VerificationStatus;
 import com.socialpulse.app.user.repository.UserProfileRepository;
@@ -46,14 +48,6 @@ public class UserService {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
         }
 
-        /**
-         * BUG FIX: Trước đây không set role và verification → null → DB NOT NULL constraint violation
-         * → Spring catch DataIntegrityViolationException → GlobalExceptionHandler map sang "User already exists"
-         * → Thông báo sai hoàn toàn!
-         *
-         * Fix: set role = USER (mặc định cho user thường) và verification = NOT_VERIFIED
-         * (chưa xác thực email, cần qua OTP flow).
-         */
         User user = User.builder()
                 .username(userCreation.getUsername())
                 .email(normalizedEmail)
@@ -69,6 +63,34 @@ public class UserService {
                 .username(user.getUsername())
                 .email(user.getEmail())
                 .message("User created successfully for email: " + user.getEmail())
+                .build();
+    }
+
+    @Transactional
+    public UserViewProfileResponse getProfile(Long userId) {
+        UserProfile userProfile = userProfileRepository.findByUserId(userId)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        return UserViewProfileResponse.builder()
+                .userId(userProfile.getUser().getId())
+                .displayName(userProfile.getDisplayName())
+                .bio(userProfile.getBio())
+                .dob(userProfile.getDob())
+                .build();
+    }
+
+    @Transactional(readOnly = true)
+    public UserViewProfileResponse getProfileByUsername(String username) {
+        User user = userRepository.findProfileByUsername(username)
+                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+
+        UserProfile userProfile = user.getProfile();
+
+        return UserViewProfileResponse.builder()
+                .userId(user.getId())
+                .displayName(userProfile.getDisplayName())
+                .bio(userProfile.getBio())
+                .dob(userProfile.getDob())
                 .build();
     }
 }
