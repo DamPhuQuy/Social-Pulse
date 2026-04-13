@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/input-otp";
 import { PATHS } from "@/constants/paths";
 import { verifyEmailOtp } from "@/services/auth/authService";
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 
@@ -33,7 +33,7 @@ export default function VerifyOtpPage() {
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const [lastSubmittedOtp, setLastSubmittedOtp] = useState<string | null>(null);
+  const lastSubmittedOtpRef = useRef<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
 
   const email = useMemo(() => {
@@ -68,11 +68,11 @@ export default function VerifyOtpPage() {
       return;
     }
 
-    const timeoutId = window.setTimeout(() => {
+    const timeoutId = globalThis.setTimeout(() => {
       navigate(`${PATHS.LOGIN}?email=${encodeURIComponent(email)}`);
     }, 1200);
 
-    return () => window.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(timeoutId);
   }, [email, isVerified, navigate]);
 
   useEffect(() => {
@@ -80,10 +80,10 @@ export default function VerifyOtpPage() {
       return;
     }
 
-    const intervalId = window.setInterval(() => {
+    const intervalId = globalThis.setInterval(() => {
       setSecondsLeft((previousSeconds) => {
         if (previousSeconds <= 1) {
-          window.clearInterval(intervalId);
+          globalThis.clearInterval(intervalId);
           return 0;
         }
 
@@ -91,7 +91,7 @@ export default function VerifyOtpPage() {
       });
     }, 1000);
 
-    return () => window.clearInterval(intervalId);
+    return () => globalThis.clearInterval(intervalId);
   }, [secondsLeft]);
 
   const submitOtpVerification = useCallback(
@@ -141,7 +141,7 @@ export default function VerifyOtpPage() {
       }
 
       setOtp("");
-      setLastSubmittedOtp(null);
+      lastSubmittedOtpRef.current = null;
       setIsVerifying(false);
     },
     [email, failedAttempts],
@@ -156,18 +156,19 @@ export default function VerifyOtpPage() {
       return;
     }
 
-    if (otp === lastSubmittedOtp) {
+    if (otp === lastSubmittedOtpRef.current) {
       return;
     }
 
-    setLastSubmittedOtp(otp);
+    lastSubmittedOtpRef.current = otp;
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     void submitOtpVerification(otp);
   }, [
     email,
     hasReachedMaxAttempts,
     isResending,
     isVerifying,
-    lastSubmittedOtp,
+    lastSubmittedOtpRef,
     otp,
     submitOtpVerification,
   ]);
@@ -181,7 +182,7 @@ export default function VerifyOtpPage() {
     setSecondsLeft(RESEND_SECONDS);
     setOtp("");
     setFailedAttempts(0);
-    setLastSubmittedOtp(null);
+    lastSubmittedOtpRef.current = null;
     setIsVerified(false);
     toast.success("A new OTP code has been sent.", {
       description: "Please check your email inbox.",

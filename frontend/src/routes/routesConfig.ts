@@ -1,11 +1,11 @@
 import { PATHS } from "@/constants/paths";
-import ForgotPasswordPage from "@/pages/ForgotPasswordPage";
-import LoginPage from "@/pages/LoginPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import RegisterPage from "@/pages/RegisterPage";
-import ResetPasswordOtpPage from "@/pages/ResetPasswordOtpPage";
-import ResetPasswordPage from "@/pages/ResetPasswordPage";
-import VerifyOtpPage from "@/pages/VerifyOtpPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import LoginPage from "@/pages/auth/LoginPage";
+import OnboardingPage from "@/pages/auth/OnboardingPage";
+import RegisterPage from "@/pages/auth/RegisterPage";
+import ResetPasswordOtpPage from "@/pages/auth/ResetPasswordOtpPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
+import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
