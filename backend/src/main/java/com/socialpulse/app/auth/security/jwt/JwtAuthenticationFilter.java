@@ -1,11 +1,6 @@
 package com.socialpulse.app.auth.security.jwt;
 
-import com.socialpulse.app.auth.service.user.CustomUserDetailsService;
-import com.socialpulse.app.auth.service.jwt.JwtService;
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -14,17 +9,14 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import java.io.IOException;
+import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.service.user.CustomUserDetailsService;
 
-/**
- * Đọc Access Token từ Authorization: Bearer header.
- *
- * Hybrid Auth Pattern:
- *   - Access Token đến qua header (FE gắn vào request từ in-memory state)
- *   - Refresh Token ở trong HttpOnly cookie, chỉ được đọc tại /auth/refresh endpoint
- *
- * Cookie sp_refresh_token KHÔNG được đọc ở đây để tránh CSRF.
- */
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 

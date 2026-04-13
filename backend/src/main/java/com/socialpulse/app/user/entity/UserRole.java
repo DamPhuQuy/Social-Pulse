@@ -8,6 +8,8 @@ public enum UserRole {
     )),
 
     USER(Set.of(
+            Permission.VIEW_PROFILE,
+            Permission.VIEW_OTHER_PROFILE,
             Permission.READ_POSTS,
             Permission.CREATE_POSTS,
             Permission.DELETE_POSTS
