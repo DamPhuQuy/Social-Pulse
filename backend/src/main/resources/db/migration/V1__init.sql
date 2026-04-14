@@ -19,6 +19,7 @@ CREATE TABLE profiles (
     dob DATE,
     gender VARCHAR(20),
     avatar_url VARCHAR(255),
+    avatar_public_id VARCHAR(255),
     updated_at TIMESTAMP,
     CONSTRAINT fk_profiles_user
         FOREIGN KEY (user_id)
@@ -31,6 +32,7 @@ CREATE TABLE posts (
     user_id BIGINT NOT NULL,
     content TEXT,
     image_url VARCHAR(255),
+    image_public_id VARCHAR(255),
     privacy VARCHAR(50) NOT NULL DEFAULT 'PUBLIC',
     upvote_count BIGINT NOT NULL DEFAULT 0,
     downvote_count BIGINT NOT NULL DEFAULT 0,

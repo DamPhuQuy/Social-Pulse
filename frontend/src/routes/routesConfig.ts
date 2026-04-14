@@ -1,8 +1,11 @@
 import { PATHS } from "@/constants/paths";
-import LoginPage from "@/pages/LoginPage";
-import OnboardingPage from "@/pages/OnboardingPage";
-import RegisterPage from "@/pages/RegisterPage";
-import VerifyOtpPage from "@/pages/VerifyOtpPage";
+import ForgotPasswordPage from "@/pages/auth/ForgotPasswordPage";
+import LoginPage from "@/pages/auth/LoginPage";
+import OnboardingPage from "@/pages/auth/OnboardingPage";
+import RegisterPage from "@/pages/auth/RegisterPage";
+import ResetPasswordOtpPage from "@/pages/auth/ResetPasswordOtpPage";
+import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
+import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -29,6 +32,21 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.VERIFY_EMAIL,
     element: VerifyOtpPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.FORGOT_PASSWORD,
+    element: ForgotPasswordPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.RESET_PASSWORD,
+    element: ResetPasswordOtpPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.RESET_PASSWORD_NEW,
+    element: ResetPasswordPage,
     isPrivate: false,
   },
 ];

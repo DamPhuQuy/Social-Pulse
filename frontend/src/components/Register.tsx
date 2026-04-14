@@ -5,7 +5,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Separator } from "@/components/ui/separator";
 import { PATHS } from "@/constants/paths";
-import { registerUser } from "@/services/authService";
+import { registerUser } from "@/services/auth/authService";
+import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
+import { HugeiconsIcon } from "@hugeicons/react";
 import type { ComponentProps } from "react";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
@@ -35,6 +37,8 @@ export default function RegisterForm() {
   const navigate = useNavigate();
   const [form, setForm] = useState<RegisterFormState>(INITIAL_FORM);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
   const handleSubmit = async (event: FormSubmitEvent) => {
     event.preventDefault();
@@ -145,40 +149,70 @@ export default function RegisterForm() {
               <Label htmlFor="password" className="text-on-surface">
                 Password
               </Label>
-              <Input
-                id="password"
-                type="password"
-                value={form.password}
-                onChange={(event) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    password: event.target.value,
-                  }))
-                }
-                disabled={isSubmitting}
-                autoComplete="new-password"
-                className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60"
-              />
+              <div className="relative">
+                <Input
+                  id="password"
+                  type={showPassword ? "text" : "password"}
+                  value={form.password}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      password: event.target.value,
+                    }))
+                  }
+                  disabled={isSubmitting}
+                  autoComplete="new-password"
+                  className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60 pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "Hide password" : "Show password"}
+                  onClick={() => setShowPassword((p) => !p)}
+                  className="absolute inset-y-0 right-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  <HugeiconsIcon
+                    icon={showPassword ? ViewOffSlashIcon : ViewIcon}
+                    strokeWidth={2}
+                    className="size-4"
+                  />
+                </button>
+              </div>
             </div>
 
             <div className="space-y-2">
               <Label htmlFor="confirm" className="text-on-surface">
                 Confirm
               </Label>
-              <Input
-                id="confirm"
-                type="password"
-                value={form.confirmPassword}
-                onChange={(event) =>
-                  setForm((previous) => ({
-                    ...previous,
-                    confirmPassword: event.target.value,
-                  }))
-                }
-                disabled={isSubmitting}
-                autoComplete="new-password"
-                className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60"
-              />
+              <div className="relative">
+                <Input
+                  id="confirm"
+                  type={showConfirmPassword ? "text" : "password"}
+                  value={form.confirmPassword}
+                  onChange={(event) =>
+                    setForm((previous) => ({
+                      ...previous,
+                      confirmPassword: event.target.value,
+                    }))
+                  }
+                  disabled={isSubmitting}
+                  autoComplete="new-password"
+                  className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60 pr-10"
+                />
+                <button
+                  type="button"
+                  tabIndex={-1}
+                  aria-label={showConfirmPassword ? "Hide confirm password" : "Show confirm password"}
+                  onClick={() => setShowConfirmPassword((p) => !p)}
+                  className="absolute inset-y-0 right-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors"
+                >
+                  <HugeiconsIcon
+                    icon={showConfirmPassword ? ViewOffSlashIcon : ViewIcon}
+                    strokeWidth={2}
+                    className="size-4"
+                  />
+                </button>
+              </div>
             </div>
           </div>
 

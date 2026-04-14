@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.config;
+package com.socialpulse.app.common.springdoc;
 
 import io.swagger.v3.oas.models.Components;
 import io.swagger.v3.oas.models.OpenAPI;
