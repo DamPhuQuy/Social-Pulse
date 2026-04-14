@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.cloudinary.service;
+package com.socialpulse.app.cloudinary.service;
 
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;

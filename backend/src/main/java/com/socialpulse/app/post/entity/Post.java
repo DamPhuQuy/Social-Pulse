@@ -80,7 +80,6 @@ public class Post {
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
 
-
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();

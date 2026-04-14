@@ -11,8 +11,10 @@ public enum UserRole {
             Permission.VIEW_PROFILE,
             Permission.VIEW_OTHER_PROFILE,
             Permission.READ_POSTS,
-            Permission.CREATE_POSTS,
-            Permission.DELETE_POSTS
+            Permission.CREATE_POST,
+            Permission.DELETE_POST,
+            Permission.CREATE_COMMENT,
+            Permission.DELETE_COMMENT
     )),
 
     ADMIN(Set.of(

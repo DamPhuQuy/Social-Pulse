@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.cloudinary.config;
+package com.socialpulse.app.cloudinary.config;
 
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;

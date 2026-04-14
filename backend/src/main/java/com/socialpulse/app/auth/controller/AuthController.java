@@ -1,36 +1,39 @@
 package com.socialpulse.app.auth.controller;
 
-import com.socialpulse.app.auth.dto.TokenPair;
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
-import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
-import com.socialpulse.app.user.dto.response.UserAuthorizedResponse;
-import io.swagger.v3.oas.annotations.media.Content;
-import io.swagger.v3.oas.annotations.media.ExampleObject;
-import io.swagger.v3.oas.annotations.media.Schema;
+import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseCookie;
 import org.springframework.http.ResponseEntity;
-import org.springframework.http.HttpHeaders;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
 
+import com.socialpulse.app.auth.dto.TokenPair;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
+import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
+import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
+import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
-import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.AuthService;
+import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
+import com.socialpulse.app.auth.service.password.PasswordResetService;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.AuthApiResponseSchemas;
 import com.socialpulse.app.common.exception.ErrorResponse;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
+import com.socialpulse.app.user.dto.response.UserAuthorizedResponse;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
-import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
-import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
-import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
-import com.socialpulse.app.auth.service.password.PasswordResetService;
 
 import io.swagger.v3.oas.annotations.Operation;
-
+import io.swagger.v3.oas.annotations.media.Content;
+import io.swagger.v3.oas.annotations.media.ExampleObject;
+import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.servlet.http.Cookie;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.validation.Valid;
@@ -105,7 +108,7 @@ public class AuthController {
                                     examples = @ExampleObject(value = """
                                             {
                                                 "status": 500,
-                                                "message": "Unexpected server error", 
+                                                "message": "Unexpected server error",
                                                 "timestamp": "2026-04-08T11:30:00"
                                             }
                                             """))
@@ -481,7 +484,7 @@ public class AuthController {
         // remove refresh token cookie by setting maxAge=0
         ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false)
+                .secure(false) // set true when deploy with HTTPS
                 .path("/api/v1/auth/refresh")
                 .sameSite("Lax")
                 .maxAge(0)
@@ -499,7 +502,7 @@ public class AuthController {
     }
 
     @GetMapping("/me")
-    public ResponseEntity<?> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
+    public ResponseEntity<UserAuthorizedResponse> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
         UserAuthorizedResponse response = UserAuthorizedResponse.builder()
                 .id(user.getUser().getId())
                 .email(user.getUser().getEmail())
