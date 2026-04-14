@@ -1,4 +1,4 @@
-package com.socialpulse.app.common.cloudinary.config;
+package com.socialpulse.app.cloudinary.config;
 
 import com.cloudinary.Cloudinary;
 import org.springframework.context.annotation.Bean;

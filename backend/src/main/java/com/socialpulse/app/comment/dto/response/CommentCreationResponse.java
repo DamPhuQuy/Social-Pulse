@@ -1,0 +1,24 @@
+package com.socialpulse.app.comment.dto.response;
+
+import java.time.LocalDateTime;
+
+import com.socialpulse.app.user.dto.response.UserSummary;
+
+import lombok.AllArgsConstructor;
+import lombok.Builder;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+@Builder
+@NoArgsConstructor
+@AllArgsConstructor
+@Getter
+public class CommentCreationResponse {
+    private Long id;
+    private Long postId;
+    private UserSummary user;
+    private Long parentCommentId;
+    private String content;
+    private LocalDateTime createdAt;
+    private int replyCount;
+}
