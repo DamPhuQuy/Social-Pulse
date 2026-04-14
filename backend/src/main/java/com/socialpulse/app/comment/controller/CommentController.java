@@ -12,13 +12,15 @@ import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.comment.dto.request.CommentCreationRequest;
 import com.socialpulse.app.comment.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.service.CommentService;
+import com.socialpulse.app.common.dto.response.ApiResponse;
 
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.responses.ApiResponse;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @Controller
 @RequestMapping("/api/v1/comments")
+@Tag(name = "Comments", description = "Comment management APIs")
 public class CommentController {
     private final CommentService commentService;
 
@@ -28,20 +30,41 @@ public class CommentController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CREATE_COMMENT')")
-    @Operation(summary = "Create a comment on a post or reply to another comment",
-        description = "Create a comment on a post or reply to another comment. " +
-                "If parentCommentId is provided, the comment will be a reply to the specified comment. " +
-                "Otherwise, it will be a top-level comment on the post.",
+    @Operation(
+        summary = "Create comment",
+        description = "Create a comment on a post",
         responses = {
-            @ApiResponse(responseCode = "200", description = "Comment created successfully"),
-            @ApiResponse(responseCode = "400", description = "Invalid request data"),
-            @ApiResponse(responseCode = "404", description = "Post or parent comment not found"),
-            @ApiResponse(responseCode = "403", description = "User does not have permission to create comment")
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "Comment created successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "Invalid request data"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "Unauthorized"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "Forbidden"
+             ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "500",
+                description = "Internal server error"
+            )
         }
     )
-    public ResponseEntity<CommentCreationResponse> createComment(@AuthenticationPrincipal CustomUserDetails currentUser, @RequestBody @Valid CommentCreationRequest request) {
+    public ResponseEntity<ApiResponse<CommentCreationResponse>> createComment(@AuthenticationPrincipal CustomUserDetails currentUser, @RequestBody @Valid CommentCreationRequest request) {
         Long userId = currentUser.getId();
 
-        return ResponseEntity.ok(commentService.createComment(request, userId));
+        CommentCreationResponse response = commentService.createComment(request, userId);
+
+        return ResponseEntity.ok(ApiResponse.<CommentCreationResponse>builder()
+                .code(200)
+                .message("Comment created successfully.")
+                .data(response)
+                .build());
     }
 }
