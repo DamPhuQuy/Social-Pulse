@@ -4,7 +4,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
+import com.socialpulse.app.common.status.PostCode;
+import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.request.PostReactionRequest;
@@ -41,7 +42,7 @@ public class PostService {
 
     public PostCreationResponse createPost(PostCreationRequest request, Long userId) {
         User currentUser = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         Post post = postMapper.toPost(request, currentUser);
 
@@ -62,10 +63,10 @@ public class PostService {
 
     private PostReactionResponse react(Long postId, Long userId, ReactionType targetReaction) {
         Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+            .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
         User user = userRepository.findById(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         PostReactions currentReaction = postReactionRepository.findByPostIdAndUserId(postId, userId)
                 .orElse(null);

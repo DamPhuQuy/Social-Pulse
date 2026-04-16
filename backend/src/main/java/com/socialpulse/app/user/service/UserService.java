@@ -7,7 +7,8 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
+import com.socialpulse.app.common.status.AuthCode;
+import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.dto.response.UserViewProfileResponse;
@@ -45,15 +46,15 @@ public class UserService {
         String normalizedEmail = userCreation.getEmail().trim().toLowerCase(Locale.ROOT);
 
         if (userRepository.existsByUsername(userCreation.getUsername())) {
-            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+            throw new AppException(UserCode.USER_ALREADY_EXISTS);
         }
 
         if (userRepository.existsByEmail(normalizedEmail)) {
-            throw new AppException(ErrorCode.USER_ALREADY_EXISTS);
+            throw new AppException(UserCode.USER_ALREADY_EXISTS);
         }
 
         if (!userCreation.getRawPassword().equals(userCreation.getConfirmPassword())) {
-            throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
+            throw new AppException(AuthCode.PASSWORD_NOT_MATCH);
         }
 
         String encodedPassword = encoder.encode(userCreation.getRawPassword());
@@ -68,7 +69,7 @@ public class UserService {
     @Transactional
     public UserViewProfileResponse getProfile(Long userId) {
         UserProfile userProfile = userProfileRepository.findByUserId(userId)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         return userProfileMapper.toUserViewProfileResponse(userProfile);
     }
@@ -76,7 +77,7 @@ public class UserService {
     @Transactional(readOnly = true)
     public UserViewProfileResponse getProfileByUsername(String username) {
         User user = userRepository.findProfileByUsername(username)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         return userProfileMapper.toUserViewProfileResponse(user);
     }

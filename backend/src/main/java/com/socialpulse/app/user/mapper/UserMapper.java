@@ -15,6 +15,7 @@ public interface UserMapper {
     @Mapping(target = "posts", ignore = true)
     @Mapping(target = "comments", ignore = true)
     @Mapping(target = "commentReactions", ignore = true)
+    @Mapping(target = "refreshTokens", ignore = true)
     @Mapping(target = "email", source = "normalizedEmail")
     @Mapping(target = "passwordHash", source = "encodedPassword")
     @Mapping(target = "status", ignore = true)
