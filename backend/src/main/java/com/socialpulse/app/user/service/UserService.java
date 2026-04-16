@@ -13,8 +13,8 @@ import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.entity.UserProfile;
-import com.socialpulse.app.user.entity.UserRole;
-import com.socialpulse.app.user.entity.VerificationStatus;
+import com.socialpulse.app.user.mapper.UserMapper;
+import com.socialpulse.app.user.mapper.UserProfileMapper;
 import com.socialpulse.app.user.repository.UserProfileRepository;
 import com.socialpulse.app.user.repository.UserRepository;
 
@@ -25,11 +25,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
     private final PasswordEncoder encoder;
+    private final UserMapper userMapper;
+    private final UserProfileMapper userProfileMapper;
 
-    public UserService(UserRepository userRepository, UserProfileRepository userProfileRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       UserProfileRepository userProfileRepository,
+                       PasswordEncoder passwordEncoder,
+                       UserMapper userMapper,
+                       UserProfileMapper userProfileMapper) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
         this.encoder = passwordEncoder;
+        this.userMapper = userMapper;
+        this.userProfileMapper = userProfileMapper;
     }
 
     @Transactional
@@ -48,22 +56,13 @@ public class UserService {
             throw new AppException(ErrorCode.PASSWORD_NOT_MATCH);
         }
 
-        User user = User.builder()
-                .username(userCreation.getUsername())
-                .email(normalizedEmail)
-                .passwordHash(encoder.encode(userCreation.getRawPassword()))
-                .role(UserRole.USER)                        // FIX: set default role
-                .verification(VerificationStatus.NOT_VERIFIED)  // FIX: chưa verify email
-                .build();
+        String encodedPassword = encoder.encode(userCreation.getRawPassword());
+        User user = userMapper.toUser(userCreation, normalizedEmail, encodedPassword);
 
         user = userRepository.save(user);
+        String message = "User created successfully for email: " + user.getEmail();
 
-        return UserCreationResponse.builder()
-                .id(user.getId())
-                .username(user.getUsername())
-                .email(user.getEmail())
-                .message("User created successfully for email: " + user.getEmail())
-                .build();
+        return userMapper.toUserCreationResponse(user, message);
     }
 
     @Transactional
@@ -71,12 +70,7 @@ public class UserService {
         UserProfile userProfile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        return UserViewProfileResponse.builder()
-                .userId(userProfile.getUser().getId())
-                .displayName(userProfile.getDisplayName())
-                .bio(userProfile.getBio())
-                .dob(userProfile.getDob())
-                .build();
+        return userProfileMapper.toUserViewProfileResponse(userProfile);
     }
 
     @Transactional(readOnly = true)
@@ -84,13 +78,6 @@ public class UserService {
         User user = userRepository.findProfileByUsername(username)
                 .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
 
-        UserProfile userProfile = user.getProfile();
-
-        return UserViewProfileResponse.builder()
-                .userId(user.getId())
-                .displayName(userProfile.getDisplayName())
-                .bio(userProfile.getBio())
-                .dob(userProfile.getDob())
-                .build();
+        return userProfileMapper.toUserViewProfileResponse(user);
     }
 }
