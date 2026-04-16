@@ -2,8 +2,6 @@ package com.socialpulse.app.auth.service;
 
 import java.util.Locale;
 
-import com.socialpulse.app.auth.service.jwt.JwtService;
-import com.socialpulse.app.auth.service.otp.OtpService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -16,11 +14,15 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.TokenPair;
-import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
+import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
+import com.socialpulse.app.auth.service.jwt.JwtService;
+import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
+import com.socialpulse.app.auth.service.otp.OtpService;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
+import com.socialpulse.app.common.status.AuthCode;
+import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.entity.User;
@@ -37,6 +39,7 @@ public class AuthService {
     private final OtpService otpService;
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
+    private final RefreshTokenService refreshTokenService;
     private final Logger logger;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
@@ -45,12 +48,14 @@ public class AuthService {
                        UserRepository userRepository,
                        OtpService otpService,
                        AuthenticationManager authenticationManager,
-                       JwtService jwtService) {
+                       JwtService jwtService,
+                       RefreshTokenService refreshTokenService) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.otpService = otpService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
+        this.refreshTokenService = refreshTokenService;
         this.logger = LoggerFactory.getLogger(AuthService.class);
     }
 
@@ -68,7 +73,7 @@ public class AuthService {
         logger.info("Attempting to verify email: {}", normalizedEmail);
 
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         if (user.getStatus() == UserStatus.ACTIVE) {
             otpService.invalidateOtp(normalizedEmail);
@@ -89,15 +94,15 @@ public class AuthService {
         String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
 
         User user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new AppException(ErrorCode.INVALID_CREDENTIALS));
+                .orElseThrow(() -> new AppException(AuthCode.INVALID_CREDENTIALS));
 
         if (user.isLocked() || user.getStatus() == UserStatus.LOCKED) {
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+            throw new AppException(AuthCode.ACCOUNT_LOCKED);
         }
 
         if (user.getVerification() != VerificationStatus.VERIFIED
                 || user.getStatus() != UserStatus.ACTIVE) {
-            throw new AppException(ErrorCode.ACCOUNT_NOT_VERIFIED);
+            throw new AppException(AuthCode.ACCOUNT_NOT_VERIFIED);
         }
 
         try {
@@ -112,20 +117,20 @@ public class AuthService {
             userRepository.save(user);
 
             String accessToken = jwtService.generateToken(userDetails);
-            String refreshToken = jwtService.generateRefreshToken(userDetails);
+            String refreshToken = refreshTokenService.issueRefreshToken(user);
             logger.info("Login successful for: {}", normalizedEmail);
 
             return new TokenPair(accessToken, refreshToken);
 
         } catch (BadCredentialsException e) {
             handleFailedLoginAttempt(user);
-            throw new AppException(ErrorCode.INVALID_CREDENTIALS);
+            throw new AppException(AuthCode.INVALID_CREDENTIALS);
 
         } catch (LockedException e) {
-            throw new AppException(ErrorCode.ACCOUNT_LOCKED);
+            throw new AppException(AuthCode.ACCOUNT_LOCKED);
 
         } catch (DisabledException e) {
-            throw new AppException(ErrorCode.ACCOUNT_NOT_VERIFIED);
+            throw new AppException(AuthCode.ACCOUNT_NOT_VERIFIED);
         }
     }
 

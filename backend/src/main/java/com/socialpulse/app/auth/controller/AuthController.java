@@ -118,16 +118,7 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
         TokenPair tokens = authService.login(request);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
-        long refreshExpiresInMs = jwtService.getJwtProperties().getRefreshExpirationMs();
-
-        // FE cannot read HttpOnly cookie; it is sent automatically to /refresh.
-        ResponseCookie refreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, tokens.refreshToken())
-                .httpOnly(true)
-                .secure(false) // TODO: set true when deploying with HTTPS
-                .path("/api/v1/auth/refresh")
-                .sameSite("Lax")
-                .maxAge(refreshExpiresInMs / 1000)
-                .build();
+        ResponseCookie refreshCookie = buildRefreshCookie(tokens.refreshToken());
 
         LoginResponse result = LoginResponse.builder()
                 .accessToken(tokens.accessToken())
@@ -158,11 +149,12 @@ public class AuthController {
     public ResponseEntity<ApiResponse<LoginResponse>> refreshToken(HttpServletRequest request) {
         String refreshToken = extractRefreshTokenFromCookie(request);
 
-        String newAccessToken = refreshTokenService.rotateAccessToken(refreshToken);
+        TokenPair rotatedTokens = refreshTokenService.rotateTokens(refreshToken);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
+        ResponseCookie refreshCookie = buildRefreshCookie(rotatedTokens.refreshToken());
 
         LoginResponse result = LoginResponse.builder()
-                .accessToken(newAccessToken)
+                .accessToken(rotatedTokens.accessToken())
                 .tokenType("Bearer")
                 .expiresIn(accessExpiresInMs)
                 .build();
@@ -173,7 +165,9 @@ public class AuthController {
                 .data(result)
                 .build();
 
-        return ResponseEntity.ok(response);
+        return ResponseEntity.ok()
+                .header(HttpHeaders.SET_COOKIE, refreshCookie.toString())
+                .body(response);
     }
 
     private String extractRefreshTokenFromCookie(HttpServletRequest request) {
@@ -198,12 +192,15 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error")
             }
     )
-    public ResponseEntity<ApiResponse<Void>> logout() {
+        public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
+                String refreshToken = extractRefreshTokenFromCookie(request);
+                refreshTokenService.revokeCurrentToken(refreshToken);
+
         // Remove refresh token cookie by setting maxAge=0.
         ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
                 .secure(false) // TODO: set true when deploying with HTTPS
-                .path("/api/v1/auth/refresh")
+                .path("/api/v1/auth")
                 .sameSite("Lax")
                 .maxAge(0)
                 .build();
@@ -218,6 +215,18 @@ public class AuthController {
                 .header(HttpHeaders.SET_COOKIE, clearRefreshCookie.toString())
                 .body(response);
     }
+
+        private ResponseCookie buildRefreshCookie(String refreshToken) {
+                long refreshExpiresInMs = jwtService.getJwtProperties().getRefreshExpirationMs();
+
+                return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
+                                .httpOnly(true)
+                                .secure(false) // TODO: set true when deploying with HTTPS
+                                .path("/api/v1/auth")
+                                .sameSite("Lax")
+                                .maxAge(refreshExpiresInMs / 1000)
+                                .build();
+        }
 
     @GetMapping("/me")
     @Operation(

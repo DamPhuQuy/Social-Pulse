@@ -9,7 +9,7 @@ import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.service.otp.OtpService;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
+import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.repository.UserRepository;
 
@@ -33,7 +33,7 @@ public class PasswordResetService {
         String email = request.getEmail();
 
         userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         otpService.generateToStoreAndSendEmail(email);
     }
@@ -43,7 +43,7 @@ public class PasswordResetService {
         String email = request.getEmail();
 
         userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         otpService.generateToStoreAndSendEmail(email);
     }
@@ -54,7 +54,7 @@ public class PasswordResetService {
         String newPassword = request.getNewPassword();
 
         User user = userRepository.findByEmail(email)
-                .orElseThrow(() -> new AppException(ErrorCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);

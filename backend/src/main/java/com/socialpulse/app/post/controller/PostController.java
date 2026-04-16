@@ -11,7 +11,9 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
+import com.socialpulse.app.post.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
+import com.socialpulse.app.post.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.service.PostService;
 
 import io.swagger.v3.oas.annotations.Operation;
@@ -57,5 +59,21 @@ public class PostController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(postService.createPost(request, currentUser.getId()));
+    }
+
+    @PostMapping("/upvote")
+    public ResponseEntity<PostReactionResponse> upvote(
+        @RequestBody @Valid PostReactionRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return ResponseEntity.ok(postService.upvote(request, currentUser.getId()));
+    }
+
+    @PostMapping("/downvote")
+    public ResponseEntity<PostReactionResponse> downvote(
+        @RequestBody @Valid PostReactionRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return ResponseEntity.ok(postService.downvote(request, currentUser.getId()));
     }
 }

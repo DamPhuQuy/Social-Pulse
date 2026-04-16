@@ -6,16 +6,16 @@ import java.time.Instant;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
 
-import com.socialpulse.app.auth.service.email.EmailService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.auth.entity.Otp;
-import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
 import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
+import com.socialpulse.app.auth.service.email.EmailService;
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.status.AuthCode;
 
 @Service
 public class OtpService {
@@ -70,11 +70,11 @@ public class OtpService {
 
         if (otp == null || otp.isExpired(Instant.now().toEpochMilli())) {
             redisTemplate.delete(key);
-            throw new AppException(ErrorCode.OTP_EXPIRED);
+            throw new AppException(AuthCode.OTP_EXPIRED);
         }
 
         if (otp.getAttemptCount() >= OTP_MAX_ATTEMPTS) {
-            throw new AppException(ErrorCode.OTP_TOO_MANY_ATTEMPTS);
+            throw new AppException(AuthCode.OTP_TOO_MANY_ATTEMPTS);
         }
 
         if (!passwordEncoder.matches(otpCode.trim(), otp.getOtpCode())) {
@@ -87,9 +87,9 @@ public class OtpService {
             }
 
             if (updatedAttempts >= OTP_MAX_ATTEMPTS) {
-                throw new AppException(ErrorCode.OTP_TOO_MANY_ATTEMPTS);
+                throw new AppException(AuthCode.OTP_TOO_MANY_ATTEMPTS);
             }
-            throw new AppException(ErrorCode.OTP_INVALID);
+            throw new AppException(AuthCode.OTP_INVALID);
         }
     }
 

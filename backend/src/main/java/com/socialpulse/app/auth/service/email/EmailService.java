@@ -1,11 +1,12 @@
 package com.socialpulse.app.auth.service.email;
 
-import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.status.SystemCode;
 
 import jakarta.mail.internet.MimeMessage;
 
@@ -34,7 +35,7 @@ public class EmailService {
             mailSender.send(message);
 
         } catch (Exception e) {
-            throw new AppException(ErrorCode.EMAIL_SENDS_FAILED);
+          throw new AppException(SystemCode.EMAIL_SENDS_FAILED);
         }
     }
 

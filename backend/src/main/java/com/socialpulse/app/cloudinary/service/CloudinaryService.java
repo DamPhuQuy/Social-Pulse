@@ -1,13 +1,14 @@
 package com.socialpulse.app.cloudinary.service;
 
-import com.cloudinary.Cloudinary;
-import com.cloudinary.utils.ObjectUtils;
-import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.ErrorCode;
+import java.util.Map;
+
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Map;
+import com.cloudinary.Cloudinary;
+import com.cloudinary.utils.ObjectUtils;
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.status.SystemCode;
 
 @Service
 public class CloudinaryService {
@@ -19,7 +20,7 @@ public class CloudinaryService {
 
     public String upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
-            throw new AppException(ErrorCode.UPLOAD_FAILED);
+            throw new AppException(SystemCode.UPLOAD_FAILED);
         }
 
         try {
@@ -30,14 +31,14 @@ public class CloudinaryService {
 
             Object secureUrl = result.get("secure_url");
             if (secureUrl == null) {
-                throw new AppException(ErrorCode.UPLOAD_FAILED);
+                throw new AppException(SystemCode.UPLOAD_FAILED);
             }
 
             return secureUrl.toString();
         } catch (AppException e) {
             throw e;
         } catch (Exception e) {
-            throw new AppException(ErrorCode.UPLOAD_FAILED);
+            throw new AppException(SystemCode.UPLOAD_FAILED);
         }
     }
 }
