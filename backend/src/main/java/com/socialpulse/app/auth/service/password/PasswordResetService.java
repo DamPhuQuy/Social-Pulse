@@ -6,6 +6,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
+import com.socialpulse.app.auth.dto.request.VerifyOtpRequest;
 import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.auth.service.otp.OtpService;
 import com.socialpulse.app.common.exception.AppException;
@@ -49,12 +50,25 @@ public class PasswordResetService {
     }
 
     @Transactional
+    public void processVerifyOtp(VerifyOtpRequest request) {
+        String email = request.getEmail();
+
+        userRepository.findByEmail(email)
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+
+        otpService.verifyOtp(email, request.getOtpCode());
+    }
+
+    @Transactional
     public void processResetPassword(ResetPasswordRequest request) {
         String email = request.getEmail();
+        String otpCode = request.getOtpCode();
         String newPassword = request.getNewPassword();
 
         User user = userRepository.findByEmail(email)
             .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+
+        otpService.verifyOtp(email, otpCode);
 
         user.setPassword(passwordEncoder.encode(newPassword));
         userRepository.save(user);

@@ -17,6 +17,7 @@ import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
+import com.socialpulse.app.auth.dto.request.VerifyOtpRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
 import com.socialpulse.app.auth.mapper.AuthMapper;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
@@ -186,9 +187,9 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error")
             }
     )
-        public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
-                String refreshToken = extractRefreshTokenFromCookie(request);
-                refreshTokenService.revokeCurrentToken(refreshToken);
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
+        String refreshToken = extractRefreshTokenFromCookie(request);
+        refreshTokenService.revokeCurrentToken(refreshToken);
 
         // Remove refresh token cookie by setting maxAge=0.
         ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
@@ -280,6 +281,29 @@ public class AuthController {
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(200)
                 .message("Mã OTP mới đã được gửi thành công.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-otp")
+    @Operation(
+            summary = "Verify reset-password OTP",
+            description = "Verify OTP code sent by forgot-password flow",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "OTP verified successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Email not found"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many verification attempts")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        passwordResetService.processVerifyOtp(request);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("OTP verified successfully.")
                 .data(null)
                 .build();
 

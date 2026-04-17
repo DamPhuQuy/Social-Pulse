@@ -1,0 +1,70 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - POST /api/v1/auth/login
+
+autonumber
+
+actor Client
+participant AuthController
+participant AuthService
+database UserRepository
+participant AuthenticationManager
+participant JwtService
+participant RefreshTokenService
+database RefreshTokenRepository
+participant AuthMapper
+
+Client -> AuthController: POST /api/v1/auth/login\nLoginRequest
+AuthController -> AuthService: login(request)
+AuthService -> UserRepository: findByEmail(normalizedEmail)
+
+alt Email not found
+  UserRepository --> AuthService: empty
+  AuthService --> AuthController: throw INVALID_CREDENTIALS
+  AuthController --> Client: 404 or 400
+else User found
+  UserRepository --> AuthService: User
+
+  alt User locked
+    AuthService --> AuthController: throw ACCOUNT_LOCKED
+    AuthController --> Client: 423 Locked
+  else User not verified or not active
+    AuthService --> AuthController: throw ACCOUNT_NOT_VERIFIED
+    AuthController --> Client: 403 Forbidden
+  else Candidate for authentication
+    AuthService -> AuthenticationManager: authenticate(email, password)
+
+    alt Bad credentials
+      AuthenticationManager --> AuthService: BadCredentialsException
+      AuthService -> AuthService: increment failed attempts
+      AuthService -> UserRepository: save(user)
+      AuthService --> AuthController: throw INVALID_CREDENTIALS
+      AuthController --> Client: 404 or 400
+    else Authenticated
+      AuthenticationManager --> AuthService: CustomUserDetails
+      AuthService -> AuthService: reset failed attempts + update last login
+      AuthService -> UserRepository: save(user)
+      AuthService -> JwtService: generateToken(userDetails)
+      JwtService --> AuthService: accessToken
+
+      AuthService -> RefreshTokenService: issueRefreshToken(user)
+      RefreshTokenService -> RefreshTokenRepository: save(tokenHash, expiresAt)
+      RefreshTokenRepository --> RefreshTokenService: persisted
+      RefreshTokenService --> AuthService: rawRefreshToken
+
+      AuthService -> AuthMapper: toTokenPair(accessToken, refreshToken)
+      AuthMapper --> AuthService: TokenPair
+      AuthService --> AuthController: TokenPair
+
+      AuthController -> JwtService: getExpirationMs()
+      JwtService --> AuthController: accessExpiresInMs
+      AuthController -> AuthMapper: toLoginResponse(TokenPair, accessExpiresInMs)
+      AuthMapper --> AuthController: LoginResponse
+
+      AuthController --> Client: 200 OK\nSet-Cookie(sp_refresh_token) + ApiResponse<LoginResponse>
+    end
+  end
+end
+
+@enduml

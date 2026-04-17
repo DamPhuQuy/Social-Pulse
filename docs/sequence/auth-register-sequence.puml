@@ -1,0 +1,33 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - POST /api/v1/auth/register
+
+autonumber
+
+actor Client
+participant AuthController
+participant AuthService
+participant UserService
+database UserRepository
+participant OtpService
+database Redis
+participant EmailService
+
+Client -> AuthController: POST /api/v1/auth/register\nUserCreationRequest
+AuthController -> AuthService: register(request)
+AuthService -> UserService: createUser(request)
+UserService -> UserRepository: save(user)
+UserRepository --> UserService: user persisted
+UserService --> AuthService: UserCreationResponse
+
+AuthService -> OtpService: generateToStoreAndSendEmail(email)
+OtpService -> Redis: save otp hash + ttl
+OtpService -> EmailService: sendOtpEmail(email, otpCode)
+EmailService --> OtpService: sent
+OtpService --> AuthService: done
+
+AuthService --> AuthController: UserCreationResponse
+AuthController --> Client: 201 Created\nApiResponse<UserCreationResponse>
+
+@enduml

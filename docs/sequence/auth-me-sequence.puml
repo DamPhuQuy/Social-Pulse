@@ -1,0 +1,31 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - GET /api/v1/auth/me
+
+autonumber
+
+actor Client
+participant JwtAuthenticationFilter
+participant JwtService
+participant CustomUserDetailsService
+database UserRepository
+participant AuthController
+participant AuthMapper
+
+Client -> JwtAuthenticationFilter: GET /api/v1/auth/me\nAuthorization: Bearer accessToken
+JwtAuthenticationFilter -> JwtService: extractEmail(token)
+JwtService --> JwtAuthenticationFilter: email
+JwtAuthenticationFilter -> CustomUserDetailsService: loadUserByUsername(email)
+CustomUserDetailsService -> UserRepository: findByEmail(email)
+UserRepository --> CustomUserDetailsService: User
+CustomUserDetailsService --> JwtAuthenticationFilter: CustomUserDetails
+JwtAuthenticationFilter -> JwtService: isTokenValid(token, userDetails)
+JwtService --> JwtAuthenticationFilter: true
+JwtAuthenticationFilter -> AuthController: invoke getCurrentUser(principal)
+
+AuthController -> AuthMapper: toUserAuthorizedResponse(principal.user)
+AuthMapper --> AuthController: UserAuthorizedResponse
+AuthController --> Client: 200 OK\nApiResponse<UserAuthorizedResponse>
+
+@enduml

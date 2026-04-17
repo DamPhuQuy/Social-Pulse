@@ -23,6 +23,7 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 const MAX_FAILED_ATTEMPTS = 3;
 const RESET_VERIFIED_FLAG_KEY = "pendingResetVerified";
+const RESET_OTP_CODE_KEY = "pendingResetOtpCode";
 
 function formatCountdown(seconds: number): string {
   const minutes = Math.floor(seconds / 60);
@@ -96,10 +97,11 @@ export default function ResetPasswordOtpPage() {
       }
 
       setIsVerifying(true);
-      const result = await verifyResetOtp({ email, otp: otpCode });
+      const result = await verifyResetOtp({ email, otpCode });
 
       if (result.ok) {
         sessionStorage.setItem(RESET_VERIFIED_FLAG_KEY, "1");
+        sessionStorage.setItem(RESET_OTP_CODE_KEY, otpCode);
         setIsVerified(true);
         toast.success("OTP verified!", {
           description: "Redirecting to set your new password...",
@@ -163,6 +165,7 @@ export default function ResetPasswordOtpPage() {
         description: "Please check your email inbox.",
       });
       sessionStorage.removeItem(RESET_VERIFIED_FLAG_KEY);
+      sessionStorage.removeItem(RESET_OTP_CODE_KEY);
       setOtp("");
       setFailedAttempts(0);
       setSecondsLeft(RESEND_SECONDS);

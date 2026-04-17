@@ -22,6 +22,7 @@ type FormSubmitEvent = Parameters<
 >[0];
 
 const RESET_VERIFIED_FLAG_KEY = "pendingResetVerified";
+const RESET_OTP_CODE_KEY = "pendingResetOtpCode";
 
 export default function ResetPasswordPage() {
   const location = useLocation();
@@ -47,6 +48,11 @@ export default function ResetPasswordPage() {
       Boolean(navigationState?.verified) ||
       sessionStorage.getItem(RESET_VERIFIED_FLAG_KEY) === "1",
     [navigationState],
+  );
+
+  const otpCode = useMemo(
+    () => sessionStorage.getItem(RESET_OTP_CODE_KEY)?.trim() ?? "",
+    [],
   );
 
   const [newPassword, setNewPassword] = useState("");
@@ -95,6 +101,7 @@ export default function ResetPasswordPage() {
     const id = globalThis.setTimeout(() => {
       sessionStorage.removeItem("pendingResetEmail");
       sessionStorage.removeItem(RESET_VERIFIED_FLAG_KEY);
+      sessionStorage.removeItem(RESET_OTP_CODE_KEY);
       navigate(loginPath);
     }, 1500);
     return () => globalThis.clearTimeout(id);
@@ -117,6 +124,13 @@ export default function ResetPasswordPage() {
       return;
     }
 
+    if (!otpCode || otpCode.length !== 6) {
+      toast.error("OTP context missing.", {
+        description: "Please verify OTP again before resetting password.",
+      });
+      return;
+    }
+
     if (!newPassword) {
       toast.error("Please enter your new password.");
       return;
@@ -134,7 +148,7 @@ export default function ResetPasswordPage() {
 
     setIsSubmitting(true);
 
-    const result = await resetPassword({ email, newPassword });
+    const result = await resetPassword({ email, otpCode, newPassword });
 
     if (result.ok) {
       setIsSuccess(true);
