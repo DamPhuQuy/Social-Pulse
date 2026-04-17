@@ -57,9 +57,8 @@ public class CommentController {
         }
     )
     public ResponseEntity<ApiResponse<CommentCreationResponse>> createComment(@AuthenticationPrincipal CustomUserDetails currentUser, @RequestBody @Valid CommentCreationRequest request) {
-        Long userId = currentUser.getId();
 
-        CommentCreationResponse response = commentService.createComment(request, userId);
+        CommentCreationResponse response = commentService.createComment(request, currentUser);
 
         return ResponseEntity.ok(ApiResponse.<CommentCreationResponse>builder()
                 .code(200)

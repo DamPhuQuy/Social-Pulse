@@ -2,9 +2,11 @@ package com.socialpulse.app.comment.service;
 
 import org.springframework.stereotype.Service;
 
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.comment.dto.request.CommentCreationRequest;
 import com.socialpulse.app.comment.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.entity.Comment;
+import com.socialpulse.app.comment.mapper.CommentMapper;
 import com.socialpulse.app.comment.repository.CommentRepository;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.CommentCode;
@@ -12,7 +14,6 @@ import com.socialpulse.app.common.status.PostCode;
 import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.post.entity.Post;
 import com.socialpulse.app.post.repository.PostRepository;
-import com.socialpulse.app.user.dto.response.UserSummary;
 import com.socialpulse.app.user.entity.User;
 import com.socialpulse.app.user.repository.UserRepository;
 
@@ -21,18 +22,20 @@ public class CommentService {
     private final UserRepository userRepository;
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;
+    private final CommentMapper commentMapper;
 
-    public CommentService(CommentRepository commentRepository, PostRepository postRepository, UserRepository userRepository) {
+    public CommentService(CommentRepository commentRepository, PostRepository postRepository, UserRepository userRepository, CommentMapper commentMapper) {
         this.commentRepository = commentRepository;
         this.postRepository = postRepository;
         this.userRepository = userRepository;
+        this.commentMapper = commentMapper;
     }
 
-    public CommentCreationResponse createComment(CommentCreationRequest request, Long userId) {
+    public CommentCreationResponse createComment(CommentCreationRequest request, CustomUserDetails currentUser) {
         Post post = postRepository.findById(request.getPostId())
             .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(currentUser.getId())
             .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         Comment parent = null;
@@ -58,26 +61,10 @@ public class CommentService {
             }
         }
 
-        Comment comment = Comment.builder()
-                .content(request.getContent())
-                .post(post)
-                .parentComment(parent)
-                .user(user)
-                .build();
+        Comment comment = commentMapper.toComment(request, post, user, parent);
 
         comment = commentRepository.save(comment);
 
-        return CommentCreationResponse.builder()
-                .id(comment.getId())
-                .postId(post.getId())
-                .user(UserSummary.builder()
-                        .id(user.getId())
-                        .username(user.getUsername())
-                        .build())
-                .parentCommentId(parent != null ? parent.getId() : null)
-                .content(comment.getContent())
-                .createdAt(comment.getCreatedAt())
-                .replyCount(0)
-                .build();
+        return commentMapper.toCommentCreationResponse(comment);
     }
 }
