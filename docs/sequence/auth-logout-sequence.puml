@@ -8,29 +8,35 @@ autonumber
 actor Client
 participant AuthController
 participant RefreshTokenService
+participant RefreshTokenRevocationService
 database RefreshTokenRepository
 
 Client -> AuthController: POST /api/v1/auth/logout\nCookie: sp_refresh_token
 AuthController -> AuthController: extractRefreshTokenFromCookie(request)
 AuthController -> RefreshTokenService: revokeCurrentToken(rawRefreshToken)
+RefreshTokenService -> RefreshTokenRevocationService: revokeCurrentToken(rawRefreshToken)
 
 alt Missing or blank refresh token
+  RefreshTokenRevocationService --> RefreshTokenService: return
   RefreshTokenService --> AuthController: return
 else Token exists
-  RefreshTokenService -> RefreshTokenService: hashToken(rawRefreshToken)
-  RefreshTokenService -> RefreshTokenRepository: findByTokenHash(tokenHash)
+  RefreshTokenRevocationService -> RefreshTokenRevocationService: hashToken(rawRefreshToken)
+  RefreshTokenRevocationService -> RefreshTokenRepository: findByTokenHash(tokenHash)
 
   alt Token not found
-    RefreshTokenRepository --> RefreshTokenService: empty
+    RefreshTokenRepository --> RefreshTokenRevocationService: empty
+    RefreshTokenRevocationService --> RefreshTokenService: return
     RefreshTokenService --> AuthController: return
   else Token found
-    RefreshTokenRepository --> RefreshTokenService: token
+    RefreshTokenRepository --> RefreshTokenRevocationService: token
 
     alt Token already revoked
+      RefreshTokenRevocationService --> RefreshTokenService: return
       RefreshTokenService --> AuthController: return
     else Active token
-      RefreshTokenService -> RefreshTokenRepository: save(token with revokedAt)
-      RefreshTokenRepository --> RefreshTokenService: persisted
+      RefreshTokenRevocationService -> RefreshTokenRepository: save(token with revokedAt)
+      RefreshTokenRepository --> RefreshTokenRevocationService: persisted
+      RefreshTokenRevocationService --> RefreshTokenService: return
       RefreshTokenService --> AuthController: return
     end
   end

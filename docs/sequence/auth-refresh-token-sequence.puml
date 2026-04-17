@@ -8,6 +8,7 @@ autonumber
 actor Client
 participant AuthController
 participant RefreshTokenService
+participant RefreshTokenRevocationService
 database RefreshTokenRepository
 participant JwtService
 participant AuthMapper
@@ -31,8 +32,13 @@ else Refresh token provided
     RefreshTokenRepository --> RefreshTokenService: tokenRecord
 
     alt Token revoked
-      RefreshTokenService -> RefreshTokenRepository: findAllByUserIdAndRevokedAtIsNull(userId)
-      RefreshTokenService -> RefreshTokenRepository: saveAll(revoke active tokens)
+      RefreshTokenService -> RefreshTokenRevocationService: revokeAllActiveTokensForUser(userId, now)
+      note right of RefreshTokenRevocationService
+        Runs in REQUIRES_NEW transaction
+        to avoid self-invocation/proxy bypass and rollback side effects.
+      end note
+      RefreshTokenRevocationService -> RefreshTokenRepository: findAllByUserIdAndRevokedAtIsNull(userId)
+      RefreshTokenRevocationService -> RefreshTokenRepository: saveAll(revoke active tokens)
       RefreshTokenService --> AuthController: throw REFRESH_TOKEN_REUSE_DETECTED
       AuthController --> Client: 401 Unauthorized
     else Token expired

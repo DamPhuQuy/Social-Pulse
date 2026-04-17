@@ -6,7 +6,6 @@ import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.time.LocalDateTime;
 import java.util.Base64;
-import java.util.List;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -27,14 +26,17 @@ public class RefreshTokenService {
 
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final RefreshTokenRevocationService refreshTokenRevocationService;
     private final AuthMapper authMapper;
     private final SecureRandom secureRandom;
 
     public RefreshTokenService(JwtService jwtService,
                                RefreshTokenRepository refreshTokenRepository,
+                               RefreshTokenRevocationService refreshTokenRevocationService,
                                AuthMapper authMapper) {
         this.jwtService = jwtService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.refreshTokenRevocationService = refreshTokenRevocationService;
         this.authMapper = authMapper;
         this.secureRandom = new SecureRandom();
     }
@@ -71,7 +73,7 @@ public class RefreshTokenService {
         LocalDateTime now = LocalDateTime.now();
 
         if (tokenRecord.isRevoked()) {
-            revokeAllActiveTokensForUser(tokenRecord.getUser().getId(), now);
+            refreshTokenRevocationService.revokeAllActiveTokensForUser(tokenRecord.getUser().getId(), now);
             throw new AppException(AuthCode.REFRESH_TOKEN_REUSE_DETECTED);
         }
 
@@ -107,32 +109,7 @@ public class RefreshTokenService {
 
     @Transactional
     public void revokeCurrentToken(String rawRefreshToken) {
-        if (rawRefreshToken == null || rawRefreshToken.isBlank()) {
-            return;
-        }
-
-        String tokenHash = hashToken(rawRefreshToken);
-        refreshTokenRepository.findByTokenHash(tokenHash)
-                .ifPresent(token -> {
-                    if (!token.isRevoked()) {
-                        token.setRevokedAt(LocalDateTime.now());
-                        refreshTokenRepository.save(token);
-                    }
-                });
-    }
-
-    @Transactional
-    public void revokeAllActiveTokensForUser(Long userId, LocalDateTime revokedAt) {
-        List<RefreshToken> activeTokens = refreshTokenRepository.findAllByUserIdAndRevokedAtIsNull(userId);
-        if (activeTokens.isEmpty()) {
-            return;
-        }
-
-        for (RefreshToken token : activeTokens) {
-            token.setRevokedAt(revokedAt);
-        }
-
-        refreshTokenRepository.saveAll(activeTokens);
+        refreshTokenRevocationService.revokeCurrentToken(rawRefreshToken);
     }
 
     private String generateToken() {
