@@ -63,6 +63,13 @@ public class GlobalExceptionHandler {
         return buildErrorResponse(400, "Invalid data for one or more required fields");
     }
 
+    // handle AccessDeniedException explicitly
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        logger.error("Access denied error", ex);
+        return buildErrorResponse(403, "Access Denied: You do not have permission to access this resource");
+    }
+
     // catch all unhandled exceptions
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleException(Exception ex) {

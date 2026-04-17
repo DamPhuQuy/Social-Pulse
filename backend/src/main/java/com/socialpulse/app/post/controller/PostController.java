@@ -1,9 +1,12 @@
 package com.socialpulse.app.post.controller;
 
+import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -15,6 +18,8 @@ import com.socialpulse.app.post.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.service.PostService;
+import com.socialpulse.app.post.dto.response.ViewPostResponse;
+import com.socialpulse.app.post.dto.request.ViewPostRequest;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -60,6 +65,17 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(postService.createPost(request, currentUser.getId()));
     }
+    
+    @GetMapping("/{postId}")
+    @PreAuthorize("hasAuthority('READ_POSTS')")
+    public ResponseEntity<ViewPostResponse> viewPost(
+            @PathVariable Long postId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        ViewPostRequest request = ViewPostRequest.builder()
+                .postId(postId)
+                .build();
+        return ResponseEntity.status(HttpStatus.OK)
+                .body(postService.viewPost(request));
 
     @PostMapping("/upvote")
     public ResponseEntity<PostReactionResponse> upvote(

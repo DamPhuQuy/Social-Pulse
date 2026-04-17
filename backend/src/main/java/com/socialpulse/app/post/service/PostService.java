@@ -10,6 +10,8 @@ import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
+import com.socialpulse.app.post.dto.response.ViewPostResponse;
+import com.socialpulse.app.post.dto.request.ViewPostRequest;
 import com.socialpulse.app.post.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.entity.Post;
 import com.socialpulse.app.post.entity.PostReactions;
@@ -51,6 +53,20 @@ public class PostService {
         return postMapper.toPostCreationResponse(savedPost);
     }
 
+    @org.springframework.transaction.annotation.Transactional(readOnly = true)
+    public ViewPostResponse viewPost(ViewPostRequest request){
+        Post post = postRepository.findById(request.getPostId())
+                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+        return ViewPostResponse.builder()
+                .content(post.getContent())
+                .imageUrl(post.getImageUrl())
+                .imagePublicId(post.getImagePublicId())
+                .privacy(post.getPrivacy())
+                .userId(post.getUser().getId())
+                .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
+                .build();
+    }
     @Transactional
     public PostReactionResponse upvote(PostReactionRequest request, Long userId) {
         return react(request.getPostId(), userId, ReactionType.UPVOTE);
