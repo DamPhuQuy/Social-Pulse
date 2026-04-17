@@ -12,7 +12,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.auth.entity.Otp;
-import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
+import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.auth.service.email.EmailService;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.AuthCode;
@@ -28,9 +28,9 @@ public class OtpService {
     private final SecureRandom secureRandom;
     private final Logger logger;
     private final EmailService emailService;
-    PasswordEncoder passwordEncoder;
+    private final AppPasswordEncoder passwordEncoder;
 
-    public OtpService(StringRedisTemplate redisTemplate, EmailService emailService, PasswordEncoder passwordEncoder) {
+    public OtpService(StringRedisTemplate redisTemplate, EmailService emailService, AppPasswordEncoder passwordEncoder) {
         this.redisTemplate = redisTemplate;
         this.emailService = emailService;
         this.passwordEncoder = passwordEncoder;

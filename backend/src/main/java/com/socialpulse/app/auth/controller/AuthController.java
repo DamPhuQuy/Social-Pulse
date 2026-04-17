@@ -17,7 +17,9 @@ import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
+import com.socialpulse.app.auth.dto.request.VerifyOtpRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
+import com.socialpulse.app.auth.mapper.AuthMapper;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.auth.service.jwt.JwtService;
@@ -46,14 +48,17 @@ public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService passwordResetService;
+        private final AuthMapper authMapper;
 
     public AuthController(AuthService authService, JwtService jwtService,
                           RefreshTokenService refreshTokenService,
-                          PasswordResetService passwordResetService) {
+                                                  PasswordResetService passwordResetService,
+                                                  AuthMapper authMapper) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.passwordResetService = passwordResetService;
+                this.authMapper = authMapper;
     }
 
     @PostMapping("/register")
@@ -119,12 +124,7 @@ public class AuthController {
         TokenPair tokens = authService.login(request);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(tokens.refreshToken());
-
-        LoginResponse result = LoginResponse.builder()
-                .accessToken(tokens.accessToken())
-                .tokenType("Bearer")
-                .expiresIn(accessExpiresInMs)
-                .build();
+                LoginResponse result = authMapper.toLoginResponse(tokens, accessExpiresInMs);
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -152,12 +152,7 @@ public class AuthController {
         TokenPair rotatedTokens = refreshTokenService.rotateTokens(refreshToken);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(rotatedTokens.refreshToken());
-
-        LoginResponse result = LoginResponse.builder()
-                .accessToken(rotatedTokens.accessToken())
-                .tokenType("Bearer")
-                .expiresIn(accessExpiresInMs)
-                .build();
+                LoginResponse result = authMapper.toLoginResponse(rotatedTokens, accessExpiresInMs);
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -192,9 +187,9 @@ public class AuthController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "500", description = "Unexpected server error")
             }
     )
-        public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
-                String refreshToken = extractRefreshTokenFromCookie(request);
-                refreshTokenService.revokeCurrentToken(refreshToken);
+    public ResponseEntity<ApiResponse<Void>> logout(HttpServletRequest request) {
+        String refreshToken = extractRefreshTokenFromCookie(request);
+        refreshTokenService.revokeCurrentToken(refreshToken);
 
         // Remove refresh token cookie by setting maxAge=0.
         ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
@@ -238,11 +233,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<UserAuthorizedResponse>> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
-        UserAuthorizedResponse response = UserAuthorizedResponse.builder()
-                .id(user.getUser().getId())
-                .email(user.getUser().getEmail())
-                .role(user.getUser().getRole())
-                .build();
+                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.getUser());
 
         return ResponseEntity.ok(ApiResponse.<UserAuthorizedResponse>builder()
                 .code(200)
@@ -290,6 +281,29 @@ public class AuthController {
         ApiResponse<Void> response = ApiResponse.<Void>builder()
                 .code(200)
                 .message("Mã OTP mới đã được gửi thành công.")
+                .data(null)
+                .build();
+
+        return ResponseEntity.ok(response);
+    }
+
+    @PostMapping("/verify-otp")
+    @Operation(
+            summary = "Verify reset-password OTP",
+            description = "Verify OTP code sent by forgot-password flow",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "OTP verified successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Invalid or expired OTP"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "Email not found"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "429", description = "Too many verification attempts")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> verifyOtp(@Valid @RequestBody VerifyOtpRequest request) {
+        passwordResetService.processVerifyOtp(request);
+
+        ApiResponse<Void> response = ApiResponse.<Void>builder()
+                .code(200)
+                .message("OTP verified successfully.")
                 .data(null)
                 .build();
 

@@ -533,7 +533,7 @@ export async function resetPassword(
 
 export async function verifyResetOtp(payload: {
   email: string;
-  otp: string;
+  otpCode: string;
 }): Promise<PasswordResponse> {
   const url = getVerifyOtpUrl();
 

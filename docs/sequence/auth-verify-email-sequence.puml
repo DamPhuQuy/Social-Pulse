@@ -1,0 +1,52 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - POST /api/v1/auth/verify-email
+
+autonumber
+
+actor Client
+participant AuthController
+participant AuthService
+database UserRepository
+participant OtpService
+database Redis
+
+Client -> AuthController: POST /api/v1/auth/verify-email\nEmailVerificationRequest
+AuthController -> AuthService: verifyEmail(request)
+AuthService -> UserRepository: findByEmail(normalizedEmail)
+
+alt User not found
+  UserRepository --> AuthService: empty
+  AuthService --> AuthController: throw USER_NOT_FOUND
+  AuthController --> Client: 404 Not Found
+else User found
+  UserRepository --> AuthService: User
+
+  alt Account already ACTIVE
+    AuthService -> OtpService: invalidateOtp(email)
+    OtpService -> Redis: delete otp key
+    AuthService --> AuthController: return
+    AuthController --> Client: 200 OK
+  else Pending or not verified
+    AuthService -> OtpService: verifyOtp(email, otpCode)
+    OtpService -> Redis: read otp data
+
+    alt OTP expired or invalid or too many attempts
+      OtpService --> AuthService: throw OTP error
+      AuthService --> AuthController: propagate error
+      AuthController --> Client: 400 or 429
+    else OTP valid
+      OtpService --> AuthService: verified
+      AuthService -> AuthService: user.activeAccount()
+      AuthService -> AuthService: user.verifyAccount()
+      AuthService -> UserRepository: save(user)
+      AuthService -> OtpService: invalidateOtp(email)
+      OtpService -> Redis: delete otp key
+      AuthService --> AuthController: return
+      AuthController --> Client: 200 OK
+    end
+  end
+end
+
+@enduml
