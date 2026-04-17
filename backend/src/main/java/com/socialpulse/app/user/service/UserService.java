@@ -4,8 +4,9 @@ import java.util.Locale;
 
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.validation.annotation.Validated;
 
-import com.socialpulse.app.auth.security.encoder.PasswordEncoder;
+import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.AuthCode;
 import com.socialpulse.app.common.status.UserCode;
@@ -22,21 +23,22 @@ import com.socialpulse.app.user.repository.UserRepository;
 import jakarta.validation.Valid;
 
 @Service
+@Validated
 public class UserService {
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-    private final PasswordEncoder encoder;
+    private final AppPasswordEncoder passwordEncoder;
     private final UserMapper userMapper;
     private final UserProfileMapper userProfileMapper;
 
     public UserService(UserRepository userRepository,
                        UserProfileRepository userProfileRepository,
-                       PasswordEncoder passwordEncoder,
+                       AppPasswordEncoder appPasswordEncoder,
                        UserMapper userMapper,
                        UserProfileMapper userProfileMapper) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
-        this.encoder = passwordEncoder;
+        this.passwordEncoder = appPasswordEncoder;
         this.userMapper = userMapper;
         this.userProfileMapper = userProfileMapper;
     }
@@ -57,7 +59,7 @@ public class UserService {
             throw new AppException(AuthCode.PASSWORD_NOT_MATCH);
         }
 
-        String encodedPassword = encoder.encode(userCreation.getRawPassword());
+        String encodedPassword = passwordEncoder.encode(userCreation.getRawPassword());
         User user = userMapper.toUser(userCreation, normalizedEmail, encodedPassword);
 
         user = userRepository.save(user);

@@ -1,12 +1,12 @@
 package com.socialpulse.app.auth.service.password;
 
-import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
+import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.auth.service.otp.OtpService;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.UserCode;
@@ -17,11 +17,11 @@ import com.socialpulse.app.user.repository.UserRepository;
 public class PasswordResetService {
 
     private final UserRepository userRepository;
-    private final PasswordEncoder passwordEncoder;
+    private final AppPasswordEncoder passwordEncoder;
     private final OtpService otpService;
 
     public PasswordResetService(UserRepository userRepository,
-                                PasswordEncoder passwordEncoder,
+                                AppPasswordEncoder passwordEncoder,
                                 OtpService otpService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;

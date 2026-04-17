@@ -16,6 +16,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.auth.dto.TokenPair;
 import com.socialpulse.app.auth.dto.request.EmailVerificationRequest;
 import com.socialpulse.app.auth.dto.request.LoginRequest;
+import com.socialpulse.app.auth.mapper.AuthMapper;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.jwt.JwtService;
 import com.socialpulse.app.auth.service.jwt.RefreshTokenService;
@@ -40,6 +41,7 @@ public class AuthService {
     private final AuthenticationManager authenticationManager;
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
+    private final AuthMapper authMapper;
     private final Logger logger;
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
@@ -49,13 +51,15 @@ public class AuthService {
                        OtpService otpService,
                        AuthenticationManager authenticationManager,
                        JwtService jwtService,
-                       RefreshTokenService refreshTokenService) {
+                       RefreshTokenService refreshTokenService,
+                       AuthMapper authMapper) {
         this.userService = userService;
         this.userRepository = userRepository;
         this.otpService = otpService;
         this.authenticationManager = authenticationManager;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
+        this.authMapper = authMapper;
         this.logger = LoggerFactory.getLogger(AuthService.class);
     }
 
@@ -120,7 +124,7 @@ public class AuthService {
             String refreshToken = refreshTokenService.issueRefreshToken(user);
             logger.info("Login successful for: {}", normalizedEmail);
 
-            return new TokenPair(accessToken, refreshToken);
+            return authMapper.toTokenPair(accessToken, refreshToken);
 
         } catch (BadCredentialsException e) {
             handleFailedLoginAttempt(user);

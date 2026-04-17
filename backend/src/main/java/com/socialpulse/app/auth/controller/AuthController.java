@@ -18,6 +18,7 @@ import com.socialpulse.app.auth.dto.request.LoginRequest;
 import com.socialpulse.app.auth.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.dto.response.LoginResponse;
+import com.socialpulse.app.auth.mapper.AuthMapper;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.auth.service.AuthService;
 import com.socialpulse.app.auth.service.jwt.JwtService;
@@ -46,14 +47,17 @@ public class AuthController {
     private final JwtService jwtService;
     private final RefreshTokenService refreshTokenService;
     private final PasswordResetService passwordResetService;
+        private final AuthMapper authMapper;
 
     public AuthController(AuthService authService, JwtService jwtService,
                           RefreshTokenService refreshTokenService,
-                          PasswordResetService passwordResetService) {
+                                                  PasswordResetService passwordResetService,
+                                                  AuthMapper authMapper) {
         this.authService = authService;
         this.jwtService = jwtService;
         this.refreshTokenService = refreshTokenService;
         this.passwordResetService = passwordResetService;
+                this.authMapper = authMapper;
     }
 
     @PostMapping("/register")
@@ -119,12 +123,7 @@ public class AuthController {
         TokenPair tokens = authService.login(request);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(tokens.refreshToken());
-
-        LoginResponse result = LoginResponse.builder()
-                .accessToken(tokens.accessToken())
-                .tokenType("Bearer")
-                .expiresIn(accessExpiresInMs)
-                .build();
+                LoginResponse result = authMapper.toLoginResponse(tokens, accessExpiresInMs);
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -152,12 +151,7 @@ public class AuthController {
         TokenPair rotatedTokens = refreshTokenService.rotateTokens(refreshToken);
         long accessExpiresInMs = jwtService.getJwtProperties().getExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(rotatedTokens.refreshToken());
-
-        LoginResponse result = LoginResponse.builder()
-                .accessToken(rotatedTokens.accessToken())
-                .tokenType("Bearer")
-                .expiresIn(accessExpiresInMs)
-                .build();
+                LoginResponse result = authMapper.toLoginResponse(rotatedTokens, accessExpiresInMs);
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)
@@ -238,11 +232,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<UserAuthorizedResponse>> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
-        UserAuthorizedResponse response = UserAuthorizedResponse.builder()
-                .id(user.getUser().getId())
-                .email(user.getUser().getEmail())
-                .role(user.getUser().getRole())
-                .build();
+                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.getUser());
 
         return ResponseEntity.ok(ApiResponse.<UserAuthorizedResponse>builder()
                 .code(200)

@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.dto.TokenPair;
 import com.socialpulse.app.auth.entity.RefreshToken;
+import com.socialpulse.app.auth.mapper.AuthMapper;
 import com.socialpulse.app.auth.repository.RefreshTokenRepository;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
@@ -26,11 +27,15 @@ public class RefreshTokenService {
 
     private final JwtService jwtService;
     private final RefreshTokenRepository refreshTokenRepository;
+    private final AuthMapper authMapper;
     private final SecureRandom secureRandom;
 
-    public RefreshTokenService(JwtService jwtService, RefreshTokenRepository refreshTokenRepository) {
+    public RefreshTokenService(JwtService jwtService,
+                               RefreshTokenRepository refreshTokenRepository,
+                               AuthMapper authMapper) {
         this.jwtService = jwtService;
         this.refreshTokenRepository = refreshTokenRepository;
+        this.authMapper = authMapper;
         this.secureRandom = new SecureRandom();
     }
 
@@ -97,7 +102,7 @@ public class RefreshTokenService {
                 .build();
 
         String newAccessToken = jwtService.generateToken(userDetails);
-        return new TokenPair(newAccessToken, newRawRefreshToken);
+        return authMapper.toTokenPair(newAccessToken, newRawRefreshToken);
     }
 
     @Transactional
