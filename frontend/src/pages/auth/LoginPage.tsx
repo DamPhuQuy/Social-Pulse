@@ -1,4 +1,5 @@
-import Header from "@/components/Header";
+import { AuthLayout } from "@/components/auth/AuthLayout";
+import { PasswordInput } from "@/components/auth/PasswordInput";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -7,9 +8,7 @@ import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { setApiClientToken } from "@/lib/axiosClient";
 import { loginUser } from "@/services/auth/authService";
-import { ViewIcon, ViewOffSlashIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import type { ComponentProps } from "react";
+import type { FormSubmitEvent } from "@/types/form";
 import { useMemo, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -18,10 +17,6 @@ type LoginFormState = {
   email: string;
   password: string;
 };
-
-type FormSubmitEvent = Parameters<
-  NonNullable<ComponentProps<"form">["onSubmit"]>
->[0];
 
 const INITIAL_FORM: LoginFormState = {
   email: "",
@@ -32,6 +27,8 @@ export default function LoginPage() {
   const location = useLocation();
   const navigate = useNavigate();
   const { setAccessToken } = useAuth();
+
+  // Pre-fill email from query param (e.g. redirected from register)
   const prefilledEmail = useMemo(
     () => new URLSearchParams(location.search).get("email")?.trim() ?? "",
     [location.search],
@@ -42,7 +39,6 @@ export default function LoginPage() {
     email: prefilledEmail,
   });
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [showPassword, setShowPassword] = useState(false);
 
   const handleSubmit = async (event: FormSubmitEvent) => {
     event.preventDefault();
@@ -56,10 +52,9 @@ export default function LoginPage() {
 
     setIsSubmitting(true);
 
-    const result = await loginUser({ email: email, password: form.password });
+    const result = await loginUser({ email, password: form.password });
 
     if (result.ok && result.accessToken) {
-      // Lưu Access Token vào React state và axios client
       setAccessToken(result.accessToken);
       setApiClientToken(result.accessToken);
 
@@ -69,153 +64,109 @@ export default function LoginPage() {
 
       navigate(PATHS.ONBOARDING);
     } else {
-      toast.error("Login failed.", {
-        description: result.message,
-      });
+      toast.error("Login failed.", { description: result.message });
     }
 
     setIsSubmitting(false);
   };
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
-      <Header isHomePage={false} />
-
-      <main className="flex-1 grid lg:grid-cols-2">
-        <div className="flex items-center justify-center p-8 bg-surface">
-          <div className="w-full max-w-md">
-            <Card className="w-full rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 shadow-lg sm:p-8">
-              <CardContent className="space-y-6">
-                <div className="space-y-2 text-center sm:text-left">
-                  <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
-                    Sign In
-                  </h1>
-                  <p className="text-sm text-on-surface-variant">
-                    Login with your existing account to continue.
-                  </p>
-                </div>
-
-                <form className="space-y-5" onSubmit={handleSubmit}>
-                  <div className="space-y-2">
-                    <Label htmlFor="login-email" className="text-on-surface">
-                      Email
-                    </Label>
-                    <Input
-                      id="login-email"
-                      type="email"
-                      autoComplete="email"
-                      value={form.email}
-                      onChange={(event) =>
-                        setForm((previous) => ({
-                          ...previous,
-                          email: event.target.value,
-                        }))
-                      }
-                      disabled={isSubmitting}
-                      placeholder="name@example.com"
-                      className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <div className="flex items-center justify-between">
-                      <Label
-                        htmlFor="login-password"
-                        className="text-on-surface"
-                      >
-                        Password
-                      </Label>
-                      <Link
-                        to={
-                          form.email.trim()
-                            ? `${PATHS.FORGOT_PASSWORD}?email=${encodeURIComponent(form.email.trim())}`
-                            : PATHS.FORGOT_PASSWORD
-                        }
-                        className="text-xs text-primary font-semibold hover:underline"
-                        tabIndex={-1}
-                      >
-                        Forgot password?
-                      </Link>
-                    </div>
-                    <div className="relative">
-                      <Input
-                        id="login-password"
-                        type={showPassword ? "text" : "password"}
-                        autoComplete="current-password"
-                        value={form.password}
-                        onChange={(event) =>
-                          setForm((previous) => ({
-                            ...previous,
-                            password: event.target.value,
-                          }))
-                        }
-                        disabled={isSubmitting}
-                        placeholder="P@ssw0rd"
-                        className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60 pr-10"
-                      />
-                      <button
-                        type="button"
-                        tabIndex={-1}
-                        aria-label={
-                          showPassword ? "Hide password" : "Show password"
-                        }
-                        onClick={() => setShowPassword((prev) => !prev)}
-                        className="absolute inset-y-0 right-3 flex items-center text-on-surface-variant hover:text-on-surface transition-colors"
-                      >
-                        <HugeiconsIcon
-                          icon={showPassword ? ViewOffSlashIcon : ViewIcon}
-                          strokeWidth={2}
-                          className="size-4"
-                        />
-                      </button>
-                    </div>
-                  </div>
-
-                  <Button
-                    type="submit"
-                    disabled={isSubmitting}
-                    className="w-full rounded-full py-6 text-base"
-                  >
-                    {isSubmitting ? "Signing In..." : "Sign In"}
-                  </Button>
-                </form>
-
-                <p className="text-center text-sm text-on-surface-variant">
-                  Need a new account?{" "}
-                  <Link
-                    to={PATHS.REGISTER}
-                    className="text-primary font-semibold hover:underline"
-                  >
-                    Create account
-                  </Link>
-                </p>
-              </CardContent>
-            </Card>
-          </div>
-        </div>
-
-        <div className="hidden lg:flex flex-col items-center justify-center p-12 bg-surface-container-low">
-          <div className="max-w-md text-center space-y-6">
+    <AuthLayout
+      heroTitle={
+        <>
+          Welcome back to your{" "}
+          <span className="text-primary">Social Pulse.</span>
+        </>
+      }
+      heroBody="Sign in to reconnect with your communities and pick up where you left off."
+      heroImageSrc="https://img.freepik.com/free-vector/flat-design-international-human-rights-day_23-2148711491.jpg?semt=ais_incoming&w=740&q=80"
+      heroImageAlt="Login illustration"
+    >
+      <Card className="w-full rounded-3xl border border-outline-variant bg-surface-container-lowest shadow-lg p-6 sm:p-8">
+        <CardContent className="space-y-6">
+          {/* Heading */}
+          <div className="space-y-1">
             <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
-              Welcome back to your{" "}
-              <span className="text-primary">Social Pulse.</span>
+              Sign In
             </h1>
-
-            <p className="text-on-surface-variant text-lg">
-              Sign in to reconnect with your communities and pick up where you
-              left off.
+            <p className="text-sm text-on-surface-variant">
+              Login with your existing account to continue.
             </p>
+          </div>
 
-            <div className="pt-8">
-              <img
-                src="https://img.freepik.com/free-vector/flat-design-international-human-rights-day_23-2148711491.jpg?semt=ais_incoming&w=740&q=80"
-                alt="Login Illustration"
-                className="w-full h-auto drop-shadow-xl rounded-2xl"
+          {/* Form */}
+          <form className="space-y-5" onSubmit={handleSubmit}>
+            {/* Email */}
+            <div className="space-y-2">
+              <Label htmlFor="login-email" className="text-on-surface">
+                Email
+              </Label>
+              <Input
+                id="login-email"
+                type="email"
+                autoComplete="email"
+                value={form.email}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, email: e.target.value }))
+                }
+                disabled={isSubmitting}
+                placeholder="name@example.com"
+                className="border-outline-variant bg-surface-container-lowest placeholder:text-on-surface-variant focus-visible:border-primary focus-visible:ring-primary-fixed/60"
               />
             </div>
-          </div>
-        </div>
-      </main>
-    </div>
+
+            {/* Password with "Forgot password?" link in the label row */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label htmlFor="login-password" className="text-on-surface">
+                  Password
+                </Label>
+                <Link
+                  to={
+                    form.email.trim()
+                      ? `${PATHS.FORGOT_PASSWORD}?email=${encodeURIComponent(form.email.trim())}`
+                      : PATHS.FORGOT_PASSWORD
+                  }
+                  className="text-xs text-primary font-semibold hover:underline"
+                  tabIndex={-1}
+                >
+                  Forgot password?
+                </Link>
+              </div>
+              <PasswordInput
+                id="login-password"
+                label=""
+                autoComplete="current-password"
+                value={form.password}
+                onChange={(e) =>
+                  setForm((prev) => ({ ...prev, password: e.target.value }))
+                }
+                disabled={isSubmitting}
+                placeholder="P@ssw0rd"
+              />
+            </div>
+
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="w-full rounded-full py-6 text-base"
+            >
+              {isSubmitting ? "Signing In..." : "Sign In"}
+            </Button>
+          </form>
+
+          {/* Footer link */}
+          <p className="text-center text-sm text-on-surface-variant">
+            Need a new account?{" "}
+            <Link
+              to={PATHS.REGISTER}
+              className="text-primary font-semibold hover:underline"
+            >
+              Create account
+            </Link>
+          </p>
+        </CardContent>
+      </Card>
+    </AuthLayout>
   );
 }

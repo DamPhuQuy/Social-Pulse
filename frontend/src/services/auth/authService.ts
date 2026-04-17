@@ -16,110 +16,54 @@ import type { VerifyEmailOtpResponse } from "@/types/response/VerifyEmailOtpResp
 
 import axios from "axios";
 
-const DEFAULT_API_BASE_URL = "http://localhost:8080/api/v1";
-const DEFAULT_REGISTER_ENDPOINT = "/auth/register";
-const DEFAULT_VERIFY_EMAIL_ENDPOINT = "/auth/verify-email";
-const DEFAULT_LOGIN_ENDPOINT = "/auth/login";
-const DEFAULT_LOGOUT_ENDPOINT = "/auth/logout";
-const DEFAULT_REFRESH_ENDPOINT = "/auth/refresh";
-const DEFAULT_ME_ENDPOINT = "/auth/me";
-const DEFAULT_FORGOT_PASSWORD_ENDPOINT = "/auth/forgot-password";
-const DEFAULT_RESEND_OTP_ENDPOINT = "/auth/resend-otp";
-const DEFAULT_RESET_PASSWORD_ENDPOINT = "/auth/reset-password";
-const DEFAULT_VERIFY_OTP_ENDPOINT = "/auth/verify-otp";
+// ─── URL Helpers ─────────────────────────────────────────────────────────────
 
-function buildAuthUrl(endpointValue: string, defaultEndpoint: string): string {
-  const baseUrl = (
-    import.meta.env.VITE_API_BASE_URL ?? DEFAULT_API_BASE_URL
-  ).trim();
-  const endpoint = (endpointValue || defaultEndpoint).trim();
+const API_BASE_URL = (
+  import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080/api/v1"
+).trim().replace(/\/+$/, "");
 
-  if (/^https?:\/\//i.test(endpoint)) {
-    return endpoint;
-  }
-
-  const normalizedBase = baseUrl.replace(/\/+$/, "");
-  const normalizedEndpoint = endpoint.startsWith("/")
-    ? endpoint
-    : `/${endpoint}`;
-
-  return `${normalizedBase}${normalizedEndpoint}`;
+/**
+ * Builds a full API endpoint URL.
+ *
+ * @param envVar - The value of the VITE_ env variable (may be empty string).
+ * @param defaultPath - The default path to use when the env var is not set.
+ */
+function buildEndpointUrl(envVar: string | undefined, defaultPath: string): string {
+  const path = (envVar || defaultPath).trim();
+  // Already a full URL (e.g. from env override)
+  if (/^https?:\/\//i.test(path)) return path;
+  return `${API_BASE_URL}${path.startsWith("/") ? path : `/${path}`}`;
 }
 
-function getRegisterUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_REGISTER_ENDPOINT ?? "",
-    DEFAULT_REGISTER_ENDPOINT,
-  );
-}
+const ENDPOINTS = {
+  register:       () => buildEndpointUrl(import.meta.env.VITE_REGISTER_ENDPOINT,        "/auth/register"),
+  verifyEmail:    () => buildEndpointUrl(import.meta.env.VITE_VERIFY_EMAIL_ENDPOINT,    "/auth/verify-email"),
+  login:          () => buildEndpointUrl(import.meta.env.VITE_LOGIN_ENDPOINT,           "/auth/login"),
+  logout:         () => buildEndpointUrl(import.meta.env.VITE_LOGOUT_ENDPOINT,          "/auth/logout"),
+  refresh:        () => buildEndpointUrl(import.meta.env.VITE_REFRESH_ENDPOINT,         "/auth/refresh"),
+  me:             () => buildEndpointUrl(import.meta.env.VITE_ME_ENDPOINT,              "/auth/me"),
+  forgotPassword: () => buildEndpointUrl(import.meta.env.VITE_FORGOT_PASSWORD_ENDPOINT, "/auth/forgot-password"),
+  resendOtp:      () => buildEndpointUrl(import.meta.env.VITE_RESEND_OTP_ENDPOINT,      "/auth/resend-otp"),
+  resetPassword:  () => buildEndpointUrl(import.meta.env.VITE_RESET_PASSWORD_ENDPOINT,  "/auth/reset-password"),
+  verifyOtp:      () => buildEndpointUrl(import.meta.env.VITE_VERIFY_OTP_ENDPOINT,      "/auth/verify-otp"),
+} as const;
 
-function getVerifyEmailUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_VERIFY_EMAIL_ENDPOINT ?? "",
-    DEFAULT_VERIFY_EMAIL_ENDPOINT,
-  );
-}
+// ─── Shared Utilities ─────────────────────────────────────────────────────────
 
-function getLoginUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_LOGIN_ENDPOINT ?? "",
-    DEFAULT_LOGIN_ENDPOINT,
-  );
-}
+/** JSON headers used for all requests that send a body */
+const JSON_HEADERS = {
+  "Content-Type": "application/json",
+  Accept: "application/json",
+  "Accept-Encoding": "gzip, deflate, br",
+  Connection: "keep-alive",
+};
 
-function getLogoutUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_LOGOUT_ENDPOINT ?? "",
-    DEFAULT_LOGOUT_ENDPOINT,
-  );
-}
-
-function getRefreshUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_REFRESH_ENDPOINT ?? "",
-    DEFAULT_REFRESH_ENDPOINT,
-  );
-}
-
-function getMeUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_ME_ENDPOINT ?? "",
-    DEFAULT_ME_ENDPOINT,
-  );
-}
-
-function getForgotPasswordUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_FORGOT_PASSWORD_ENDPOINT ?? "",
-    DEFAULT_FORGOT_PASSWORD_ENDPOINT,
-  );
-}
-
-function getResendOtpUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_RESEND_OTP_ENDPOINT ?? "",
-    DEFAULT_RESEND_OTP_ENDPOINT,
-  );
-}
-
-function getResetPasswordUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_RESET_PASSWORD_ENDPOINT ?? "",
-    DEFAULT_RESET_PASSWORD_ENDPOINT,
-  );
-}
-
-function getVerifyOtpUrl(): string {
-  return buildAuthUrl(
-    import.meta.env.VITE_VERIFY_OTP_ENDPOINT ?? "",
-    DEFAULT_VERIFY_OTP_ENDPOINT,
-  );
-}
-
+/**
+ * Extracts the human-readable error / success message from an API response body.
+ * Checks `message`, `error`, and `data.message` fields.
+ */
 function readMessage(data: unknown): string | null {
-  if (!data || typeof data !== "object") {
-    return null;
-  }
+  if (!data || typeof data !== "object") return null;
 
   const payload = data as Record<string, unknown>;
 
@@ -131,485 +75,193 @@ function readMessage(data: unknown): string | null {
     return payload.error;
   }
 
-  if (payload.data && typeof payload.data === "object") {
-    const nestedData = payload.data as Record<string, unknown>;
-
-    if (typeof nestedData.message === "string" && nestedData.message.trim()) {
-      return nestedData.message;
-    }
+  const nested = payload.data;
+  if (nested && typeof nested === "object") {
+    const nestedMsg = (nested as Record<string, unknown>).message;
+    if (typeof nestedMsg === "string" && nestedMsg.trim()) return nestedMsg;
   }
 
   return null;
 }
 
-/** JSON headers dùng chung cho các request có body */
-const JSON_HEADERS = {
-  "Content-Type": "application/json",
-  Accept: "application/json",
-  "Accept-Encoding": "gzip, deflate, br",
-  Connection: "keep-alive",
-};
+/**
+ * Wraps an Axios call and maps success / HTTP error / network error into a
+ * consistent result object with `{ ok, status?, message, data? }`.
+ */
+async function safeRequest<T extends { ok: boolean }>(
+  call: () => Promise<T>,
+  fallbackMessage: string,
+): Promise<T> {
+  try {
+    return await call();
+  } catch (error) {
+    if (axios.isAxiosError(error)) {
+      const status = error.response?.status;
+      const data = error.response?.data;
+      return {
+        ok: false,
+        status,
+        message: readMessage(data) ?? error.message ?? fallbackMessage,
+        data,
+      } as unknown as T;
+    }
+    return { ok: false, message: fallbackMessage } as unknown as T;
+  }
+}
 
-export async function registerUser(
-  payload: RegisterRequest,
-): Promise<RegisterResponse> {
-  const registerUrl: string = getRegisterUrl();
-  const requestBody: RegisterApiRequest = {
+// ─── Auth API Functions ───────────────────────────────────────────────────────
+
+export async function registerUser(payload: RegisterRequest): Promise<RegisterResponse> {
+  const body: RegisterApiRequest = {
     username: payload.username,
     email: payload.email,
     rawPassword: payload.password,
     confirmPassword: payload.confirmPassword,
   };
 
-  try {
-    const response = await axios.post(registerUrl, requestBody, {
-      headers: JSON_HEADERS,
-    });
-
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.register(), body, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Registration request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Registration succeeded (${response.status}).`,
       data: response.data,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Registration request failed. Please try again.",
-        data,
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while sending register request.",
-    };
-  }
+  }, "Registration failed. Please try again.");
 }
 
-export async function verifyEmailOtp(
-  payload: VerifyEmailOtpRequest,
-): Promise<VerifyEmailOtpResponse> {
-  const verifyEmailUrl = getVerifyEmailUrl();
-
-  try {
-    const response = await axios.post(verifyEmailUrl, payload, {
-      headers: JSON_HEADERS,
-    });
-
+export async function verifyEmailOtp(payload: VerifyEmailOtpRequest): Promise<VerifyEmailOtpResponse> {
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.verifyEmail(), payload, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Verify email request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Email verified (${response.status}).`,
       data: response.data,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Verify email request failed. Please try again.",
-        data,
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while verifying OTP.",
-    };
-  }
+  }, "OTP verification failed. Please try again.");
 }
 
 export async function loginUser(payload: LoginRequest): Promise<LoginResponse> {
-  const loginUrl = getLoginUrl();
-
-  try {
-    const response = await axios.post(loginUrl, payload, {
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.login(), payload, {
       headers: JSON_HEADERS,
-      withCredentials: true, // cần để nhận HttpOnly refresh-token cookie
+      withCredentials: true, // needed to receive the HttpOnly refresh-token cookie
     });
-
-    // Backend: { code, message, data: { accessToken, tokenType, expiresIn } }
-    const accessToken: string | undefined =
-      response.data?.data?.accessToken ?? undefined;
-
+    const accessToken: string | undefined = response.data?.data?.accessToken ?? undefined;
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Login request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Login succeeded (${response.status}).`,
       accessToken,
       data: response.data,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Login request failed. Please try again.",
-        data,
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while sending login request.",
-    };
-  }
+  }, "Login failed. Please try again.");
 }
 
 export async function refreshToken(): Promise<RefreshResponse> {
-  const refreshUrl = getRefreshUrl();
-
-  try {
-    const response = await axios.post(
-      refreshUrl,
-      {},
-      {
-        headers: JSON_HEADERS,
-        withCredentials: true, // cần để gửi HttpOnly refresh-token cookie
-      },
-    );
-
-    // Backend: { code, message, data: { accessToken, tokenType, expiresIn } }
-    const accessToken: string | undefined =
-      response.data?.data?.accessToken ?? undefined;
-
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.refresh(), {}, {
+      headers: JSON_HEADERS,
+      withCredentials: true, // needed to send the HttpOnly refresh-token cookie
+    });
+    const accessToken: string | undefined = response.data?.data?.accessToken ?? undefined;
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Token refresh succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Token refreshed (${response.status}).`,
       accessToken,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Token refresh failed. Please log in again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while refreshing token.",
-    };
-  }
+  }, "Token refresh failed. Please log in again.");
 }
 
 export async function logoutUser(): Promise<LogoutResponse> {
-  const logoutUrl = getLogoutUrl();
-
-  try {
-    const response = await axios.post(
-      logoutUrl,
-      {},
-      {
-        headers: JSON_HEADERS,
-        withCredentials: true, // cần để trình duyệt nhận cookie bị xóa
-      },
-    );
-
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.logout(), {}, {
+      headers: JSON_HEADERS,
+      withCredentials: true, // needed so the browser clears the cookie
+    });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Logout request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Logout succeeded (${response.status}).`,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Logout request failed. Please try again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while sending logout request.",
-    };
-  }
+  }, "Logout failed. Please try again.");
 }
 
 export async function getCurrentUser(accessToken: string): Promise<MeResponse> {
-  const meUrl = getMeUrl();
-
-  try {
-    const response = await axios.get(meUrl, {
-      headers: {
-        ...JSON_HEADERS,
-        Authorization: `Bearer ${accessToken}`,
-      },
+  return safeRequest(async () => {
+    const response = await axios.get(ENDPOINTS.me(), {
+      headers: { ...JSON_HEADERS, Authorization: `Bearer ${accessToken}` },
       withCredentials: true,
     });
-
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Session check succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Session check succeeded (${response.status}).`,
       data: response.data,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ?? error.message ?? "Failed to fetch current user.",
-        data: undefined,
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while fetching current user.",
-    };
-  }
+  }, "Failed to fetch current user.");
 }
 
-export async function forgotPassword(
-  payload: ForgotPasswordRequest,
-): Promise<PasswordResponse> {
-  const url = getForgotPasswordUrl();
-
-  try {
-    const response = await axios.post(url, payload, {
-      headers: JSON_HEADERS,
-    });
-
+export async function forgotPassword(payload: ForgotPasswordRequest): Promise<PasswordResponse> {
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.forgotPassword(), payload, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Forgot password request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Reset OTP sent (${response.status}).`,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Forgot password request failed. Please try again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message:
-        "Unexpected error occurred while sending forgot password request.",
-    };
-  }
+  }, "Failed to send reset code. Please try again.");
 }
 
-export async function resendOtp(
-  payload: ResendOtpRequest,
-): Promise<PasswordResponse> {
-  const url = getResendOtpUrl();
-
-  try {
-    const response = await axios.post(url, payload, {
-      headers: JSON_HEADERS,
-    });
-
+export async function resendOtp(payload: ResendOtpRequest): Promise<PasswordResponse> {
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.resendOtp(), payload, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Resend OTP request succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `OTP resent (${response.status}).`,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Resend OTP request failed. Please try again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while resending OTP.",
-    };
-  }
+  }, "Resend OTP failed. Please try again.");
 }
 
-export async function resetPassword(
-  payload: ResetPasswordRequest,
-): Promise<PasswordResponse> {
-  const url = getResetPasswordUrl();
-
-  try {
-    const response = await axios.post(url, payload, {
-      headers: JSON_HEADERS,
-    });
-
+export async function resetPassword(payload: ResetPasswordRequest): Promise<PasswordResponse> {
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.resetPassword(), payload, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Password reset succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Password reset succeeded (${response.status}).`,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "Password reset failed. Please try again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while resetting password.",
-    };
-  }
+  }, "Password reset failed. Please try again.");
 }
 
 export async function verifyResetOtp(payload: {
   email: string;
   otpCode: string;
 }): Promise<PasswordResponse> {
-  const url = getVerifyOtpUrl();
-
-  try {
-    const response = await axios.post(url, payload, {
-      headers: JSON_HEADERS,
-    });
-
+  return safeRequest(async () => {
+    const response = await axios.post(ENDPOINTS.verifyOtp(), payload, { headers: JSON_HEADERS });
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `OTP verified successfully with status ${response.status}.`,
+      message: readMessage(response.data) ?? `OTP verified (${response.status}).`,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message:
-          readMessage(data) ??
-          error.message ??
-          "OTP verification failed. Please try again.",
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while verifying OTP.",
-    };
-  }
+  }, "OTP verification failed. Please try again.");
 }
 
 export async function getMeAuth(): Promise<LoginResponse> {
-  const sessionUrl = getMeUrl();
-
-  try {
-    const response = await axios.get(sessionUrl, {
-      headers: {
-        "Content-Type": "application/json",
-        "Content-Length": JSON.stringify({}).length,
-        Accept: "application/json",
-        "Accept-Encoding": "gzip, deflate, br",
-        Connection: "keep-alive", // persistent connection
-      },
+  return safeRequest(async () => {
+    const response = await axios.get(ENDPOINTS.me(), {
+      headers: JSON_HEADERS,
       withCredentials: true,
     });
-
     return {
       ok: true,
       status: response.status,
-      message:
-        readMessage(response.data) ??
-        `Session check succeeded with status ${response.status}.`,
+      message: readMessage(response.data) ?? `Session check succeeded (${response.status}).`,
       data: response.data,
     };
-  } catch (error) {
-    if (axios.isAxiosError(error)) {
-      const status = error.response?.status;
-      const data = error.response?.data;
-
-      return {
-        ok: false,
-        status,
-        message: readMessage(data) ?? error.message ?? "Session check failed.",
-        data,
-      };
-    }
-
-    return {
-      ok: false,
-      message: "Unexpected error occurred while checking session.",
-    };
-  }
+  }, "Session check failed.");
 }

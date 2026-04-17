@@ -9,34 +9,44 @@ import React, {
   useState,
 } from "react";
 
-// ─── Types ───────────────────────────────────────────────────────────────────
+// ─── Types ────────────────────────────────────────────────────────────────────
 
 type AuthState = {
-  /** Access Token ngắn hạn (15 phút). Lưu trong memory — mất sau khi refresh tab. */
+  /**
+   * Short-lived Access Token (15 min).
+   * Stored in memory only — lost when the tab is refreshed or closed.
+   */
   accessToken: string | null;
-  /** true khi đang trong quá trình khởi tạo (auto-refresh lần đầu) */
+  /**
+   * True while the initial silent-refresh attempt is in progress.
+   * Use this to show a loading skeleton instead of redirecting the user.
+   */
   isLoading: boolean;
 };
 
 type AuthContextValue = AuthState & {
+  /** Store a new Access Token after login or token refresh */
   setAccessToken: (token: string | null) => void;
+  /** Clear the Access Token (local only — does not call the server) */
   logout: () => void;
 };
 
-// ─── Context ─────────────────────────────────────over────────────────────────────
+// ─── Context ──────────────────────────────────────────────────────────────────
 
 const AuthContext = createContext<AuthContextValue | null>(null);
 
-// ─── Provider ────────────────────────────────────────────────────────────────
+// ─── Provider ─────────────────────────────────────────────────────────────────
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [accessToken, setAccessTokenState] = useState<string | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const didInit = useRef(false);
 
-  // Khi app khởi động, thử tự refresh bằng RT cookie
-  // Nếu RT còn sống → nhận AT mới (user không cần login lại)
-  // Nếu RT hết hạn / không có → isLoading = false, user phải login
+  /**
+   * On app startup, attempt a silent token refresh using the HttpOnly
+   * refresh-token cookie. If it succeeds, the user stays logged in without
+   * needing to re-enter credentials. If it fails, they must log in manually.
+   */
   useEffect(() => {
     if (didInit.current) return;
     didInit.current = true;
@@ -49,7 +59,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setApiClientToken(result.accessToken);
         }
       } catch {
-        // RT không hợp lệ — user cần login lại, không cần báo lỗi
+        // RT is invalid or expired — user needs to log in again
       } finally {
         setIsLoading(false);
       }
@@ -58,17 +68,21 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     silentRefresh();
   }, []);
 
-  // Sync setApiClientToken khi token thay đổi
+  // Keep the Axios client in sync with the latest token
   useEffect(() => {
     setApiClientToken(accessToken);
   }, [accessToken]);
 
-  // Lắng nghe events từ axiosClient interceptor để đồng bộ state
+  /**
+   * Listen to custom events dispatched by the Axios interceptor so that the
+   * auth context stays in sync with background token refreshes.
+   */
   useEffect(() => {
     const onRefreshed = (e: Event) => {
       const token = (e as CustomEvent<{ accessToken: string }>).detail.accessToken;
       setAccessTokenState(token);
     };
+
     const onLogoutRequired = () => {
       setAccessTokenState(null);
     };
@@ -99,6 +113,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
 // ─── Hook ─────────────────────────────────────────────────────────────────────
 
+/**
+ * Returns the current auth context.
+ * Must be used inside an `<AuthProvider>` tree.
+ */
 export function useAuth(): AuthContextValue {
   const ctx = useContext(AuthContext);
   if (!ctx) {
