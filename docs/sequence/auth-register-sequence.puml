@@ -16,18 +16,36 @@ participant EmailService
 
 Client -> AuthController: POST /api/v1/auth/register\nUserCreationRequest
 AuthController -> AuthService: register(request)
-AuthService -> UserService: createUser(request)
-UserService -> UserRepository: save(user)
-UserRepository --> UserService: user persisted
-UserService --> AuthService: UserCreationResponse
 
-AuthService -> OtpService: generateToStoreAndSendEmail(email)
-OtpService -> Redis: save otp hash + ttl
-OtpService -> EmailService: sendOtpEmail(email, otpCode)
-EmailService --> OtpService: sent
-OtpService --> AuthService: done
+alt Invalid request or user already exists
+	AuthService -> UserService: createUser(request)
+	UserService --> AuthService: throw validation/business error
+	AuthService --> AuthController: propagate error
+	AuthController --> Client: 400 Bad Request
+else User created
+	AuthService -> UserService: createUser(request)
+	UserService -> UserRepository: save(user)
+	UserRepository --> UserService: user persisted
+	UserService --> AuthService: UserCreationResponse
 
-AuthService --> AuthController: UserCreationResponse
-AuthController --> Client: 201 Created\nApiResponse<UserCreationResponse>
+	alt OTP send failed
+		AuthService -> OtpService: generateToStoreAndSendEmail(email)
+		OtpService -> Redis: save otp hash + ttl
+		OtpService -> EmailService: sendOtpEmail(email, otpCode)
+		EmailService --> OtpService: throw mail error
+		OtpService --> AuthService: propagate error
+		AuthService --> AuthController: propagate error
+		AuthController --> Client: 500 Internal Server Error
+	else OTP sent successfully
+		AuthService -> OtpService: generateToStoreAndSendEmail(email)
+		OtpService -> Redis: save otp hash + ttl
+		OtpService -> EmailService: sendOtpEmail(email, otpCode)
+		EmailService --> OtpService: sent
+		OtpService --> AuthService: done
+
+		AuthService --> AuthController: UserCreationResponse
+		AuthController --> Client: 201 Created\nApiResponse<UserCreationResponse>
+	end
+end
 
 @enduml
