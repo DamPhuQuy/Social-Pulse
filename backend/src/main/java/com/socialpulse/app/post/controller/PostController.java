@@ -14,15 +14,20 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
+import com.socialpulse.app.post.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
+import com.socialpulse.app.post.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.service.PostService;
 import com.socialpulse.app.post.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.dto.request.ViewPostRequest;
 
+import io.swagger.v3.oas.annotations.Operation;
+import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/posts")
+@Tag(name = "Posts", description = "Post management APIs")
 public class PostController {
     private final PostService postService;
 
@@ -32,6 +37,28 @@ public class PostController {
 
     @PostMapping
     @PreAuthorize("hasAuthority('CREATE_POST')")
+    @Operation(
+            summary = "Create post",
+            description = "Create a new post for current authenticated user",
+            responses = {
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "201",
+                    description = "Post created successfully"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "400",
+                    description = "Invalid request data"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "401",
+                    description = "Unauthorized"
+                ),
+                @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                    responseCode = "403",
+                    description = "Forbidden"
+                )
+            }
+    )
     public ResponseEntity<PostCreationResponse> createPost(
             @RequestBody @Valid PostCreationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -49,5 +76,20 @@ public class PostController {
                 .build();
         return ResponseEntity.status(HttpStatus.OK)
                 .body(postService.viewPost(request));
+
+    @PostMapping("/upvote")
+    public ResponseEntity<PostReactionResponse> upvote(
+        @RequestBody @Valid PostReactionRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return ResponseEntity.ok(postService.upvote(request, currentUser.getId()));
+    }
+
+    @PostMapping("/downvote")
+    public ResponseEntity<PostReactionResponse> downvote(
+        @RequestBody @Valid PostReactionRequest request,
+        @AuthenticationPrincipal CustomUserDetails currentUser
+    ) {
+        return ResponseEntity.ok(postService.downvote(request, currentUser.getId()));
     }
 }

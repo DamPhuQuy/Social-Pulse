@@ -4,13 +4,6 @@ import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import lombok.Getter;
 
-/**
- * Request body cho POST /api/v1/auth/login.
- *
- * Dùng @NotBlank thay vì @NotNull vì blank string ("  ")
- * vẫn pass @NotNull nhưng sẽ fail authentication.
- * @Email validate format cơ bản của email.
- */
 @Getter
 public class LoginRequest {
 

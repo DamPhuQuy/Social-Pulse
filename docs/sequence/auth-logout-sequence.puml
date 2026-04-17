@@ -1,0 +1,47 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - POST /api/v1/auth/logout
+
+autonumber
+
+actor Client
+participant AuthController
+participant RefreshTokenService
+participant RefreshTokenRevocationService
+database RefreshTokenRepository
+
+Client -> AuthController: POST /api/v1/auth/logout\nCookie: sp_refresh_token
+AuthController -> AuthController: extractRefreshTokenFromCookie(request)
+AuthController -> RefreshTokenService: revokeCurrentToken(rawRefreshToken)
+RefreshTokenService -> RefreshTokenRevocationService: revokeCurrentToken(rawRefreshToken)
+
+alt Missing or blank refresh token
+  RefreshTokenRevocationService --> RefreshTokenService: return
+  RefreshTokenService --> AuthController: return
+else Token exists
+  RefreshTokenRevocationService -> RefreshTokenRevocationService: hashToken(rawRefreshToken)
+  RefreshTokenRevocationService -> RefreshTokenRepository: findByTokenHash(tokenHash)
+
+  alt Token not found
+    RefreshTokenRepository --> RefreshTokenRevocationService: empty
+    RefreshTokenRevocationService --> RefreshTokenService: return
+    RefreshTokenService --> AuthController: return
+  else Token found
+    RefreshTokenRepository --> RefreshTokenRevocationService: token
+
+    alt Token already revoked
+      RefreshTokenRevocationService --> RefreshTokenService: return
+      RefreshTokenService --> AuthController: return
+    else Active token
+      RefreshTokenRevocationService -> RefreshTokenRepository: save(token with revokedAt)
+      RefreshTokenRepository --> RefreshTokenRevocationService: persisted
+      RefreshTokenRevocationService --> RefreshTokenService: return
+      RefreshTokenService --> AuthController: return
+    end
+  end
+end
+
+AuthController --> Client: 200 OK\nSet-Cookie(sp_refresh_token cleared, maxAge=0)
+
+@enduml
