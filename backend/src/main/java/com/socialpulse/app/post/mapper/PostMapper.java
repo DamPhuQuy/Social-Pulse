@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
+import com.socialpulse.app.post.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.entity.Post;
 import com.socialpulse.app.user.entity.User;
 
@@ -27,4 +28,13 @@ public interface PostMapper {
     @Mapping(target = "id", source = "id")
     @Mapping(target = "userId", source = "user.id")
     PostCreationResponse toPostCreationResponse(Post post);
+
+    @Mapping(target = "content", source = "content")
+    @Mapping(target = "imageUrl", source = "imageUrl")
+    @Mapping(target = "imagePublicId", source = "imagePublicId")
+    @Mapping(target = "privacy", source = "privacy")
+    @Mapping(target = "userId", source = "user.id")
+    @Mapping(target = "createdAt", source = "createdAt")
+    @Mapping(target = "updatedAt", source = "updatedAt")
+    ViewPostResponse toViewPostResponse(Post post);
 }

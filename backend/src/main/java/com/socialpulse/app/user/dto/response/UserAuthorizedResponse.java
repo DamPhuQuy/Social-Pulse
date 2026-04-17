@@ -1,6 +1,7 @@
 package com.socialpulse.app.user.dto.response;
 
-import com.socialpulse.app.user.entity.UserRole;
+import com.socialpulse.app.user.enums.UserRole;
+
 import lombok.Builder;
 import lombok.Getter;
 import lombok.Setter;

@@ -1,4 +1,4 @@
-package com.socialpulse.app.user.entity;
+package com.socialpulse.app.user.enums;
 
 import java.util.Set;
 

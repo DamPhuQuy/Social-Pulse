@@ -7,6 +7,9 @@ import com.socialpulse.app.auth.entity.RefreshToken;
 import com.socialpulse.app.comment.entity.Comment;
 import com.socialpulse.app.comment.entity.CommentReaction;
 import com.socialpulse.app.post.entity.Post;
+import com.socialpulse.app.user.enums.UserRole;
+import com.socialpulse.app.user.enums.UserStatus;
+import com.socialpulse.app.user.enums.VerificationStatus;
 
 import jakarta.persistence.CascadeType;
 import jakarta.persistence.Column;

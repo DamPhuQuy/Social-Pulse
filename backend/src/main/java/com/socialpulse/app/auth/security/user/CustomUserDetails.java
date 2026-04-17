@@ -1,9 +1,10 @@
 package com.socialpulse.app.auth.security.user;
 
 import com.socialpulse.app.user.entity.User;
-import com.socialpulse.app.user.entity.UserRole;
-import com.socialpulse.app.user.entity.UserStatus;
-import com.socialpulse.app.user.entity.VerificationStatus;
+import com.socialpulse.app.user.enums.UserRole;
+import com.socialpulse.app.user.enums.UserStatus;
+import com.socialpulse.app.user.enums.VerificationStatus;
+
 import lombok.Builder;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;

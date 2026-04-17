@@ -7,6 +7,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.AuthCode;
 import com.socialpulse.app.common.status.UserCode;
@@ -68,9 +69,10 @@ public class UserService {
         return userMapper.toUserCreationResponse(user, message);
     }
 
-    @Transactional
-    public UserViewProfileResponse getProfile(Long userId) {
-        UserProfile userProfile = userProfileRepository.findByUserId(userId)
+    @Transactional(readOnly = true)
+    public UserViewProfileResponse getProfile(CustomUserDetails currentUser) {
+
+        UserProfile userProfile = userProfileRepository.findByUserId(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         return userProfileMapper.toUserViewProfileResponse(userProfile);
@@ -78,9 +80,10 @@ public class UserService {
 
     @Transactional(readOnly = true)
     public UserViewProfileResponse getProfileByUsername(String username) {
-        User user = userRepository.findProfileByUsername(username)
-                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+        // user view other user profile
+        UserProfile userProfile = userProfileRepository.findByUsername(username)
+                .orElseThrow(() -> new AppException(UserCode.USER_PROFILE_NOT_FOUND));
 
-        return userProfileMapper.toUserViewProfileResponse(user);
+        return userProfileMapper.toUserViewProfileResponse(userProfile);
     }
 }

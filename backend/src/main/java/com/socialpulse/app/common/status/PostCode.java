@@ -4,7 +4,9 @@ import lombok.Getter;
 
 @Getter
 public enum PostCode implements AppCode {
-    POST_NOT_FOUND(404, "Post not found");
+    POST_NOT_FOUND(404, "Post not found"),
+
+    POST_NOT_ACCESSIBLE(403, "Post is not accessible");
 
     private final int code;
     private final String message;

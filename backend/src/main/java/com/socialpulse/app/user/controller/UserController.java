@@ -36,9 +36,7 @@ public class UserController {
             }
     )
     public ResponseEntity<UserViewProfileResponse> getProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
-        Long userId = currentUser.getId();
-
-        return ResponseEntity.ok(userService.getProfile(userId));
+        return ResponseEntity.ok(userService.getProfile(currentUser));
     }
 
     @GetMapping("/profile/{username}")
@@ -50,10 +48,10 @@ public class UserController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User profile not found")
             }
     )
     public ResponseEntity<UserViewProfileResponse> getOtherProfile(@AuthenticationPrincipal CustomUserDetails currentUser, @PathVariable String username) {
-        return ResponseEntity.ok(userService.getProfileByUsername(username));
+        return ResponseEntity.ok(userService.getProfileByUsername(username.toLowerCase()));
     }
 }

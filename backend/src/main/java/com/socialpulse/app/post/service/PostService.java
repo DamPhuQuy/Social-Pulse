@@ -3,6 +3,7 @@ package com.socialpulse.app.post.service;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.status.PostCode;
 import com.socialpulse.app.common.status.UserCode;
@@ -10,11 +11,11 @@ import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
-import com.socialpulse.app.post.dto.response.ViewPostResponse;
-import com.socialpulse.app.post.dto.request.ViewPostRequest;
 import com.socialpulse.app.post.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.entity.Post;
 import com.socialpulse.app.post.entity.PostReactions;
+import com.socialpulse.app.post.entity.Privacy;
 import com.socialpulse.app.post.mapper.PostMapper;
 import com.socialpulse.app.post.mapper.PostReactionMapper;
 import com.socialpulse.app.post.repository.PostReactionRepository;
@@ -42,50 +43,44 @@ public class PostService {
         this.postReactionMapper = postReactionMapper;
     }
 
-    public PostCreationResponse createPost(PostCreationRequest request, Long userId) {
-        User currentUser = userRepository.findById(userId)
+    public PostCreationResponse createPost(PostCreationRequest request, CustomUserDetails currentUser) {
+        User user = userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
-        Post post = postMapper.toPost(request, currentUser);
+        Post post = postMapper.toPost(request, user);
 
         Post savedPost = postRepository.save(post);
 
         return postMapper.toPostCreationResponse(savedPost);
     }
 
-    @org.springframework.transaction.annotation.Transactional(readOnly = true)
-    public ViewPostResponse viewPost(ViewPostRequest request){
-        Post post = postRepository.findById(request.getPostId())
-                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
-        return ViewPostResponse.builder()
-                .content(post.getContent())
-                .imageUrl(post.getImageUrl())
-                .imagePublicId(post.getImagePublicId())
-                .privacy(post.getPrivacy())
-                .userId(post.getUser().getId())
-                .createdAt(post.getCreatedAt())
-                .updatedAt(post.getUpdatedAt())
-                .build();
-    }
-    @Transactional
-    public PostReactionResponse upvote(PostReactionRequest request, Long userId) {
-        return react(request.getPostId(), userId, ReactionType.UPVOTE);
-    }
-
-    @Transactional
-    public PostReactionResponse downvote(PostReactionRequest request, Long userId) {
-        return react(request.getPostId(), userId, ReactionType.DOWNVOTE);
-    }
-
-    private PostReactionResponse react(Long postId, Long userId, ReactionType targetReaction) {
+    @Transactional(readOnly = true)
+    public ViewPostResponse viewPost(Long postId, CustomUserDetails currentUser){
         Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
+
+        Long userId = currentUser.getId();
+
+        // post is not public and the current user is not the owner of the post
+        if (!post.getPrivacy().equals(Privacy.PUBLIC) && !post.getUser().getId().equals(userId)) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+        }
+
+        return postMapper.toViewPostResponse(post);
+    }
+
+    @Transactional
+    public PostReactionResponse react(PostReactionRequest request, CustomUserDetails currentUser) {
+        Post post = postRepository.findById(request.getPostId())
             .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
-        User user = userRepository.findById(userId)
+        User user = userRepository.findById(currentUser.getId())
             .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
-        PostReactions currentReaction = postReactionRepository.findByPostIdAndUserId(postId, userId)
+        PostReactions currentReaction = postReactionRepository.findByPostIdAndUserId(request.getPostId(), currentUser.getId())
                 .orElse(null);
+
+        ReactionType targetReaction = request.getReactionType();
 
         if (currentReaction == null) {
             PostReactions newReaction = postReactionMapper.toPostReaction(user, post, targetReaction);
@@ -97,10 +92,15 @@ public class PostService {
             return postReactionMapper.toPostReactionResponse(savedReaction);
         }
 
+        // remove the reaction if the user clicks the same reaction again
         if (currentReaction.getReactionType() == targetReaction) {
+            postReactionRepository.delete(currentReaction);
+            decrementReactionCount(post, targetReaction);
+            postRepository.save(post);
             return postReactionMapper.toPostReactionResponse(currentReaction);
         }
 
+        // user changes reaction if current reaction != target reaction
         decrementReactionCount(post, currentReaction.getReactionType());
         incrementReactionCount(post, targetReaction);
         currentReaction.setReactionType(targetReaction);

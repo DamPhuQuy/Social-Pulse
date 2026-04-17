@@ -27,8 +27,8 @@ import com.socialpulse.app.common.status.UserCode;
 import com.socialpulse.app.user.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.entity.User;
-import com.socialpulse.app.user.entity.UserStatus;
-import com.socialpulse.app.user.entity.VerificationStatus;
+import com.socialpulse.app.user.enums.UserStatus;
+import com.socialpulse.app.user.enums.VerificationStatus;
 import com.socialpulse.app.user.repository.UserRepository;
 import com.socialpulse.app.user.service.UserService;
 

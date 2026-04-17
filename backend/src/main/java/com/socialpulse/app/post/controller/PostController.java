@@ -14,7 +14,6 @@ import org.springframework.web.bind.annotation.RestController;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.request.PostReactionRequest;
-import com.socialpulse.app.post.dto.request.ViewPostRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.dto.response.ViewPostResponse;
@@ -35,7 +34,7 @@ public class PostController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_POST')")
+    @PreAuthorize("hasRole('USER') and hasAuthority('CREATE_POST')")
     @Operation(
             summary = "Create post",
             description = "Create a new post for current authenticated user",
@@ -62,34 +61,21 @@ public class PostController {
             @RequestBody @Valid PostCreationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.status(HttpStatus.CREATED)
-                .body(postService.createPost(request, currentUser.getId()));
+                .body(postService.createPost(request, currentUser));
     }
 
-    @GetMapping("/{postId}")
-    @PreAuthorize("hasAuthority('READ_POSTS')")
-    public ResponseEntity<ViewPostResponse> viewPost(
-            @PathVariable Long postId,
+    @GetMapping("/{id}")
+    @PreAuthorize("hasRole('USER') and hasAuthority('VIEW_POST')")
+    public ResponseEntity<ViewPostResponse> viewPost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(postService.viewPost(id, currentUser));
+    }
+
+    @PostMapping("/react")
+    @PreAuthorize("hasRole('USER') and hasAuthority('REACT_POST')")
+    public ResponseEntity<PostReactionResponse> react(
+            @RequestBody @Valid PostReactionRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        ViewPostRequest request = ViewPostRequest.builder()
-                .postId(postId)
-                .build();
-        return ResponseEntity.status(HttpStatus.OK)
-                .body(postService.viewPost(request));
+        return ResponseEntity.ok(postService.react(request, currentUser));
     }
 
-    @PostMapping("/upvote")
-    public ResponseEntity<PostReactionResponse> upvote(
-        @RequestBody @Valid PostReactionRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
-    ) {
-        return ResponseEntity.ok(postService.upvote(request, currentUser.getId()));
-    }
-
-    @PostMapping("/downvote")
-    public ResponseEntity<PostReactionResponse> downvote(
-        @RequestBody @Valid PostReactionRequest request,
-        @AuthenticationPrincipal CustomUserDetails currentUser
-    ) {
-        return ResponseEntity.ok(postService.downvote(request, currentUser.getId()));
-    }
 }

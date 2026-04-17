@@ -3,6 +3,8 @@ package com.socialpulse.app.user.entity;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 
+import com.socialpulse.app.user.enums.UserGender;
+
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
