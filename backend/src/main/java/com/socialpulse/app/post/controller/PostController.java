@@ -1,6 +1,5 @@
 package com.socialpulse.app.post.controller;
 
-import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -15,11 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.post.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.dto.request.PostReactionRequest;
+import com.socialpulse.app.post.dto.request.ViewPostRequest;
 import com.socialpulse.app.post.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.dto.response.PostReactionResponse;
-import com.socialpulse.app.post.service.PostService;
 import com.socialpulse.app.post.dto.response.ViewPostResponse;
-import com.socialpulse.app.post.dto.request.ViewPostRequest;
+import com.socialpulse.app.post.service.PostService;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -65,7 +64,7 @@ public class PostController {
         return ResponseEntity.status(HttpStatus.CREATED)
                 .body(postService.createPost(request, currentUser.getId()));
     }
-    
+
     @GetMapping("/{postId}")
     @PreAuthorize("hasAuthority('READ_POSTS')")
     public ResponseEntity<ViewPostResponse> viewPost(
@@ -76,6 +75,7 @@ public class PostController {
                 .build();
         return ResponseEntity.status(HttpStatus.OK)
                 .body(postService.viewPost(request));
+    }
 
     @PostMapping("/upvote")
     public ResponseEntity<PostReactionResponse> upvote(

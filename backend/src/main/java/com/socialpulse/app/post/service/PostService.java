@@ -56,7 +56,7 @@ public class PostService {
     @org.springframework.transaction.annotation.Transactional(readOnly = true)
     public ViewPostResponse viewPost(ViewPostRequest request){
         Post post = postRepository.findById(request.getPostId())
-                .orElseThrow(() -> new AppException(ErrorCode.POST_NOT_FOUND));
+                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
         return ViewPostResponse.builder()
                 .content(post.getContent())
                 .imageUrl(post.getImageUrl())
