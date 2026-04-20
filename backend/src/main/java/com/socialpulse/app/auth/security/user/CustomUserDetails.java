@@ -1,19 +1,20 @@
 package com.socialpulse.app.auth.security.user;
 
-import com.socialpulse.app.user.entity.User;
-import com.socialpulse.app.user.enums.UserRole;
-import com.socialpulse.app.user.enums.UserStatus;
-import com.socialpulse.app.user.enums.VerificationStatus;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
 
-import lombok.Builder;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.List;
+import com.socialpulse.app.user.domain.enums.UserRole;
+import com.socialpulse.app.user.domain.enums.UserStatus;
+import com.socialpulse.app.user.domain.enums.VerificationStatus;
+import com.socialpulse.app.user.domain.model.User;
+
+import lombok.Builder;
 
 @Builder
 public class CustomUserDetails implements UserDetails {
@@ -45,8 +46,7 @@ public class CustomUserDetails implements UserDetails {
         return user.getPasswordHash();
     }
 
-    // QUAN TRọNG: trả email (không phải username) vì project xác thực bằng email.
-    // Spring Security dùng giá trị này làm "principal" và JJWT lưu vào JWT subject.
+    // Spring Security dùng giá trị này làm principal và JJWT lưu vào JWT subject.
     @Override
     public String getUsername() {
         return user.getEmail();

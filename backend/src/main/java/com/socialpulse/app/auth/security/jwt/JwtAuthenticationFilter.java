@@ -9,8 +9,8 @@ import org.springframework.security.web.authentication.WebAuthenticationDetailsS
 import org.springframework.stereotype.Component;
 import org.springframework.web.filter.OncePerRequestFilter;
 
-import com.socialpulse.app.auth.service.jwt.JwtService;
-import com.socialpulse.app.auth.service.user.CustomUserDetailsService;
+import com.socialpulse.app.auth.application.port.in.JwtUseCase;
+import com.socialpulse.app.auth.application.service.user.CustomUserDetailsService;
 
 import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
@@ -20,11 +20,11 @@ import jakarta.servlet.http.HttpServletResponse;
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
-    private final JwtService jwtService;
+    private final JwtUseCase jwtUseCase;
     private final CustomUserDetailsService userDetailsService;
 
-    public JwtAuthenticationFilter(JwtService jwtService, CustomUserDetailsService userDetailsService) {
-        this.jwtService = jwtService;
+    public JwtAuthenticationFilter(JwtUseCase jwtUseCase, CustomUserDetailsService userDetailsService) {
+        this.jwtUseCase = jwtUseCase;
         this.userDetailsService = userDetailsService;
     }
 
@@ -44,14 +44,14 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         }
 
         try {
-            final String email = jwtService.extractEmail(jwt);
+            final String email = jwtUseCase.extractEmail(jwt);
 
             // Chỉ set authentication nếu chưa có trong SecurityContext
             if (email != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
                 UserDetails userDetails = userDetailsService.loadUserByUsername(email);
 
-                if (jwtService.isTokenValid(jwt, userDetails)) {
+                if (jwtUseCase.isTokenValid(jwt, userDetails)) {
                     UsernamePasswordAuthenticationToken authToken =
                             new UsernamePasswordAuthenticationToken(
                                     userDetails,
