@@ -1,4 +1,4 @@
-package com.socialpulse.app.cloudinary.service;
+package com.socialpulse.app.infrastructure.cloudinary.service;
 
 import java.util.Map;
 
@@ -8,7 +8,7 @@ import org.springframework.web.multipart.MultipartFile;
 import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.status.SystemCode;
+import com.socialpulse.app.common.exception.status.SystemCode;
 
 @Service
 public class CloudinaryService {

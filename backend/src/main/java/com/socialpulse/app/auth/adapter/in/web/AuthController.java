@@ -159,9 +159,9 @@ public class AuthController {
         String refreshToken = extractRefreshTokenFromCookie(request);
 
         TokenPair rotatedTokens = refreshTokenUseCase.rotateTokens(refreshToken);
-                long accessExpiresInMs = jwtUseCase.getAccessExpirationMs();
+        long accessExpiresInMs = jwtUseCase.getAccessExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(rotatedTokens.refreshToken());
-                LoginResponse result = authMapper.toLoginResponse(rotatedTokens, accessExpiresInMs);
+        LoginResponse result = authMapper.toLoginResponse(rotatedTokens, accessExpiresInMs);
 
         ApiResponse<LoginResponse> response = ApiResponse.<LoginResponse>builder()
                 .code(200)

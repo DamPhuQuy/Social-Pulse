@@ -8,8 +8,7 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.comment.domain.model.CommentReaction;
 import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentEntity;
 import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentReactionEntity;
-import com.socialpulse.app.post.domain.model.Post;
-import com.socialpulse.app.user.domain.model.User;
+import com.socialpulse.app.post.infrastructure.persistence.entity.PostEntity;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 
 @Mapper(componentModel = "spring")
@@ -27,21 +26,21 @@ public interface CommentDomainToEntity {
     CommentReactionEntity toEntity(CommentReaction domain);
 
     @Named("postIdToPost")
-    default Post postIdToPost(Long postId) {
+    default PostEntity postIdToPost(Long postId) {
         if (postId == null) {
             return null;
         }
 
-        return Post.builder().id(postId).build();
+        return PostEntity.builder().id(postId).build();
     }
 
     @Named("userIdToUser")
-    default User userIdToUser(Long userId) {
+    default UserEntity userIdToUser(Long userId) {
         if (userId == null) {
             return null;
         }
 
-        return User.builder().id(userId).build();
+        return UserEntity.builder().id(userId).build();
     }
 
     @Named("userIdToUserEntity")

@@ -1,11 +1,12 @@
-package com.socialpulse.app.cloudinary.config;
-
-import com.cloudinary.Cloudinary;
-import org.springframework.context.annotation.Bean;
-import org.springframework.context.annotation.Configuration;
+package com.socialpulse.app.infrastructure.cloudinary.config;
 
 import java.util.HashMap;
 import java.util.Map;
+
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
+
+import com.cloudinary.Cloudinary;
 
 @Configuration
 public class CloudinaryConfig {
