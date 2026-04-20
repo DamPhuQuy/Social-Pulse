@@ -14,25 +14,32 @@ import com.socialpulse.app.user.application.port.out.UserProfileRepositoryPort;
 import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.GetUserProfileService;
-import com.socialpulse.app.user.infrastructure.persistence.mapper.UserEntityToDomainMapper;
+import com.socialpulse.app.user.infrastructure.persistence.mapper.UserDomainToEntity;
+import com.socialpulse.app.user.infrastructure.persistence.mapper.UserEntityToDomain;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
 @Configuration
 public class UserConfig {
+
+    // adapters --------------------------------------
+
     @Bean
     public UserRepositoryPort userRepositoryPort(
             JpaUserRepository jpaUserRepository,
-            UserEntityToDomainMapper userEntityToDomainMapper) {
-        return new UserRepositoryAdapter(jpaUserRepository, userEntityToDomainMapper);
+            UserEntityToDomain userEntityToDomainMapper,
+            UserDomainToEntity userDomainToEntityMapper) {
+        return new UserRepositoryAdapter(jpaUserRepository, userEntityToDomainMapper, userDomainToEntityMapper);
     }
 
     @Bean
     public UserProfileRepositoryPort userProfileRepositoryPort(
             JpaUserProfileRepository jpaUserProfileRepository,
-            UserEntityToDomainMapper userEntityToDomainMapper) {
+            UserEntityToDomain userEntityToDomainMapper) {
         return new UserProfileRepositoryAdapter(jpaUserProfileRepository, userEntityToDomainMapper);
     }
+
+    // use cases --------------------------------------
 
     @Bean
     public GetUserProfileUseCase getUserProfileUseCase(

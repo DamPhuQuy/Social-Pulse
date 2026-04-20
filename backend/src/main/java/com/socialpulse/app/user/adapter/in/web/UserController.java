@@ -9,6 +9,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.auth.security.user.CustomUserDetails;
+import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.application.port.in.GetUserProfileUseCase;
@@ -36,12 +37,12 @@ public class UserController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
             }
     )
-    public ResponseEntity<UserViewProfileResponse> getProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
+    public ResponseEntity<ApiResponse<UserViewProfileResponse>> getProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
         var request = UserViewProfileRequest.builder()
                 .targetUserId(currentUser.getId())
                 .build();
 
-        return ResponseEntity.ok(getUserProfileUseCase.getProfile(request));
+        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfile(request)).build());
     }
 
     @GetMapping("/profile/{username}")
@@ -56,8 +57,8 @@ public class UserController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User profile not found")
             }
     )
-    public ResponseEntity<UserViewProfileResponse> getOtherProfile(@PathVariable String username) {
-        return ResponseEntity.ok(getUserProfileUseCase.getProfileByUsername(username));
+    public ResponseEntity<ApiResponse<UserViewProfileResponse>> getOtherProfile(@PathVariable String username) {
+        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username)).build());
     }
 }
 

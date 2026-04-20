@@ -12,8 +12,8 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
-import com.socialpulse.app.common.status.AppCode;
-import com.socialpulse.app.common.status.UserCode;
+import com.socialpulse.app.common.exception.status.AppCode;
+import com.socialpulse.app.common.exception.status.UserCode;
 
 @RestControllerAdvice // catch global exception, appfasely all controller
 public class GlobalExceptionHandler {

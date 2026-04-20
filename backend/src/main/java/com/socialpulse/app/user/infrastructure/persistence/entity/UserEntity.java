@@ -1,12 +1,7 @@
 package com.socialpulse.app.user.infrastructure.persistence.entity;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
-import com.socialpulse.app.auth.infrastructure.persistence.entity.RefreshTokenEntity;
-import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentEntity;
-import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentReactionEntity;
-import com.socialpulse.app.post.infrastructure.persistence.entity.PostEntity;
 import com.socialpulse.app.user.domain.enums.UserRole;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
@@ -16,11 +11,9 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.FetchType;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.OneToMany;
 import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
@@ -46,18 +39,6 @@ public class UserEntity {
 
     @OneToOne(mappedBy = "user", cascade = CascadeType.ALL)
     private UserProfileEntity profile;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<PostEntity> posts;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CommentEntity> comments;
-
-    @OneToMany(mappedBy = "user", cascade = CascadeType.ALL, fetch = FetchType.LAZY)
-    private List<CommentReactionEntity> commentReactions;
-
-    @OneToMany(mappedBy = "user", fetch = FetchType.LAZY)
-    private List<RefreshTokenEntity> refreshTokens;
 
     @Column(nullable = false, unique = true)
     private String email;

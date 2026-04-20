@@ -1,12 +1,7 @@
 package com.socialpulse.app.user.domain.model;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
-import com.socialpulse.app.auth.domain.model.RefreshToken;
-import com.socialpulse.app.comment.domain.model.Comment;
-import com.socialpulse.app.comment.domain.model.CommentReaction;
-import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.user.domain.enums.UserRole;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
@@ -24,10 +19,6 @@ public class User {
 	private Long id;
 	private String username;
 	private UserProfile profile;
-	private List<Post> posts;
-	private List<Comment> comments;
-	private List<CommentReaction> commentReactions;
-	private List<RefreshToken> refreshTokens;
 	private String email;
 	private String passwordHash;
 	private UserStatus status;

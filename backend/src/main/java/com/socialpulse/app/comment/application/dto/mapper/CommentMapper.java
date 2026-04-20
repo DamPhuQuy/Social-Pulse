@@ -1,0 +1,37 @@
+package com.socialpulse.app.comment.application.dto.mapper;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+
+import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
+import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
+import com.socialpulse.app.comment.domain.model.Comment;
+import com.socialpulse.app.user.application.dto.response.UserSummary;
+import com.socialpulse.app.user.domain.model.User;
+
+@Mapper(componentModel = "spring")
+public interface CommentMapper {
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "postId", source = "request.postId")
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "parentCommentId", source = "parentCommentId")
+    @Mapping(target = "content", source = "request.content")
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "upvoteCount", constant = "0L")
+    @Mapping(target = "downvoteCount", constant = "0L")
+    @Mapping(target = "deleted", constant = "false")
+    Comment toComment(CommentCreationRequest request, Long userId, Long parentCommentId);
+
+    @Mapping(target = "id", source = "comment.id")
+    @Mapping(target = "postId", source = "comment.postId")
+    @Mapping(target = "parentCommentId", source = "comment.parentCommentId")
+    @Mapping(target = "content", source = "comment.content")
+    @Mapping(target = "createdAt", source = "comment.createdAt")
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "replyCount", constant = "0")
+    CommentCreationResponse toCommentCreationResponse(Comment comment, User user);
+
+    @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
+    UserSummary toUserSummary(User user);
+}

@@ -1,0 +1,64 @@
+package com.socialpulse.app.comment.infrastructure.persistence.mapper;
+
+import org.mapstruct.Mapper;
+import org.mapstruct.Mapping;
+import org.mapstruct.Named;
+
+import com.socialpulse.app.comment.domain.model.Comment;
+import com.socialpulse.app.comment.domain.model.CommentReaction;
+import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentEntity;
+import com.socialpulse.app.comment.infrastructure.persistence.entity.CommentReactionEntity;
+import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.user.domain.model.User;
+import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
+
+@Mapper(componentModel = "spring")
+public interface CommentDomainToEntity {
+
+    @Mapping(target = "post", source = "postId", qualifiedByName = "postIdToPost")
+    @Mapping(target = "user", source = "userId", qualifiedByName = "userIdToUser")
+    @Mapping(target = "parentComment", source = "parentCommentId", qualifiedByName = "commentIdToCommentEntity")
+    @Mapping(target = "replies", ignore = true)
+    @Mapping(target = "downVoteCount", source = "downvoteCount")
+    CommentEntity toEntity(Comment domain);
+
+    @Mapping(target = "comment", source = "commentId", qualifiedByName = "commentIdToCommentEntity")
+    @Mapping(target = "user", source = "userId", qualifiedByName = "userIdToUserEntity")
+    CommentReactionEntity toEntity(CommentReaction domain);
+
+    @Named("postIdToPost")
+    default Post postIdToPost(Long postId) {
+        if (postId == null) {
+            return null;
+        }
+
+        return Post.builder().id(postId).build();
+    }
+
+    @Named("userIdToUser")
+    default User userIdToUser(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+
+        return User.builder().id(userId).build();
+    }
+
+    @Named("userIdToUserEntity")
+    default UserEntity userIdToUserEntity(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+
+        return UserEntity.builder().id(userId).build();
+    }
+
+    @Named("commentIdToCommentEntity")
+    default CommentEntity commentIdToCommentEntity(Long commentId) {
+        if (commentId == null) {
+            return null;
+        }
+
+        return CommentEntity.builder().id(commentId).build();
+    }
+}
