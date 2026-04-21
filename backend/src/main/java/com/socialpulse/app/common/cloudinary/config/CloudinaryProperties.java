@@ -1,4 +1,4 @@
-package com.socialpulse.app.infrastructure.cloudinary.config;
+package com.socialpulse.app.common.cloudinary.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 import org.springframework.stereotype.Component;
