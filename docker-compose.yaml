@@ -1,6 +1,6 @@
 services:
   db:
-    image: postgres:17
+    image: postgres:16-alpine
     environment:
       TZ: Asia/Ho_Chi_Minh
       POSTGRES_USER: ${POSTGRES_USERNAME}
