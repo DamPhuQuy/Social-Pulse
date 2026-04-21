@@ -3,10 +3,13 @@ package com.socialpulse.app.post.application.dto.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.application.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
+import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.post.domain.model.PostReactions;
 
 @Mapper(componentModel = "spring")
 public interface PostMapper {
@@ -29,4 +32,16 @@ public interface PostMapper {
     PostCreationResponse toPostCreationResponse(Post post);
 
     ViewPostResponse toViewPostResponse(Post post);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "postId", source = "postId")
+    @Mapping(target = "reactionType", source = "reactionType")
+    PostReactions toPostReaction(Long userId, Long postId, ReactionType reactionType);
+
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "postId", source = "postId")
+    @Mapping(target = "reactionType", expression = "java(reaction.getReactionType() != null ? reaction.getReactionType().name() : null)")
+    PostReactionResponse toPostReactionResponse(PostReactions reaction);
 }

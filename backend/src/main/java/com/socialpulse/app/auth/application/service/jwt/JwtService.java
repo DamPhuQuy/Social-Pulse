@@ -11,9 +11,9 @@ import javax.crypto.SecretKey;
 
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.socialpulse.app.auth.application.port.in.JwtUseCase;
-import com.socialpulse.app.auth.security.jwt.JwtProperties;
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
+import com.socialpulse.app.security.jwt.JwtProperties;
+import com.socialpulse.app.security.user.CustomUserDetails;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -132,3 +132,4 @@ public class JwtService implements JwtUseCase {
         return extractExpiration(token).before(new Date());
     }
 }
+

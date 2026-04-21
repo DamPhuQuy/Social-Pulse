@@ -12,15 +12,15 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.auth.application.dto.TokenPair;
 import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
-import com.socialpulse.app.auth.application.port.in.JwtUseCase;
-import com.socialpulse.app.auth.application.port.in.RefreshTokenRevocationUseCase;
-import com.socialpulse.app.auth.application.port.in.RefreshTokenUseCase;
-import com.socialpulse.app.auth.application.port.out.RefreshTokenRepositoryPort;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenRevocationUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
+import com.socialpulse.app.auth.domain.repository.RefreshTokenRepository;
 import com.socialpulse.app.auth.domain.model.RefreshToken;
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.AuthCode;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
 @Service
@@ -29,16 +29,16 @@ public class RefreshTokenService implements RefreshTokenUseCase {
     private static final int REFRESH_TOKEN_NUM_BYTES = 64;
 
     private final JwtUseCase jwtUseCase;
-    private final RefreshTokenRepositoryPort refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
     private final RefreshTokenRevocationUseCase refreshTokenRevocationUseCase;
-    private final UserRepositoryPort userRepository;
+    private final UserRepository userRepository;
     private final AuthMapper authMapper;
     private final SecureRandom secureRandom;
 
     public RefreshTokenService(JwtUseCase jwtUseCase,
-                               RefreshTokenRepositoryPort refreshTokenRepository,
+                               RefreshTokenRepository refreshTokenRepository,
                                RefreshTokenRevocationUseCase refreshTokenRevocationUseCase,
-                               UserRepositoryPort userRepository,
+                               UserRepository userRepository,
                                AuthMapper authMapper) {
         this.jwtUseCase = jwtUseCase;
         this.refreshTokenRepository = refreshTokenRepository;
@@ -144,3 +144,5 @@ public class RefreshTokenService implements RefreshTokenUseCase {
         }
     }
 }
+
+

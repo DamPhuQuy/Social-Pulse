@@ -1,16 +1,16 @@
 package com.socialpulse.app.comment.application.service;
 
-import com.socialpulse.app.comment.application.port.in.ValidateParentCommentUseCase;
-import com.socialpulse.app.comment.application.port.out.CommentRepositoryPort;
+import com.socialpulse.app.comment.application.usecase.ValidateParentCommentUseCase;
+import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.CommentCode;
 
 public class ValidateParentCommentService implements ValidateParentCommentUseCase {
 
-    private final CommentRepositoryPort commentRepositoryPort;
+    private final CommentRepository commentRepositoryPort;
 
-    public ValidateParentCommentService(CommentRepositoryPort commentRepositoryPort) {
+    public ValidateParentCommentService(CommentRepository commentRepositoryPort) {
         this.commentRepositoryPort = commentRepositoryPort;
     }
 
@@ -38,3 +38,5 @@ public class ValidateParentCommentService implements ValidateParentCommentUseCas
         return parent;
     }
 }
+
+

@@ -2,16 +2,16 @@ package com.socialpulse.app.report.application.service;
 
 import com.socialpulse.app.report.application.dto.mapper.ReportMapper;
 import com.socialpulse.app.report.application.dto.request.CreateReportRequest;
-import com.socialpulse.app.report.application.port.in.CreateReportUseCase;
-import com.socialpulse.app.report.application.port.out.ReportRepositoryPort;
+import com.socialpulse.app.report.application.usecase.CreateReportUseCase;
+import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.domain.model.Report;
 
 public class CreateReportService implements CreateReportUseCase {
 
-    private final ReportRepositoryPort reportRepositoryPort;
+    private final ReportRepository reportRepositoryPort;
     private final ReportMapper reportMapper;
 
-    public CreateReportService(ReportRepositoryPort reportRepositoryPort, ReportMapper reportMapper) {
+    public CreateReportService(ReportRepository reportRepositoryPort, ReportMapper reportMapper) {
         this.reportRepositoryPort = reportRepositoryPort;
         this.reportMapper = reportMapper;
     }
@@ -24,3 +24,5 @@ public class CreateReportService implements CreateReportUseCase {
         return reportRepositoryPort.save(report);
     }
 }
+
+

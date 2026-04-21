@@ -15,13 +15,13 @@ import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.auth.application.dto.TokenPair;
 import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
 import com.socialpulse.app.auth.application.dto.request.LoginRequest;
-import com.socialpulse.app.auth.application.port.in.JwtUseCase;
-import com.socialpulse.app.auth.application.port.in.LoginUseCase;
-import com.socialpulse.app.auth.application.port.in.RefreshTokenUseCase;
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
+import com.socialpulse.app.auth.application.usecase.LoginUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.AuthCode;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 import com.socialpulse.app.user.domain.model.User;
@@ -30,14 +30,14 @@ public class LoginService implements LoginUseCase {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;
 
-    private final UserRepositoryPort userRepository;
+    private final UserRepository userRepository;
     private final AuthenticationManager authenticationManager;
     private final JwtUseCase jwtUseCase;
     private final RefreshTokenUseCase refreshTokenUseCase;
     private final AuthMapper authMapper;
     private final Logger logger;
 
-    public LoginService(UserRepositoryPort userRepository,
+    public LoginService(UserRepository userRepository,
                         AuthenticationManager authenticationManager,
                         JwtUseCase jwtUseCase,
                         RefreshTokenUseCase refreshTokenUseCase,
@@ -100,3 +100,5 @@ public class LoginService implements LoginUseCase {
         userRepository.save(user);
     }
 }
+
+

@@ -5,13 +5,13 @@ import java.time.Instant;
 
 import org.springframework.stereotype.Service;
 
-import com.socialpulse.app.auth.application.port.in.OtpUseCase;
-import com.socialpulse.app.auth.application.port.out.EmailPort;
-import com.socialpulse.app.auth.application.port.out.OtpStoragePort;
+import com.socialpulse.app.auth.application.usecase.OtpUseCase;
+import com.socialpulse.app.auth.application.port.EmailPort;
+import com.socialpulse.app.auth.domain.repository.OtpRepository;
 import com.socialpulse.app.auth.domain.model.Otp;
-import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.AuthCode;
+import com.socialpulse.app.security.encoder.AppPasswordEncoder;
 
 @Service
 public class OtpService implements OtpUseCase {
@@ -23,12 +23,12 @@ public class OtpService implements OtpUseCase {
     private static final String PAYLOAD_SEPARATOR = "|";
 
     // Dependencies
-    private final OtpStoragePort otpStoragePort;
+    private final OtpRepository otpStoragePort;
     private final EmailPort emailPort;
     private final SecureRandom secureRandom;
     private final AppPasswordEncoder passwordEncoder;
 
-    public OtpService(OtpStoragePort otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
+    public OtpService(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
         this.otpStoragePort = otpStoragePort;
         this.emailPort = emailPort;
         this.passwordEncoder = passwordEncoder;
@@ -205,3 +205,5 @@ public class OtpService implements OtpUseCase {
         """.formatted(otpCode);
     }
 }
+
+

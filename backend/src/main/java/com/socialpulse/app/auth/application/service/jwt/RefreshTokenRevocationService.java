@@ -10,16 +10,16 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Propagation;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.socialpulse.app.auth.application.port.in.RefreshTokenRevocationUseCase;
-import com.socialpulse.app.auth.application.port.out.RefreshTokenRepositoryPort;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenRevocationUseCase;
+import com.socialpulse.app.auth.domain.repository.RefreshTokenRepository;
 import com.socialpulse.app.auth.domain.model.RefreshToken;
 
 @Service
 public class RefreshTokenRevocationService implements RefreshTokenRevocationUseCase {
 
-    private final RefreshTokenRepositoryPort refreshTokenRepository;
+    private final RefreshTokenRepository refreshTokenRepository;
 
-    public RefreshTokenRevocationService(RefreshTokenRepositoryPort refreshTokenRepository) {
+    public RefreshTokenRevocationService(RefreshTokenRepository refreshTokenRepository) {
         this.refreshTokenRepository = refreshTokenRepository;
     }
 
@@ -70,3 +70,5 @@ public class RefreshTokenRevocationService implements RefreshTokenRevocationUseC
         }
     }
 }
+
+

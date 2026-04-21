@@ -4,24 +4,24 @@ import java.util.Locale;
 
 import org.springframework.transaction.annotation.Transactional;
 
-import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.AuthCode;
 import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
 import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserCreationResponse;
-import com.socialpulse.app.user.application.port.in.CreateUserUseCase;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
 public class CreateUserService implements CreateUserUseCase {
 
-    private final UserRepositoryPort userRepository;
+    private final UserRepository userRepository;
     private final AppPasswordEncoder passwordEncode;
     private final UserMapper userMapper;
 
-    public CreateUserService(UserRepositoryPort userRepository, AppPasswordEncoder passwordEncode, UserMapper userMapper) {
+    public CreateUserService(UserRepository userRepository, AppPasswordEncoder passwordEncode, UserMapper userMapper) {
         this.userRepository = userRepository;
         this.passwordEncode = passwordEncode;
         this.userMapper = userMapper;
@@ -55,3 +55,5 @@ public class CreateUserService implements CreateUserUseCase {
     }
 
 }
+
+

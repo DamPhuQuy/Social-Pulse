@@ -3,19 +3,17 @@ package com.socialpulse.app.user.infrastructure.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
-import com.socialpulse.app.user.adapter.out.UserProfileRepositoryAdapter;
-import com.socialpulse.app.user.adapter.out.UserRepositoryAdapter;
+import com.socialpulse.app.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.user.adapter.persistence.UserProfileRepositoryAdapter;
+import com.socialpulse.app.user.adapter.persistence.UserRepositoryAdapter;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
-import com.socialpulse.app.user.application.dto.mapper.UserProfileMapper;
-import com.socialpulse.app.user.application.port.in.CreateUserUseCase;
-import com.socialpulse.app.user.application.port.in.GetUserProfileUseCase;
-import com.socialpulse.app.user.application.port.out.UserProfileRepositoryPort;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
+import com.socialpulse.app.user.domain.repository.UserProfileRepository;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.GetUserProfileService;
-import com.socialpulse.app.user.infrastructure.persistence.mapper.UserDomainToEntity;
-import com.socialpulse.app.user.infrastructure.persistence.mapper.UserEntityToDomain;
+import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
@@ -25,35 +23,36 @@ public class UserConfig {
     // adapters --------------------------------------
 
     @Bean
-    public UserRepositoryPort userRepositoryPort(
+    public UserRepository userRepositoryPort(
             JpaUserRepository jpaUserRepository,
-            UserEntityToDomain userEntityToDomainMapper,
-            UserDomainToEntity userDomainToEntityMapper) {
-        return new UserRepositoryAdapter(jpaUserRepository, userEntityToDomainMapper, userDomainToEntityMapper);
+            UserPersistenceMapper userPersistenceMapper) {
+        return new UserRepositoryAdapter(jpaUserRepository, userPersistenceMapper);
     }
 
     @Bean
-    public UserProfileRepositoryPort userProfileRepositoryPort(
+    public UserProfileRepository userProfileRepositoryPort(
             JpaUserProfileRepository jpaUserProfileRepository,
-            UserEntityToDomain userEntityToDomainMapper) {
-        return new UserProfileRepositoryAdapter(jpaUserProfileRepository, userEntityToDomainMapper);
+            UserPersistenceMapper userPersistenceMapper) {
+        return new UserProfileRepositoryAdapter(jpaUserProfileRepository, userPersistenceMapper);
     }
 
     // use cases --------------------------------------
 
     @Bean
     public GetUserProfileUseCase getUserProfileUseCase(
-            UserProfileRepositoryPort userProfileRepositoryPort,
-            UserProfileMapper userProfileMapper) {
-        return new GetUserProfileService(userProfileRepositoryPort, userProfileMapper);
+            UserProfileRepository userProfileRepositoryPort,
+            UserMapper userMapper) {
+        return new GetUserProfileService(userProfileRepositoryPort, userMapper);
     }
 
     @Bean
     public CreateUserUseCase createUserUseCase(
-            UserRepositoryPort userRepository,
+            UserRepository userRepository,
             AppPasswordEncoder appPasswordEncoder,
             UserMapper userMapper
     ) {
         return new CreateUserService(userRepository, appPasswordEncoder, userMapper);
     }
 }
+
+

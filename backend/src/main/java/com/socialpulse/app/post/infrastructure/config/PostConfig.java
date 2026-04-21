@@ -3,23 +3,21 @@ package com.socialpulse.app.post.infrastructure.config;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
-import com.socialpulse.app.post.adapter.out.PostReactionsRepositoryAdapter;
-import com.socialpulse.app.post.adapter.out.PostRepositoryAdapter;
+import com.socialpulse.app.post.adapter.persistence.PostReactionsRepositoryAdapter;
+import com.socialpulse.app.post.adapter.persistence.PostRepositoryAdapter;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
-import com.socialpulse.app.post.application.dto.mapper.PostReactionMapper;
-import com.socialpulse.app.post.application.port.in.CreatePostUseCase;
-import com.socialpulse.app.post.application.port.in.ReactPostUseCase;
-import com.socialpulse.app.post.application.port.in.ViewPostUseCase;
-import com.socialpulse.app.post.application.port.out.PostReactionsRepositoryPort;
-import com.socialpulse.app.post.application.port.out.PostRepositoryPort;
+import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
+import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
+import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
+import com.socialpulse.app.post.domain.repository.PostReactionsRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.application.service.CreatePostService;
 import com.socialpulse.app.post.application.service.ReactPostService;
 import com.socialpulse.app.post.application.service.ViewPostService;
-import com.socialpulse.app.post.infrastructure.persistence.mapper.PostDomainToEntity;
-import com.socialpulse.app.post.infrastructure.persistence.mapper.PostEntityToDomain;
+import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostReactionRepository;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
 public class PostConfig {
@@ -27,42 +25,42 @@ public class PostConfig {
     // adapters --------------------------------------
 
     @Bean
-    public PostRepositoryPort postRepositoryPort(JpaPostRepository jpaPostRepository,
-                                                 PostEntityToDomain postEntityToDomain,
-                                                 PostDomainToEntity postDomainToEntity) {
-        return new PostRepositoryAdapter(jpaPostRepository, postEntityToDomain, postDomainToEntity);
+    public PostRepository postRepositoryPort(JpaPostRepository jpaPostRepository,
+                                                 PostPersistenceMapper postPersistenceMapper) {
+        return new PostRepositoryAdapter(jpaPostRepository, postPersistenceMapper);
     }
 
     @Bean
-    public PostReactionsRepositoryPort postReactionsRepositoryPort(
+    public PostReactionsRepository postReactionsRepositoryPort(
             JpaPostReactionRepository jpaPostReactionRepository,
-            PostEntityToDomain postEntityToDomain,
-            PostDomainToEntity postDomainToEntity) {
-        return new PostReactionsRepositoryAdapter(jpaPostReactionRepository, postEntityToDomain, postDomainToEntity);
+            PostPersistenceMapper postPersistenceMapper) {
+        return new PostReactionsRepositoryAdapter(jpaPostReactionRepository, postPersistenceMapper);
     }
 
     // use cases --------------------------------------
 
     @Bean
-    public CreatePostUseCase createPostUseCase(PostRepositoryPort postRepositoryPort,
-                                               UserRepositoryPort userRepositoryPort,
+    public CreatePostUseCase createPostUseCase(PostRepository postRepositoryPort,
+                                               UserRepository userRepositoryPort,
                                                PostMapper postMapper) {
         return new CreatePostService(postRepositoryPort, userRepositoryPort, postMapper);
     }
 
     @Bean
-    public ViewPostUseCase viewPostUseCase(PostRepositoryPort postRepositoryPort,
+    public ViewPostUseCase viewPostUseCase(PostRepository postRepositoryPort,
                                            PostMapper postMapper) {
         return new ViewPostService(postRepositoryPort, postMapper);
     }
 
     @Bean
-    public ReactPostUseCase reactPostUseCase(PostRepositoryPort postRepositoryPort,
-                                             PostReactionsRepositoryPort postReactionsRepositoryPort,
-                                             UserRepositoryPort userRepositoryPort,
-                                             PostReactionMapper postReactionMapper) {
+    public ReactPostUseCase reactPostUseCase(PostRepository postRepositoryPort,
+                                             PostReactionsRepository postReactionsRepositoryPort,
+                                             UserRepository userRepositoryPort,
+                                             PostMapper postMapper) {
         return new ReactPostService(postRepositoryPort, postReactionsRepositoryPort, userRepositoryPort,
-                postReactionMapper);
+                postMapper);
     }
 }
+
+
 

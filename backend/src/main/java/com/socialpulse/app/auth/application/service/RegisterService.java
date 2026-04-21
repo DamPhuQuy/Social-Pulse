@@ -4,11 +4,11 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.transaction.annotation.Transactional;
 
-import com.socialpulse.app.auth.application.port.in.OtpUseCase;
-import com.socialpulse.app.auth.application.port.in.RegisterUseCase;
+import com.socialpulse.app.auth.application.usecase.OtpUseCase;
+import com.socialpulse.app.auth.application.usecase.RegisterUseCase;
 import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserCreationResponse;
-import com.socialpulse.app.user.application.port.in.CreateUserUseCase;
+import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
 
 public class RegisterService implements RegisterUseCase {
 
@@ -31,3 +31,4 @@ public class RegisterService implements RegisterUseCase {
         return response;
     }
 }
+

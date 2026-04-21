@@ -7,22 +7,22 @@ import com.socialpulse.app.auth.application.dto.request.ForgotPasswordRequest;
 import com.socialpulse.app.auth.application.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.application.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.application.dto.request.VerifyOtpRequest;
-import com.socialpulse.app.auth.application.port.in.OtpUseCase;
-import com.socialpulse.app.auth.application.port.in.PasswordResetUseCase;
-import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.auth.application.usecase.OtpUseCase;
+import com.socialpulse.app.auth.application.usecase.PasswordResetUseCase;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
 @Service
 public class PasswordResetService implements PasswordResetUseCase {
 
-    private final UserRepositoryPort userRepository;
+    private final UserRepository userRepository;
     private final AppPasswordEncoder passwordEncoder;
     private final OtpUseCase otpUseCase;
 
-    public PasswordResetService(UserRepositoryPort userRepository,
+    public PasswordResetService(UserRepository userRepository,
                                 AppPasswordEncoder passwordEncoder,
                                 OtpUseCase otpUseCase) {
         this.userRepository = userRepository;
@@ -81,3 +81,5 @@ public class PasswordResetService implements PasswordResetUseCase {
         otpUseCase.invalidateOtp(email);
     }
 }
+
+

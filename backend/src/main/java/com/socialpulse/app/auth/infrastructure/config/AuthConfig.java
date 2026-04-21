@@ -6,21 +6,21 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.security.authentication.AuthenticationManager;
 
-import com.socialpulse.app.auth.adapter.out.EmailAdapter;
-import com.socialpulse.app.auth.adapter.out.OtpStorageAdapter;
-import com.socialpulse.app.auth.adapter.out.RefreshTokenRepositoryAdapter;
+import com.socialpulse.app.auth.adapter.persistence.EmailAdapter;
+import com.socialpulse.app.auth.adapter.persistence.OtpStorageAdapter;
+import com.socialpulse.app.auth.adapter.persistence.RefreshTokenRepositoryAdapter;
 import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
-import com.socialpulse.app.auth.application.port.in.JwtUseCase;
-import com.socialpulse.app.auth.application.port.in.LoginUseCase;
-import com.socialpulse.app.auth.application.port.in.OtpUseCase;
-import com.socialpulse.app.auth.application.port.in.PasswordResetUseCase;
-import com.socialpulse.app.auth.application.port.in.RefreshTokenRevocationUseCase;
-import com.socialpulse.app.auth.application.port.in.RefreshTokenUseCase;
-import com.socialpulse.app.auth.application.port.in.RegisterUseCase;
-import com.socialpulse.app.auth.application.port.in.VerifyEmailUseCase;
-import com.socialpulse.app.auth.application.port.out.EmailPort;
-import com.socialpulse.app.auth.application.port.out.OtpStoragePort;
-import com.socialpulse.app.auth.application.port.out.RefreshTokenRepositoryPort;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
+import com.socialpulse.app.auth.application.usecase.LoginUseCase;
+import com.socialpulse.app.auth.application.usecase.OtpUseCase;
+import com.socialpulse.app.auth.application.usecase.PasswordResetUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenRevocationUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
+import com.socialpulse.app.auth.application.usecase.RegisterUseCase;
+import com.socialpulse.app.auth.application.usecase.VerifyEmailUseCase;
+import com.socialpulse.app.auth.application.port.EmailPort;
+import com.socialpulse.app.auth.domain.repository.OtpRepository;
+import com.socialpulse.app.auth.domain.repository.RefreshTokenRepository;
 import com.socialpulse.app.auth.application.service.LoginService;
 import com.socialpulse.app.auth.application.service.RegisterService;
 import com.socialpulse.app.auth.application.service.VerifyEmailService;
@@ -31,10 +31,10 @@ import com.socialpulse.app.auth.application.service.otp.OtpService;
 import com.socialpulse.app.auth.application.service.password.PasswordResetService;
 import com.socialpulse.app.auth.infrastructure.persistence.mapper.RefreshTokenMapper;
 import com.socialpulse.app.auth.infrastructure.persistence.repository.JpaRefreshTokenRepository;
-import com.socialpulse.app.auth.security.encoder.AppPasswordEncoder;
-import com.socialpulse.app.auth.security.jwt.JwtProperties;
-import com.socialpulse.app.user.application.port.in.CreateUserUseCase;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.security.jwt.JwtProperties;
+import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
 public class AuthConfig {
@@ -42,7 +42,7 @@ public class AuthConfig {
     // Adapters ---------------------------------------------
 
     @Bean
-    public RefreshTokenRepositoryPort refreshTokenRepositoryPort(JpaRefreshTokenRepository jpaRefreshTokenRepository,
+    public RefreshTokenRepository refreshTokenRepositoryPort(JpaRefreshTokenRepository jpaRefreshTokenRepository,
                                                                  RefreshTokenMapper refreshTokenMapper) {
         return new RefreshTokenRepositoryAdapter(jpaRefreshTokenRepository, refreshTokenMapper);
     }
@@ -53,7 +53,7 @@ public class AuthConfig {
     }
 
     @Bean
-    public OtpStoragePort otpStoragePort(StringRedisTemplate redisTemplate) {
+    public OtpRepository otpStoragePort(StringRedisTemplate redisTemplate) {
         return new OtpStorageAdapter(redisTemplate);
     }
 
@@ -65,12 +65,12 @@ public class AuthConfig {
     }
 
     @Bean
-    public VerifyEmailUseCase verifyEmailUseCase(UserRepositoryPort userRepositoryPort, OtpUseCase otpUseCase) {
+    public VerifyEmailUseCase verifyEmailUseCase(UserRepository userRepositoryPort, OtpUseCase otpUseCase) {
         return new VerifyEmailService(userRepositoryPort, otpUseCase);
     }
 
     @Bean
-    public LoginUseCase loginUseCase(UserRepositoryPort userRepositoryPort,
+    public LoginUseCase loginUseCase(UserRepository userRepositoryPort,
                                      AuthenticationManager authenticationManager,
                                      JwtUseCase jwtUseCase,
                                      RefreshTokenUseCase refreshTokenUseCase,
@@ -81,15 +81,15 @@ public class AuthConfig {
     @Bean
     public RefreshTokenUseCase refreshTokenUseCase(
         JwtUseCase jwtUseCase,
-        RefreshTokenRepositoryPort refreshTokenRepository,
+        RefreshTokenRepository refreshTokenRepository,
         RefreshTokenRevocationUseCase refreshTokenRevocationUseCase,
-        UserRepositoryPort userRepository,
+        UserRepository userRepository,
         AuthMapper authMapper) {
         return new RefreshTokenService(jwtUseCase, refreshTokenRepository, refreshTokenRevocationUseCase, userRepository, authMapper);
     }
 
     @Bean
-    public RefreshTokenRevocationUseCase refreshTokenRevocationUseCase(RefreshTokenRepositoryPort refreshTokenRepository) {
+    public RefreshTokenRevocationUseCase refreshTokenRevocationUseCase(RefreshTokenRepository refreshTokenRepository) {
         return new RefreshTokenRevocationService(refreshTokenRepository);
     }
 
@@ -99,12 +99,12 @@ public class AuthConfig {
     }
 
     @Bean
-    public OtpUseCase otpUseCase(OtpStoragePort otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
+    public OtpUseCase otpUseCase(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
         return new OtpService(otpStoragePort, emailPort, passwordEncoder);
     }
 
     @Bean
-    public PasswordResetUseCase passwordResetUseCase(UserRepositoryPort userRepositoryPort, AppPasswordEncoder passwordEncoder, OtpUseCase otpUseCase) {
+    public PasswordResetUseCase passwordResetUseCase(UserRepository userRepositoryPort, AppPasswordEncoder passwordEncoder, OtpUseCase otpUseCase) {
         return new PasswordResetService(userRepositoryPort, passwordEncoder, otpUseCase);
     }
 
@@ -114,3 +114,6 @@ public class AuthConfig {
         return new AppPasswordEncoder();
     }
 }
+
+
+

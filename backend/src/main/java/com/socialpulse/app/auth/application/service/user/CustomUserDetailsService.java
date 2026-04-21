@@ -5,15 +5,15 @@ import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
 @Service
 public class CustomUserDetailsService implements UserDetailsService {
-    private final UserRepositoryPort userRepository;
+    private final UserRepository userRepository;
 
-    public CustomUserDetailsService(UserRepositoryPort userRepository) {
+    public CustomUserDetailsService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
 
@@ -27,3 +27,4 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .build();
     }
 }
+

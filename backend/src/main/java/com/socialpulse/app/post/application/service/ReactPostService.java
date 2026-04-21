@@ -2,36 +2,36 @@ package com.socialpulse.app.post.application.service;
 
 import org.springframework.transaction.annotation.Transactional;
 
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.common.utils.ReactionType;
-import com.socialpulse.app.post.application.dto.mapper.PostReactionMapper;
+import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
-import com.socialpulse.app.post.application.port.in.ReactPostUseCase;
-import com.socialpulse.app.post.application.port.out.PostReactionsRepositoryPort;
-import com.socialpulse.app.post.application.port.out.PostRepositoryPort;
+import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
+import com.socialpulse.app.post.domain.repository.PostReactionsRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.model.PostReactions;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 public class ReactPostService implements ReactPostUseCase {
 
-    private final PostRepositoryPort postRepositoryPort;
-    private final PostReactionsRepositoryPort postReactionsRepositoryPort;
-    private final UserRepositoryPort userRepositoryPort;
-    private final PostReactionMapper postReactionMapper;
+    private final PostRepository postRepositoryPort;
+    private final PostReactionsRepository postReactionsRepositoryPort;
+    private final UserRepository userRepositoryPort;
+    private final PostMapper postMapper;
 
-    public ReactPostService(PostRepositoryPort postRepositoryPort,
-                            PostReactionsRepositoryPort postReactionsRepositoryPort,
-                            UserRepositoryPort userRepositoryPort,
-                            PostReactionMapper postReactionMapper) {
+    public ReactPostService(PostRepository postRepositoryPort,
+                            PostReactionsRepository postReactionsRepositoryPort,
+                            UserRepository userRepositoryPort,
+                            PostMapper postMapper) {
         this.postRepositoryPort = postRepositoryPort;
         this.postReactionsRepositoryPort = postReactionsRepositoryPort;
         this.userRepositoryPort = userRepositoryPort;
-        this.postReactionMapper = postReactionMapper;
+        this.postMapper = postMapper;
     }
 
     @Override
@@ -50,20 +50,20 @@ public class ReactPostService implements ReactPostUseCase {
         ReactionType targetReaction = request.getReactionType();
 
         if (currentReaction == null) {
-            PostReactions newReaction = postReactionMapper.toPostReaction(currentUser.getId(), post.getId(), targetReaction);
+            PostReactions newReaction = postMapper.toPostReaction(currentUser.getId(), post.getId(), targetReaction);
 
             PostReactions savedReaction = postReactionsRepositoryPort.save(newReaction);
             incrementReactionCount(post, targetReaction);
             postRepositoryPort.save(post);
 
-            return postReactionMapper.toPostReactionResponse(savedReaction);
+            return postMapper.toPostReactionResponse(savedReaction);
         }
 
         if (currentReaction.getReactionType() == targetReaction) {
             postReactionsRepositoryPort.delete(currentReaction);
             decrementReactionCount(post, targetReaction);
             postRepositoryPort.save(post);
-            return postReactionMapper.toPostReactionResponse(currentReaction);
+            return postMapper.toPostReactionResponse(currentReaction);
         }
 
         decrementReactionCount(post, currentReaction.getReactionType());
@@ -73,7 +73,7 @@ public class ReactPostService implements ReactPostUseCase {
         PostReactions updatedReaction = postReactionsRepositoryPort.save(currentReaction);
         postRepositoryPort.save(post);
 
-        return postReactionMapper.toPostReactionResponse(updatedReaction);
+        return postMapper.toPostReactionResponse(updatedReaction);
     }
 
     private void incrementReactionCount(Post post, ReactionType reactionType) {
@@ -99,3 +99,5 @@ public class ReactPostService implements ReactPostUseCase {
     }
 
 }
+
+

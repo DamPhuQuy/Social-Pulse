@@ -1,21 +1,21 @@
 package com.socialpulse.app.post.application.service;
 
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
-import com.socialpulse.app.post.application.port.in.ViewPostUseCase;
-import com.socialpulse.app.post.application.port.out.PostRepositoryPort;
+import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.security.user.CustomUserDetails;
 
 public class ViewPostService implements ViewPostUseCase {
 
-    private final PostRepositoryPort postRepositoryPort;
+    private final PostRepository postRepositoryPort;
     private final PostMapper postMapper;
 
-    public ViewPostService(PostRepositoryPort postRepositoryPort, PostMapper postMapper) {
+    public ViewPostService(PostRepository postRepositoryPort, PostMapper postMapper) {
         this.postRepositoryPort = postRepositoryPort;
         this.postMapper = postMapper;
     }
@@ -33,3 +33,5 @@ public class ViewPostService implements ViewPostUseCase {
         return postMapper.toViewPostResponse(post);
     }
 }
+
+

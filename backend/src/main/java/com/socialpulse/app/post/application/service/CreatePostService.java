@@ -1,24 +1,24 @@
 package com.socialpulse.app.post.application.service;
 
-import com.socialpulse.app.auth.security.user.CustomUserDetails;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
-import com.socialpulse.app.post.application.port.in.CreatePostUseCase;
-import com.socialpulse.app.post.application.port.out.PostRepositoryPort;
+import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.domain.model.Post;
-import com.socialpulse.app.user.application.port.out.UserRepositoryPort;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 public class CreatePostService implements CreatePostUseCase {
 
-    private final PostRepositoryPort postRepositoryPort;
-    private final UserRepositoryPort userRepositoryPort;
+    private final PostRepository postRepositoryPort;
+    private final UserRepository userRepositoryPort;
     private final PostMapper postMapper;
 
-    public CreatePostService(PostRepositoryPort postRepositoryPort,
-                             UserRepositoryPort userRepositoryPort,
+    public CreatePostService(PostRepository postRepositoryPort,
+                             UserRepository userRepositoryPort,
                              PostMapper postMapper) {
         this.postRepositoryPort = postRepositoryPort;
         this.userRepositoryPort = userRepositoryPort;
@@ -37,3 +37,5 @@ public class CreatePostService implements CreatePostUseCase {
         return postMapper.toPostCreationResponse(savedPost);
     }
 }
+
+
