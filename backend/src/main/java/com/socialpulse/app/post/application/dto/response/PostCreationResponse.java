@@ -2,8 +2,8 @@ package com.socialpulse.app.post.application.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

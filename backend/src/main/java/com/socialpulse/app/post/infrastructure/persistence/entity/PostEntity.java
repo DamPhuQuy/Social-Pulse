@@ -4,8 +4,8 @@ import java.time.LocalDateTime;
 
 import org.hibernate.annotations.SQLDelete;
 
-import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 
 import jakarta.persistence.Column;

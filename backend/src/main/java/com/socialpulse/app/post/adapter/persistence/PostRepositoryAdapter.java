@@ -1,13 +1,14 @@
 package com.socialpulse.app.post.adapter.persistence;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.socialpulse.app.post.domain.enums.PostType;
-import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
 
@@ -41,6 +42,10 @@ public class PostRepositoryAdapter implements PostRepository {
         return jpaPostRepository.existsByUserIdAndParentPostIdAndType(userId, parentPostId, type);
     }
 
+    @Override
+    public void updateShareCount(Map<Long, Long> updates) {
+        updates.forEach(jpaPostRepository::updateShareCount);
+    }
 }
 
 

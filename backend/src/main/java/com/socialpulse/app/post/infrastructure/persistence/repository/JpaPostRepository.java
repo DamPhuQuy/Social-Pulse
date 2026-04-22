@@ -3,6 +3,8 @@ package com.socialpulse.app.post.infrastructure.persistence.repository;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.socialpulse.app.post.domain.enums.PostType;
@@ -15,4 +17,7 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
     Page<PostEntity> findByUserId(Long userId, Pageable pageable);
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
+
+    @Query("UPDATE PostEntity p SET p.shareCount = p.shareCount + :delta WHERE p.id = :postId")
+    void updateShareCount(@Param("postId") Long postId, @Param("delta") Long delta);
 }

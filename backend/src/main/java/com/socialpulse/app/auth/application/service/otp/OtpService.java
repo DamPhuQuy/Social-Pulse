@@ -97,9 +97,9 @@ public class OtpService implements OtpUseCase {
 
         return Otp.builder()
                 .email(email)
-                                .otpCode(parts[0])
-                                .expiredAt(parseLong(parts[1]))
-                                .attemptCount(parseLong(parts[2]))
+                .otpCode(parts[0])
+                .expiredAt(parseLong(parts[1]))
+                .attemptCount(parseLong(parts[2]))
                 .build();
     }
 
