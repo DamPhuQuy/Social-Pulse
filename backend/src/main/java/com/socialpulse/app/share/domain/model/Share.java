@@ -1,19 +1,19 @@
-package com.socialpulse.app.post.application.dto.response;
+package com.socialpulse.app.share.domain.model;
 
-import com.socialpulse.app.common.utils.ReactionType;
+import java.time.LocalDateTime;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Builder
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor
-public class PostReactionResponse {
+@Builder
+public class Share {
     private Long id;
     private Long postId;
     private Long userId;
-    private ReactionType reactionType;
+    private LocalDateTime createdAt;
 }

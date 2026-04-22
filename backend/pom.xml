@@ -171,16 +171,6 @@
 					</excludes>
 				</configuration>
 			</plugin>
-			<plugin>
-				<configuration>
-					<compilerArgs>
-						<arg>-Amapstruct.verbose=true</arg>
-						<arg>-Amapstruct.suppressGeneratorTimestamp=true</arg>
-					</compilerArgs>
-					<annotationProcessorPaths>
-						</annotationProcessorPaths>
-				</configuration>
-			</plugin>
 		</plugins>
 	</build>
 

@@ -38,18 +38,26 @@ public class Post {
 
 	public void incrementUpvoteCount() {
 		this.upvoteCount = safeCount(this.upvoteCount) + 1L;
+		updateHotScore();
 	}
 
 	public void decrementUpvoteCount() {
 		this.upvoteCount = Math.max(0L, safeCount(this.upvoteCount) - 1L);
+		updateHotScore();
 	}
 
 	public void incrementDownvoteCount() {
 		this.downvoteCount = safeCount(this.downvoteCount) + 1L;
+		updateHotScore();
 	}
 
 	public void decrementDownvoteCount() {
 		this.downvoteCount = Math.max(0L, safeCount(this.downvoteCount) - 1L);
+		updateHotScore();
+	}
+
+	private void updateHotScore() {
+		this.hotScore = (double) (safeCount(this.upvoteCount) - safeCount(this.downvoteCount));
 	}
 
 	private long safeCount(Long value) {

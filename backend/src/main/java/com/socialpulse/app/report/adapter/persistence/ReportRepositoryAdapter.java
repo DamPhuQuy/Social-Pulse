@@ -1,7 +1,7 @@
 package com.socialpulse.app.report.adapter.persistence;
 
-import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.domain.model.Report;
+import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.infrastructure.persistence.mapper.ReportPersistenceMapper;
 import com.socialpulse.app.report.infrastructure.persistence.repository.JpaReportRepository;
 
