@@ -1,5 +1,6 @@
 package com.socialpulse.app.post.domain.repository;
 
+import java.util.Map;
 import java.util.Optional;
 
 import org.springframework.data.domain.Page;
@@ -16,5 +17,7 @@ public interface PostRepository {
     Page<Post> findByUserId(Long userId, Pageable pageable);
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
+
+    void updateShareCount(Map<Long, Long> updates);
 }
 

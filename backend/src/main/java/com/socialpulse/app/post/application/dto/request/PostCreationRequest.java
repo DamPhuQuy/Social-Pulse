@@ -29,4 +29,6 @@ public class PostCreationRequest {
 
     @NotNull(message = "Privacy setting must not be null")
     private Privacy privacy;
+
+    private Long parentPostId;
 }

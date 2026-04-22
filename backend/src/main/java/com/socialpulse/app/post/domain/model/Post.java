@@ -2,8 +2,8 @@ package com.socialpulse.app.post.domain.model;
 
 import java.time.LocalDateTime;
 
-import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -73,6 +73,22 @@ public class Post {
 
 	private long safeCount(Long value) {
 		return value == null ? 0L : value;
+	}
+
+	public boolean isSharedPost() {
+		return this.type == PostType.SHARE && this.parentPostId != null;
+	}
+
+	public boolean isOriginalPost() {
+		return this.type == PostType.ORIGINAL && this.parentPostId == null;
+	}
+
+	public boolean isPublic() {
+		return this.privacy == Privacy.PUBLIC;
+	}
+
+	public boolean isPrivate() {
+		return this.privacy == Privacy.PRIVATE;
 	}
 }
 
