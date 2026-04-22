@@ -1,13 +1,10 @@
 import Header from "@/components/Header";
+import { AuthCard } from "@/components/auth/AuthCard";
+import { OtpBlock } from "@/components/auth/OtpBlock";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent } from "@/components/ui/card";
-import {
-  InputOTP,
-  InputOTPGroup,
-  InputOTPSlot,
-} from "@/components/ui/input-otp";
 import { PATHS } from "@/constants/paths";
 import { verifyEmailOtp } from "@/services/auth/authService";
+import { Mail01Icon } from "@hugeicons/core-free-icons";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { toast } from "sonner";
@@ -16,82 +13,67 @@ const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 const MAX_FAILED_ATTEMPTS = 3;
 
+/** Formats a number of seconds as "MM:SS" */
 function formatCountdown(seconds: number): string {
-  const minutes = Math.floor(seconds / 60);
-  const remainingSeconds = seconds % 60;
-
-  return `${String(minutes).padStart(2, "0")}:${String(
-    remainingSeconds,
-  ).padStart(2, "0")}`;
+  const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
+  const ss = String(seconds % 60).padStart(2, "0");
+  return `${mm}:${ss}`;
 }
 
 export default function VerifyOtpPage() {
   const location = useLocation();
   const navigate = useNavigate();
+
+  /** Resolve email from: navigation state → query param → sessionStorage */
+  const email = useMemo(() => {
+    const stateEmail = (location.state as { email?: string } | null)?.email?.trim();
+    if (stateEmail) return stateEmail;
+
+    const queryEmail = new URLSearchParams(location.search).get("email")?.trim();
+    if (queryEmail) return queryEmail;
+
+    return sessionStorage.getItem("pendingVerificationEmail")?.trim() ?? "";
+  }, [location.search, location.state]);
+
   const [otp, setOtp] = useState("");
   const [secondsLeft, setSecondsLeft] = useState(RESEND_SECONDS);
   const [isResending, setIsResending] = useState(false);
   const [isVerifying, setIsVerifying] = useState(false);
   const [failedAttempts, setFailedAttempts] = useState(0);
-  const lastSubmittedOtpRef = useRef<string | null>(null);
   const [isVerified, setIsVerified] = useState(false);
 
-  const email = useMemo(() => {
-    const stateValue = location.state as { email?: string } | null;
-    const fromState = stateValue?.email?.trim() ?? "";
-
-    if (fromState) {
-      return fromState;
-    }
-
-    const fromQuery = new URLSearchParams(location.search).get("email")?.trim();
-
-    if (fromQuery) {
-      return fromQuery;
-    }
-
-    return sessionStorage.getItem("pendingVerificationEmail")?.trim() ?? "";
-  }, [location.search, location.state]);
+  /** Track the last OTP we submitted to avoid double-submitting the same code */
+  const lastSubmittedOtpRef = useRef<string | null>(null);
 
   const hasReachedMaxAttempts = failedAttempts >= MAX_FAILED_ATTEMPTS;
 
+  // Persist email so the user doesn't lose context on page refresh
   useEffect(() => {
-    if (!email) {
-      return;
-    }
-
-    sessionStorage.setItem("pendingVerificationEmail", email);
+    if (email) sessionStorage.setItem("pendingVerificationEmail", email);
   }, [email]);
 
+  // Redirect to Login after successful verification
   useEffect(() => {
-    if (!isVerified) {
-      return;
-    }
-
-    const timeoutId = globalThis.setTimeout(() => {
+    if (!isVerified) return;
+    const id = globalThis.setTimeout(() => {
       navigate(`${PATHS.LOGIN}?email=${encodeURIComponent(email)}`);
     }, 1200);
-
-    return () => globalThis.clearTimeout(timeoutId);
+    return () => globalThis.clearTimeout(id);
   }, [email, isVerified, navigate]);
 
+  // Resend countdown timer
   useEffect(() => {
-    if (secondsLeft <= 0) {
-      return;
-    }
-
-    const intervalId = globalThis.setInterval(() => {
-      setSecondsLeft((previousSeconds) => {
-        if (previousSeconds <= 1) {
-          globalThis.clearInterval(intervalId);
+    if (secondsLeft <= 0) return;
+    const id = globalThis.setInterval(() => {
+      setSecondsLeft((prev) => {
+        if (prev <= 1) {
+          globalThis.clearInterval(id);
           return 0;
         }
-
-        return previousSeconds - 1;
+        return prev - 1;
       });
     }, 1000);
-
-    return () => globalThis.clearInterval(intervalId);
+    return () => globalThis.clearInterval(id);
   }, [secondsLeft]);
 
   const submitOtpVerification = useCallback(
@@ -108,35 +90,26 @@ export default function VerifyOtpPage() {
 
       if (result.ok) {
         setIsVerified(true);
+        sessionStorage.removeItem("pendingVerificationEmail");
         toast.success("OTP verified successfully.", {
           description: "Redirecting to Login page...",
         });
-        sessionStorage.removeItem("pendingVerificationEmail");
         setIsVerifying(false);
         return;
       }
 
       const nextAttempts = failedAttempts + 1;
-
       setFailedAttempts(nextAttempts);
 
-      if (nextAttempts <= MAX_FAILED_ATTEMPTS) {
-        const remainingWarnings = MAX_FAILED_ATTEMPTS - nextAttempts;
+      const attemptsLeft = MAX_FAILED_ATTEMPTS - nextAttempts;
 
-        if (remainingWarnings > 0) {
-          toast.error("OTP is invalid.", {
-            description: `You have ${remainingWarnings} attempt(s) left.`,
-          });
-        } else {
-          toast.error("OTP is invalid 3 times.", {
-            description: "Please resend OTP and try again.",
-          });
-        }
-      }
-
-      if (nextAttempts >= MAX_FAILED_ATTEMPTS) {
-        toast.warning("Verification is temporarily locked.", {
-          description: "Please click Resend OTP to continue.",
+      if (attemptsLeft > 0) {
+        toast.error("Invalid OTP.", {
+          description: `You have ${attemptsLeft} attempt(s) left.`,
+        });
+      } else {
+        toast.error("Too many failed attempts.", {
+          description: "Please click Resend OTP to get a new code.",
         });
       }
 
@@ -147,37 +120,20 @@ export default function VerifyOtpPage() {
     [email, failedAttempts],
   );
 
+  // Auto-submit when all 6 digits are entered
   useEffect(() => {
-    if (otp.length !== OTP_LENGTH) {
-      return;
-    }
-
-    if (isVerifying || isResending || hasReachedMaxAttempts || !email) {
-      return;
-    }
-
-    if (otp === lastSubmittedOtpRef.current) {
-      return;
-    }
+    if (otp.length !== OTP_LENGTH) return;
+    if (isVerifying || isResending || hasReachedMaxAttempts || !email) return;
+    if (otp === lastSubmittedOtpRef.current) return;
 
     lastSubmittedOtpRef.current = otp;
-    // eslint-disable-next-line react-hooks/set-state-in-effect
     void submitOtpVerification(otp);
-  }, [
-    email,
-    hasReachedMaxAttempts,
-    isResending,
-    isVerifying,
-    lastSubmittedOtpRef,
-    otp,
-    submitOtpVerification,
-  ]);
+  }, [email, hasReachedMaxAttempts, isResending, isVerifying, otp, submitOtpVerification]);
 
   const handleResendOtp = async () => {
     setIsResending(true);
-
+    // Small delay for UX feedback
     await new Promise((resolve) => setTimeout(resolve, 700));
-
     setIsResending(false);
     setSecondsLeft(RESEND_SECONDS);
     setOtp("");
@@ -193,78 +149,39 @@ export default function VerifyOtpPage() {
     <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
       <Header isHomePage={false} />
 
-      <main className="flex-1 flex items-center justify-center px-6 pt-28 pb-10">
-        <Card className="w-full max-w-xl rounded-3xl border border-outline-variant bg-surface-container-lowest p-6 shadow-lg sm:p-8">
-          <CardContent className="space-y-6">
-            <div className="space-y-2 text-center">
-              <h1 className="font-headline text-3xl font-bold tracking-tight text-on-surface">
-                Verify OTP
-              </h1>
-              <p className="text-sm text-on-surface-variant">
-                Enter the 6-digit code sent to your email to complete
-                registration.
-              </p>
-              {email ? (
-                <p className="text-xs text-on-surface-variant">
+      <main className="flex-1 flex items-center justify-center px-6 py-16">
+        <div className="w-full max-w-md">
+          <AuthCard
+            icon={Mail01Icon}
+            heading="Verify OTP"
+            description="Enter the 6-digit code sent to your email to complete registration."
+            hint={
+              email ? (
+                <span>
                   Verification email:{" "}
                   <span className="font-medium text-on-surface">{email}</span>
-                </p>
+                </span>
               ) : (
-                <p className="text-xs text-destructive">
+                <span className="text-destructive">
                   Missing email context. Please return to register first.
-                </p>
-              )}
-            </div>
-
+                </span>
+              )
+            }
+          >
             <div className="space-y-5">
-              <div className="rounded-2xl border border-outline-variant bg-surface-container p-4 sm:p-5">
-                <InputOTP
-                  value={otp}
-                  onChange={(value) => {
-                    setOtp(value.replace(/\D/g, ""));
-                  }}
-                  maxLength={OTP_LENGTH}
-                  containerClassName="justify-center"
-                  disabled={
-                    isResending ||
-                    isVerifying ||
-                    hasReachedMaxAttempts ||
-                    !email
-                  }
-                >
-                  <InputOTPGroup className="gap-2 rounded-none">
-                    <InputOTPSlot
-                      index={0}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                    <InputOTPSlot
-                      index={1}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                    <InputOTPSlot
-                      index={2}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                    <InputOTPSlot
-                      index={3}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                    <InputOTPSlot
-                      index={4}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                    <InputOTPSlot
-                      index={5}
-                      className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
-                    />
-                  </InputOTPGroup>
-                </InputOTP>
-              </div>
+              {/* OTP input */}
+              <OtpBlock
+                value={otp}
+                onChange={setOtp}
+                length={OTP_LENGTH}
+                disabled={isResending || isVerifying || hasReachedMaxAttempts || !email}
+              />
 
+              {/* Resend row */}
               <div className="flex items-center justify-between gap-3 text-sm">
                 <p className="text-on-surface-variant">
                   {secondsLeft > 0
-                    ? `Resend OTP in ${formatCountdown(secondsLeft)}`
+                    ? `Resend in ${formatCountdown(secondsLeft)}`
                     : "Didn't receive the code?"}
                 </p>
                 <Button
@@ -278,22 +195,20 @@ export default function VerifyOtpPage() {
                 </Button>
               </div>
 
+              {/* Status line */}
               <p className="text-center text-xs text-on-surface-variant">
                 {isVerifying
-                  ? "Checking OTP with backend..."
-                  : `Remaining warning attempts: ${Math.max(MAX_FAILED_ATTEMPTS - failedAttempts, 0)}`}
+                  ? "Verifying your code..."
+                  : `${Math.max(MAX_FAILED_ATTEMPTS - failedAttempts, 0)} attempt(s) remaining`}
               </p>
             </div>
 
+            {/* Navigation links */}
             <p className="text-center text-sm text-on-surface-variant">
-              Need to use another email?{" "}
-              <Link
-                to={PATHS.REGISTER}
-                className="text-primary font-semibold hover:underline"
-              >
+              <Link to={PATHS.REGISTER} className="text-primary font-semibold hover:underline">
                 Back to Register
-              </Link>{" "}
-              |{" "}
+              </Link>
+              {" | "}
               <Link
                 to={`${PATHS.LOGIN}${email ? `?email=${encodeURIComponent(email)}` : ""}`}
                 className="text-primary font-semibold hover:underline"
@@ -301,8 +216,8 @@ export default function VerifyOtpPage() {
                 Go to Login
               </Link>
             </p>
-          </CardContent>
-        </Card>
+          </AuthCard>
+        </div>
       </main>
     </div>
   );

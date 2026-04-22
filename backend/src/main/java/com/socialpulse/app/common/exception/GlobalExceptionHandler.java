@@ -2,7 +2,6 @@ package com.socialpulse.app.common.exception;
 
 import java.time.LocalDateTime;
 
-import com.socialpulse.app.common.status.ErrorCode;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -13,6 +12,9 @@ import org.springframework.web.bind.MethodArgumentNotValidException;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 import org.springframework.web.bind.annotation.RestControllerAdvice;
 
+import com.socialpulse.app.common.exception.status.AppCode;
+import com.socialpulse.app.common.exception.status.UserCode;
+
 @RestControllerAdvice // catch global exception, appfasely all controller
 public class GlobalExceptionHandler {
 
@@ -22,7 +24,7 @@ public class GlobalExceptionHandler {
     @ExceptionHandler(AppException.class)
     public ResponseEntity<ErrorResponse> handleAppException(AppException ex) {
 
-        ErrorCode code = ex.getErrorCode();
+        AppCode code = ex.getErrorCode();
 
         return buildErrorResponse(code.getCode(), code.getMessage());
     }
@@ -55,10 +57,19 @@ public class GlobalExceptionHandler {
 
         // handle duplicate or unique constraint
         if (normalizedDetails.contains("unique") || normalizedDetails.contains("duplicate")) {
-            return buildErrorResponse(400, ErrorCode.USER_ALREADY_EXISTS.getMessage());
+            return buildErrorResponse(400, UserCode.USER_ALREADY_EXISTS.getMessage());
         }
 
+        // Log the actual error for debugging
+        logger.error("Database constraint violation details: {}", details);
         return buildErrorResponse(400, "Invalid data for one or more required fields");
+    }
+
+    // handle AccessDeniedException explicitly
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponse> handleAccessDeniedException(org.springframework.security.access.AccessDeniedException ex) {
+        logger.error("Access denied error", ex);
+        return buildErrorResponse(403, "Access Denied: You do not have permission to access this resource");
     }
 
     // catch all unhandled exceptions

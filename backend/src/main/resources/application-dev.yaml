@@ -1,15 +1,15 @@
 spring:
   datasource:
-    url: jdbc:postgresql://db:5432/${POSTGRES_DB}
-    username: ${POSTGRES_USERNAME}
-    password: ${POSTGRES_PASSWORD}
-    driver-class-name: org.postgresql.Driver
+    url: jdbc:${DB:postgresql}://${DB_HOST:localhost}:${DB_PORT:5432}/${DB_NAME:postgres}
+    username: ${DB_USERNAME:postgres}
+    password: ${DB_PASSWORD:postgres}
+    driver-class-name: ${DB_DRIVER:org.postgresql.Driver}
   flyway:
     enabled: true
     locations: classpath:db/migration
     clean-disabled: false
   jpa:
-    database: postgresql
+    database: ${DB:postgresql}
     hibernate:
       ddl-auto: validate
     show-sql: true

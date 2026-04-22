@@ -1,0 +1,65 @@
+@startuml
+!theme plain
+
+title Auth Endpoint Sequence - POST /api/v1/auth/refresh
+
+autonumber
+
+actor Client
+participant AuthController
+participant RefreshTokenService
+participant RefreshTokenRevocationService
+database RefreshTokenRepository
+participant JwtService
+participant AuthMapper
+
+Client -> AuthController: POST /api/v1/auth/refresh\nCookie: sp_refresh_token
+AuthController -> AuthController: extractRefreshTokenFromCookie(request)
+AuthController -> RefreshTokenService: rotateTokens(rawRefreshToken)
+
+alt Missing or blank refresh token
+  RefreshTokenService --> AuthController: throw INVALID_REFRESH_TOKEN
+  AuthController --> Client: 401 Unauthorized
+else Refresh token provided
+  RefreshTokenService -> RefreshTokenService: hashToken(rawRefreshToken)
+  RefreshTokenService -> RefreshTokenRepository: findByTokenHash(tokenHash)
+
+  alt Token not found
+    RefreshTokenRepository --> RefreshTokenService: empty
+    RefreshTokenService --> AuthController: throw INVALID_REFRESH_TOKEN
+    AuthController --> Client: 401 Unauthorized
+  else Token record found
+    RefreshTokenRepository --> RefreshTokenService: tokenRecord
+
+    alt Token revoked
+      RefreshTokenService -> RefreshTokenRevocationService: revokeAllActiveTokensForUser(userId, now)
+      note right of RefreshTokenRevocationService
+        Runs in REQUIRES_NEW transaction
+        to avoid self-invocation/proxy bypass and rollback side effects.
+      end note
+      RefreshTokenRevocationService -> RefreshTokenRepository: findAllByUserIdAndRevokedAtIsNull(userId)
+      RefreshTokenRevocationService -> RefreshTokenRepository: saveAll(revoke active tokens)
+      RefreshTokenService --> AuthController: throw REFRESH_TOKEN_REUSE_DETECTED
+      AuthController --> Client: 401 Unauthorized
+    else Token expired
+      RefreshTokenService --> AuthController: throw INVALID_REFRESH_TOKEN
+      AuthController --> Client: 401 Unauthorized
+    else Token valid
+      RefreshTokenService -> RefreshTokenRepository: save(new token record)
+      RefreshTokenService -> RefreshTokenRepository: save(old record revoked + replacedByToken)
+      RefreshTokenService -> JwtService: generateToken(userDetails)
+      JwtService --> RefreshTokenService: newAccessToken
+      RefreshTokenService -> AuthMapper: toTokenPair(newAccessToken, newRawRefreshToken)
+      AuthMapper --> RefreshTokenService: TokenPair
+      RefreshTokenService --> AuthController: TokenPair
+
+      AuthController -> JwtService: getExpirationMs()
+      JwtService --> AuthController: accessExpiresInMs
+      AuthController -> AuthMapper: toLoginResponse(TokenPair, accessExpiresInMs)
+      AuthMapper --> AuthController: LoginResponse
+      AuthController --> Client: 200 OK\nSet-Cookie(sp_refresh_token rotated) + ApiResponse<LoginResponse>
+    end
+  end
+end
+
+@enduml
