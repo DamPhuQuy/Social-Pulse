@@ -30,12 +30,6 @@ public class OpenApiConfig {
                                     .type(SecurityScheme.Type.HTTP)
                                     .scheme("bearer")
                                     .bearerFormat("JWT"))
-                        // cookie
-                        .addSecuritySchemes(cookie,
-                                new SecurityScheme()
-                                    .type(SecurityScheme.Type.APIKEY)
-                                    .in(SecurityScheme.In.COOKIE)
-                                    .bearerFormat("accessToken"))
                 );
     }
 }
