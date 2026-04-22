@@ -16,6 +16,8 @@ public interface PostMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "parentPostId", ignore = true)
+    @Mapping(target = "type", constant = "ORIGINAL")
     @Mapping(target = "upvoteCount", constant = "0L")
     @Mapping(target = "downvoteCount", constant = "0L")
     @Mapping(target = "cmtCount", constant = "0L")
@@ -40,8 +42,7 @@ public interface PostMapper {
     @Mapping(target = "reactionType", source = "reactionType")
     PostReactions toPostReaction(Long userId, Long postId, ReactionType reactionType);
 
-    @Mapping(target = "userId", source = "userId")
     @Mapping(target = "postId", source = "postId")
-    @Mapping(target = "reactionType", expression = "java(reaction.getReactionType() != null ? reaction.getReactionType().name() : null)")
+    @Mapping(target = "reactionType", source = "reactionType")
     PostReactionResponse toPostReactionResponse(PostReactions reaction);
 }

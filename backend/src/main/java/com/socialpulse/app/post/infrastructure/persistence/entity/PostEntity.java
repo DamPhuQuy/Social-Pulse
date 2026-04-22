@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.SQLDelete;
 
 import com.socialpulse.app.post.domain.enums.Privacy;
+import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 
 import jakarta.persistence.Column;
@@ -21,6 +22,7 @@ import jakarta.persistence.ManyToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
+import jakarta.persistence.Version;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -54,6 +56,14 @@ public class PostEntity {
     private String imageUrl;
     private String imagePublicId;
 
+    @Column(name = "parent_post_id")
+    private Long parentPostId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private PostType type = PostType.ORIGINAL;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default
@@ -80,6 +90,9 @@ public class PostEntity {
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
+
+    @Version
+    private Long version;
 
     @PrePersist
     public void prePersist() {

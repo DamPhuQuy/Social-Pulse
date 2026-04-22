@@ -2,7 +2,7 @@ package com.socialpulse.app.post.application.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.socialpulse.app.post.domain.enums.Privacy;
+import com.socialpulse.app.post.domain.enums.PostType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -14,11 +14,24 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class ViewPostResponse {
+    private Long id;
+    private Long parentPostId;
+    private PostType type;
+
     private String content;
     private String imageUrl;
-    private String imagePublicId;
-    private Privacy privacy;
+
     private Long userId;
+    private String username;
+    private String userAvatar;
+
+    private int upvoteCount;
+    private int downvoteCount;
+
+    private int cmtCount;
+    private int shareCount;
+
+    private Integer myVote;   // +1, -1, 0
+
     private LocalDateTime createdAt;
-    private LocalDateTime updatedAt;
 }

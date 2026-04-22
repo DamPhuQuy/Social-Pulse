@@ -1,4 +1,4 @@
-package com.socialpulse.app.infrastructure.cloudinary.service;
+package com.socialpulse.app.common.cloudinary.service;
 
 import java.util.Map;
 

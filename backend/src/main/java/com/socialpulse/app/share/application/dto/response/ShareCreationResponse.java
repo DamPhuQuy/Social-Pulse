@@ -1,27 +1,25 @@
-package com.socialpulse.app.post.application.dto.response;
+package com.socialpulse.app.share.application.dto.response;
 
 import java.time.LocalDateTime;
 
-import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-@Builder
 @NoArgsConstructor
 @AllArgsConstructor
+@Builder
 @Getter
-public class PostCreationResponse {
+public class ShareCreationResponse {
     private Long id;
-    private String content;
-    private String imageUrl;
-    private String imagePublicId;
     private Long parentPostId;
-    private PostType type;
     private Long userId;
+    private String content;
     private Privacy privacy;
+    private PostType type;
     private LocalDateTime createdAt;
 }

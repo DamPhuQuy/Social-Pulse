@@ -5,9 +5,9 @@ import org.springframework.context.annotation.Configuration;
 
 import com.socialpulse.app.report.adapter.persistence.ReportRepositoryAdapter;
 import com.socialpulse.app.report.application.dto.mapper.ReportMapper;
+import com.socialpulse.app.report.application.service.CreateReportService;
 import com.socialpulse.app.report.application.usecase.CreateReportUseCase;
 import com.socialpulse.app.report.domain.repository.ReportRepository;
-import com.socialpulse.app.report.application.service.CreateReportService;
 import com.socialpulse.app.report.infrastructure.persistence.mapper.ReportPersistenceMapper;
 import com.socialpulse.app.report.infrastructure.persistence.repository.JpaReportRepository;
 
