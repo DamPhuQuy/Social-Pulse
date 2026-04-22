@@ -1,5 +1,6 @@
 package com.socialpulse.app.report.adapter.web;
 
+import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -17,6 +18,7 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 
 @RestController
 @RequestMapping("/api/reports")
+@Tag(name = "Report API", description = "API for submitting reports on posts or comments")
 public class ReportController {
 
     private final CreateReportUseCase createReportUseCase;

@@ -2,6 +2,7 @@ package com.socialpulse.app.post.application.dto.request;
 
 import com.socialpulse.app.post.domain.enums.Privacy;
 
+import jakarta.annotation.Nullable;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
@@ -30,5 +31,6 @@ public class PostCreationRequest {
     @NotNull(message = "Privacy setting must not be null")
     private Privacy privacy;
 
+    @Nullable
     private Long parentPostId;
 }
