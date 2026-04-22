@@ -91,9 +91,6 @@ public class PostEntity {
     private LocalDateTime updatedAt;
     private LocalDateTime deletedAt;
 
-    @Version
-    private Long version;
-
     @PrePersist
     public void prePersist() {
         LocalDateTime now = LocalDateTime.now();
