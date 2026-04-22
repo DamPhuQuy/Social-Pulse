@@ -2,6 +2,7 @@ package com.socialpulse.app.post.infrastructure.config;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.socialpulse.app.post.adapter.persistence.PostReactionsRepositoryAdapter;
 import com.socialpulse.app.post.adapter.persistence.PostRepositoryAdapter;
@@ -42,8 +43,9 @@ public class PostConfig {
     @Bean
     public CreatePostUseCase createPostUseCase(PostRepository postRepository,
                                                UserRepository userRepository,
-                                               PostMapper postMapper) {
-        return new CreatePostService(postRepository, userRepository, postMapper);
+                                               PostMapper postMapper,
+                                               StringRedisTemplate redisTemplate) {
+        return new CreatePostService(postRepository, userRepository, postMapper, redisTemplate);
     }
 
     @Bean
