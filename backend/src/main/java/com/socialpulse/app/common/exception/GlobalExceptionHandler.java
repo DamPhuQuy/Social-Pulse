@@ -60,6 +60,8 @@ public class GlobalExceptionHandler {
             return buildErrorResponse(400, UserCode.USER_ALREADY_EXISTS.getMessage());
         }
 
+        // Log the actual error for debugging
+        logger.error("Database constraint violation details: {}", details);
         return buildErrorResponse(400, "Invalid data for one or more required fields");
     }
 

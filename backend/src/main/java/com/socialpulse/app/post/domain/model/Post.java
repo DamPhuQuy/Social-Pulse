@@ -23,14 +23,22 @@ public class Post {
 	private Long parentPostId;
 	private PostType type;
 	private Privacy privacy;
-	private Long upvoteCount;
-	private Long downvoteCount;
-	private Long cmtCount;
-	private Long viewCount;
-	private Long shareCount;
-	private Double hotScore;
-	private boolean toxic;
-	private Double toxicScore;
+	@Builder.Default
+	private Long upvoteCount = 0L;
+	@Builder.Default
+	private Long downvoteCount = 0L;
+	@Builder.Default
+	private Long cmtCount = 0L;
+	@Builder.Default
+	private Long viewCount = 0L;
+	@Builder.Default
+	private Long shareCount = 0L;
+	@Builder.Default
+	private Double hotScore = 0.0;
+	@Builder.Default
+	private boolean toxic = false;
+	@Builder.Default
+	private Double toxicScore = 0.0;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
 	private LocalDateTime deletedAt;

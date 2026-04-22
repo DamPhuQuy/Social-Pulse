@@ -1,5 +1,6 @@
 package com.socialpulse.app.post.application.service;
 
+import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -23,16 +24,18 @@ public class CreatePostService implements CreatePostUseCase {
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostMapper postMapper;
-
+    private final PostPersistenceMapper postPersistenceMapper;
     private final StringRedisTemplate redisTemplate;
 
     public CreatePostService(PostRepository postRepository,
                              UserRepository userRepository,
                              PostMapper postMapper,
+                             PostPersistenceMapper postPersistenceMapper,
                              StringRedisTemplate redisTemplate) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
+        this.postPersistenceMapper = postPersistenceMapper;
         this.redisTemplate = redisTemplate;
     }
 
@@ -79,6 +82,8 @@ public class CreatePostService implements CreatePostUseCase {
 
         Post post = Post.builder()
                 .content(request.getContent())
+                .imageUrl(request.getImageUrl())
+                .imagePublicId(request.getImagePublicId())
                 .userId(currentUser.getId())
                 .privacy(request.getPrivacy())
                 .parentPostId(parentPostId)

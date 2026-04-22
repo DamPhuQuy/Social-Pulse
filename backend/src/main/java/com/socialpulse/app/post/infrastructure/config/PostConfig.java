@@ -44,8 +44,9 @@ public class PostConfig {
     public CreatePostUseCase createPostUseCase(PostRepository postRepository,
                                                UserRepository userRepository,
                                                PostMapper postMapper,
+                                               PostPersistenceMapper postPersistenceMapper,
                                                StringRedisTemplate redisTemplate) {
-        return new CreatePostService(postRepository, userRepository, postMapper, redisTemplate);
+        return new CreatePostService(postRepository, userRepository, postMapper, postPersistenceMapper, redisTemplate);
     }
 
     @Bean
