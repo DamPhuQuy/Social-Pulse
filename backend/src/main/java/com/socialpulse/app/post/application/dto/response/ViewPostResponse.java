@@ -2,6 +2,8 @@ package com.socialpulse.app.post.application.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.socialpulse.app.post.domain.enums.PostType;
+
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -13,6 +15,8 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 public class ViewPostResponse {
     private Long id;
+    private Long parentPostId;
+    private PostType type;
 
     private String content;
     private String imageUrl;

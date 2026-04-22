@@ -3,6 +3,7 @@ package com.socialpulse.app.post.domain.model;
 import java.time.LocalDateTime;
 
 import com.socialpulse.app.post.domain.enums.Privacy;
+import com.socialpulse.app.post.domain.enums.PostType;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -19,6 +20,8 @@ public class Post {
 	private String content;
 	private String imageUrl;
 	private String imagePublicId;
+	private Long parentPostId;
+	private PostType type;
 	private Privacy privacy;
 	private Long upvoteCount;
 	private Long downvoteCount;
@@ -54,6 +57,14 @@ public class Post {
 	public void decrementDownvoteCount() {
 		this.downvoteCount = Math.max(0L, safeCount(this.downvoteCount) - 1L);
 		updateHotScore();
+	}
+
+	public void incrementShareCount() {
+		this.shareCount = safeCount(this.shareCount) + 1L;
+	}
+
+	public void decrementShareCount() {
+		this.shareCount = Math.max(0L, safeCount(this.shareCount) - 1L);
 	}
 
 	private void updateHotScore() {

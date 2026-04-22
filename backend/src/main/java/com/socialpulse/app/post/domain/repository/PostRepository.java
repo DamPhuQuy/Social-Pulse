@@ -5,6 +5,7 @@ import java.util.Optional;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
+import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.model.Post;
 
 public interface PostRepository {
@@ -13,5 +14,7 @@ public interface PostRepository {
     Post save(Post post);
 
     Page<Post> findByUserId(Long userId, Pageable pageable);
+
+    boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 }
 

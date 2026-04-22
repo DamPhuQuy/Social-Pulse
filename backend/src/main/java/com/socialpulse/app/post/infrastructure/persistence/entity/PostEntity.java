@@ -5,6 +5,7 @@ import java.time.LocalDateTime;
 import org.hibernate.annotations.SQLDelete;
 
 import com.socialpulse.app.post.domain.enums.Privacy;
+import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 
 import jakarta.persistence.Column;
@@ -54,6 +55,14 @@ public class PostEntity {
 
     private String imageUrl;
     private String imagePublicId;
+
+    @Column(name = "parent_post_id")
+    private Long parentPostId;
+
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    @Builder.Default
+    private PostType type = PostType.ORIGINAL;
 
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)

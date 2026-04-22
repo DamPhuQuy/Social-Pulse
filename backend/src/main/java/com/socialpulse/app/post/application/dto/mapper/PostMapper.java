@@ -16,6 +16,8 @@ public interface PostMapper {
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "parentPostId", ignore = true)
+    @Mapping(target = "type", constant = "ORIGINAL")
     @Mapping(target = "upvoteCount", constant = "0L")
     @Mapping(target = "downvoteCount", constant = "0L")
     @Mapping(target = "cmtCount", constant = "0L")
