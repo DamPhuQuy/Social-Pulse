@@ -11,17 +11,19 @@ import org.springframework.stereotype.Service;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.UserFeatures;
+import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.post.domain.model.Post;
 
 @Service
-public class FeatureExtractionService {
+public class FeatureExtractionService implements ExtractFeaturesUseCase {
     private final RedisTemplate<String, Object> redisTemplate;
 
     public FeatureExtractionService(RedisTemplate<String, Object> redisTemplate) {
         this.redisTemplate = redisTemplate;
     }
 
+    @Override
     public List<RankingFeatures> extractFeatures(Long viewerId, List<CandidatePost> candidates) {
         UserFeatures viewerFeatures = getUserFeatures(viewerId);
 
@@ -38,7 +40,7 @@ public class FeatureExtractionService {
                             .viewerFeatures(viewerFeatures)
                             .build();
                 })
-                .collect(Collectors.toList());
+                .toList();
     }
 
     private PostFeatures extractPostFeatures(Post post) {

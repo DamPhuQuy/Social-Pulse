@@ -5,17 +5,18 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 
+import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 import com.socialpulse.app.post.domain.model.Post;
 
 @Service
-public class CandidateSelectionService {
+public class CandidateSelectionService implements SelectCandidatesUseCase {
     private final FeedRepository feedRepository;
 
     private static final int RECENT_COUNT = 200;
@@ -28,6 +29,7 @@ public class CandidateSelectionService {
         this.feedRepository = feedRepository;
     }
 
+    @Override
     public List<CandidatePost> selectCandidates(Long userId) {
         LocalDateTime since = LocalDateTime.now().minusDays(LOOKBACK_DAYS);
         List<CandidatePost> candidates = new ArrayList<>();
@@ -38,7 +40,7 @@ public class CandidateSelectionService {
             if (seenIds.add(post.getId())) {
                 candidates.add(CandidatePost.builder()
                         .post(post)
-                        .source("RECENT")
+                        .source(Source.RECENT)
                         .build());
             }
         }
@@ -48,7 +50,7 @@ public class CandidateSelectionService {
             if (seenIds.add(post.getId())) {
                 candidates.add(CandidatePost.builder()
                         .post(post)
-                        .source("FOLLOWING")
+                        .source(Source.FOLLOWING)
                         .build());
             }
         }
@@ -58,7 +60,7 @@ public class CandidateSelectionService {
             if (seenIds.add(post.getId())) {
                 candidates.add(CandidatePost.builder()
                         .post(post)
-                        .source("POPULAR")
+                        .source(Source.POPULAR)
                         .build());
             }
         }
@@ -69,7 +71,7 @@ public class CandidateSelectionService {
             if (seenIds.add(post.getId())) {
                 candidates.add(CandidatePost.builder()
                         .post(post)
-                        .source("RANDOM")
+                        .source(Source.RANDOM)
                         .build());
             }
         }

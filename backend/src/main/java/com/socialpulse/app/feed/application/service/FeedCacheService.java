@@ -8,10 +8,11 @@ import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
 @Service
-public class FeedCacheService {
+public class FeedCacheService implements CacheFeedUseCase {
     private final RedisTemplate<String, Object> redisTemplate;
     private final ObjectMapper objectMapper;
 
@@ -23,6 +24,7 @@ public class FeedCacheService {
         this.objectMapper = objectMapper;
     }
 
+    @Override
     public void cacheFeed(Long userId, List<FeedItem> feedItems) {
         String key = FEED_CACHE_PREFIX + userId;
         try {
@@ -33,6 +35,7 @@ public class FeedCacheService {
         }
     }
 
+    @Override
     public List<FeedItem> getCachedFeed(Long userId) {
         String key = FEED_CACHE_PREFIX + userId;
         try {
@@ -46,6 +49,7 @@ public class FeedCacheService {
         return null;
     }
 
+    @Override
     public void invalidateFeed(Long userId) {
         String key = FEED_CACHE_PREFIX + userId;
         redisTemplate.delete(key);

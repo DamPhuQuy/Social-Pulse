@@ -11,51 +11,58 @@ import org.springframework.stereotype.Service;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;
+import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
+import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
+import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
 @Service
-public class FeedRankingService {
-    private final CandidateSelectionService candidateSelectionService;
-    private final FeatureExtractionService featureExtractionService;
-    private final AiRankingService aiRankingService;
-    private final FeedCacheService feedCacheService;
+public class FeedRankingService implements RankFeedUseCase {
+    private final SelectCandidatesUseCase selectCandidatesUseCase;
+    private final ExtractFeaturesUseCase extractFeaturesUseCase;
+    private final PredictRankingUseCase predictRankingUseCase;
+    private final CacheFeedUseCase cacheFeedUseCase;
 
     public FeedRankingService(
-            CandidateSelectionService candidateSelectionService,
-            FeatureExtractionService featureExtractionService,
-            AiRankingService aiRankingService,
-            FeedCacheService feedCacheService) {
-        this.candidateSelectionService = candidateSelectionService;
-        this.featureExtractionService = featureExtractionService;
-        this.aiRankingService = aiRankingService;
-        this.feedCacheService = feedCacheService;
+            SelectCandidatesUseCase selectCandidatesUseCase,
+            ExtractFeaturesUseCase extractFeaturesUseCase,
+            PredictRankingUseCase predictRankingUseCase,
+            CacheFeedUseCase cacheFeedUseCase) {
+        this.selectCandidatesUseCase = selectCandidatesUseCase;
+        this.extractFeaturesUseCase = extractFeaturesUseCase;
+        this.predictRankingUseCase = predictRankingUseCase;
+        this.cacheFeedUseCase = cacheFeedUseCase;
     }
 
+    @Override
     public List<FeedItem> getRankedFeed(Long userId) {
-        List<FeedItem> cachedFeed = feedCacheService.getCachedFeed(userId);
+        List<FeedItem> cachedFeed = cacheFeedUseCase.getCachedFeed(userId);
         if (cachedFeed != null && !cachedFeed.isEmpty()) {
             return cachedFeed;
         }
 
-        List<CandidatePost> candidates = candidateSelectionService.selectCandidates(userId);
+        List<CandidatePost> candidates = selectCandidatesUseCase.selectCandidates(userId);
 
         if (candidates.isEmpty()) {
             return List.of();
         }
 
-        List<RankingFeatures> features = featureExtractionService.extractFeatures(userId, candidates);
+        List<RankingFeatures> features = extractFeaturesUseCase.extractFeatures(userId, candidates);
 
         RankingRequest request = RankingRequest.builder()
                 .features(features)
                 .build();
 
-        List<RankingResponse> scores = aiRankingService.predictScores(request);
+        List<RankingResponse> scores = predictRankingUseCase.predictScores(request);
 
         Map<Long, Double> scoreMap = scores.stream()
                 .collect(Collectors.toMap(RankingResponse::getPostId, RankingResponse::getScore));
 
-        Map<Long, String> sourceMap = candidates.stream()
+        Map<Long, Source> sourceMap = candidates.stream()
                 .collect(Collectors.toMap(
                         candidate -> candidate.getPost().getId(),
                         CandidatePost::getSource
@@ -70,13 +77,14 @@ public class FeedRankingService {
                         .source(sourceMap.get(score.getPostId()))
                         .rankedAt(LocalDateTime.now())
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
-        feedCacheService.cacheFeed(userId, rankedFeed);
+        cacheFeedUseCase.cacheFeed(userId, rankedFeed);
 
         return rankedFeed;
     }
 
+    @Override
     public List<FeedItem> getPaginatedFeed(Long userId, int page, int size) {
         List<FeedItem> allFeed = getRankedFeed(userId);
 

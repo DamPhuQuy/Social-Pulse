@@ -1,12 +1,5 @@
-"""
-Updated Spring Boot AI Ranking Service
-Calls the new LightGBM Ranker endpoint
-"""
 package com.socialpulse.app.feed.application.service;
-
-import java.time.Duration;
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -15,14 +8,15 @@ import org.springframework.web.client.RestClient;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;
+import com.socialpulse.app.feed.application.dto.ai.AiPostFeatures;
 import com.socialpulse.app.feed.application.dto.ai.AiRankingRequest;
 import com.socialpulse.app.feed.application.dto.ai.AiRankingResponse;
-import com.socialpulse.app.feed.application.dto.ai.AiPostFeatures;
-import com.socialpulse.app.feed.application.dto.ai.AiUserFeatures;
 import com.socialpulse.app.feed.application.dto.ai.AiRelationshipFeatures;
+import com.socialpulse.app.feed.application.dto.ai.AiUserFeatures;
+import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 
 @Service
-public class AiRankingService {
+public class AiRankingService implements PredictRankingUseCase {
     private final RestClient restClient;
 
     public AiRankingService(@Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
@@ -31,6 +25,7 @@ public class AiRankingService {
                 .build();
     }
 
+    @Override
     public List<RankingResponse> predictScores(RankingRequest request) {
         try {
             // Convert to AI service format
@@ -53,7 +48,7 @@ public class AiRankingService {
                             .postId(rankedPost.getPostId())
                             .score(rankedPost.getRankingScore())
                             .build())
-                    .collect(Collectors.toList());
+                    .toList();
 
         } catch (Exception e) {
             throw new RuntimeException("Failed to get ranking scores from AI service", e);
@@ -94,7 +89,7 @@ public class AiRankingService {
                         .authorAvgEngagementRate(feature.getAuthorFeatures().getEngagementRate())
                         .predictedQualityScore(0.5) // Placeholder
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         // Convert relationship features
         List<AiRelationshipFeatures> relationships = request.getFeatures().stream()
@@ -107,7 +102,7 @@ public class AiRankingService {
                         .hoursSinceLastInteraction(999.0)
                         .affinityScore(0.0)
                         .build())
-                .collect(Collectors.toList());
+                .toList();
 
         return AiRankingRequest.builder()
                 .userId(userId)
