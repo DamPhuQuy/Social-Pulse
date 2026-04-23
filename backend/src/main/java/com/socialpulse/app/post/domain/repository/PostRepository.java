@@ -19,5 +19,7 @@ public interface PostRepository {
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 
     void updateShareCount(Map<Long, Long> updates);
+
+    void deleteById(Long id);
 }
 
