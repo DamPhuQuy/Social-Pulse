@@ -6,8 +6,6 @@ import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
-
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;
@@ -20,7 +18,6 @@ import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
-@Service
 public class FeedRankingService implements RankFeedUseCase {
     private final SelectCandidatesUseCase selectCandidatesUseCase;
     private final ExtractFeaturesUseCase extractFeaturesUseCase;

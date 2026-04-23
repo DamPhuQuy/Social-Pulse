@@ -6,14 +6,12 @@ import java.util.List;
 import org.springframework.data.domain.Pageable;
 import org.springframework.jdbc.core.JdbcTemplate;
 import org.springframework.jdbc.core.RowMapper;
-import org.springframework.stereotype.Repository;
 
 import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 
-@Repository
 public class FeedRepositoryAdapter implements FeedRepository {
     private final JdbcTemplate jdbcTemplate;
 

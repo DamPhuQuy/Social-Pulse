@@ -6,7 +6,6 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
@@ -15,7 +14,6 @@ import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.post.domain.model.Post;
 
-@Service
 public class FeatureExtractionService implements ExtractFeaturesUseCase {
     private final RedisTemplate<String, Object> redisTemplate;
 

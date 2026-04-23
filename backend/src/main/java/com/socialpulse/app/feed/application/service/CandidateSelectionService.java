@@ -7,7 +7,6 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.data.domain.PageRequest;
-import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
@@ -15,7 +14,6 @@ import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 import com.socialpulse.app.post.domain.model.Post;
 
-@Service
 public class CandidateSelectionService implements SelectCandidatesUseCase {
     private final FeedRepository feedRepository;
 

@@ -2,7 +2,6 @@ package com.socialpulse.app.feed.application.service;
 import java.util.List;
 
 import org.springframework.beans.factory.annotation.Value;
-import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestClient;
 
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
@@ -15,7 +14,6 @@ import com.socialpulse.app.feed.application.dto.ai.AiRelationshipFeatures;
 import com.socialpulse.app.feed.application.dto.ai.AiUserFeatures;
 import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 
-@Service
 public class AiRankingService implements PredictRankingUseCase {
     private final RestClient restClient;
 
