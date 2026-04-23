@@ -4,6 +4,7 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
@@ -18,6 +19,7 @@ import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
+import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
 import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
 import com.socialpulse.app.security.user.CustomUserDetails;
@@ -33,13 +35,16 @@ public class PostController {
     private final CreatePostUseCase createPostUseCase;
     private final ViewPostUseCase viewPostUseCase;
     private final ReactPostUseCase reactPostUseCase;
+    private final DeletePostUseCase deletePostUseCase;
 
     public PostController(CreatePostUseCase createPostUseCase,
                           ViewPostUseCase viewPostUseCase,
-                          ReactPostUseCase reactPostUseCase) {
+                          ReactPostUseCase reactPostUseCase,
+                          DeletePostUseCase deletePostUseCase) {
         this.createPostUseCase = createPostUseCase;
         this.viewPostUseCase = viewPostUseCase;
         this.reactPostUseCase = reactPostUseCase;
+        this.deletePostUseCase = deletePostUseCase;
     }
 
     @PostMapping
@@ -86,6 +91,14 @@ public class PostController {
             @RequestBody @Valid PostReactionRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PostReactionResponse>builder().data(reactPostUseCase.react(request, currentUser)).build());
+    }
+
+    @DeleteMapping("/{id}")
+    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @Operation(summary = "Delete post", description = "Soft delete a post. Only the author or an admin can delete.")
+    public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        deletePostUseCase.deletePost(id, currentUser);
+        return ResponseEntity.ok(ApiResponse.<Void>builder().message("Post deleted successfully").build());
     }
 
 }
