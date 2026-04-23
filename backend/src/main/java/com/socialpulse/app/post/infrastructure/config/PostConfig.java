@@ -8,9 +8,11 @@ import com.socialpulse.app.post.adapter.persistence.PostReactionsRepositoryAdapt
 import com.socialpulse.app.post.adapter.persistence.PostRepositoryAdapter;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.service.CreatePostService;
+import com.socialpulse.app.post.application.service.DeletePostService;
 import com.socialpulse.app.post.application.service.ReactPostService;
 import com.socialpulse.app.post.application.service.ViewPostService;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
+import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
 import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
 import com.socialpulse.app.post.domain.repository.PostReactionsRepository;
@@ -53,6 +55,11 @@ public class PostConfig {
     public ViewPostUseCase viewPostUseCase(PostRepository postRepository,
                                            PostMapper postMapper) {
         return new ViewPostService(postRepository, postMapper);
+    }
+
+    @Bean
+    public DeletePostUseCase deletePostUseCase(PostRepository postRepository) {
+        return new DeletePostService(postRepository);
     }
 
     @Bean

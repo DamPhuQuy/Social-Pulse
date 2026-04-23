@@ -46,6 +46,11 @@ public class PostRepositoryAdapter implements PostRepository {
     public void updateShareCount(Map<Long, Long> updates) {
         updates.forEach(jpaPostRepository::updateShareCount);
     }
+
+    @Override
+    public void deleteById(Long id) {
+        jpaPostRepository.deleteById(id);
+    }
 }
 
 
