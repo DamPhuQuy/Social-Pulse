@@ -8,6 +8,7 @@ import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
@@ -15,11 +16,14 @@ import org.springframework.web.bind.annotation.RestController;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.post.application.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
+import com.socialpulse.app.post.application.dto.request.PostUpdateRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
 import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
+import com.socialpulse.app.post.application.usecase.EditPostUseCase;
 import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
 import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
 import com.socialpulse.app.security.user.CustomUserDetails;
@@ -36,15 +40,18 @@ public class PostController {
     private final ViewPostUseCase viewPostUseCase;
     private final ReactPostUseCase reactPostUseCase;
     private final DeletePostUseCase deletePostUseCase;
+    private final EditPostUseCase editPostUseCase;
 
     public PostController(CreatePostUseCase createPostUseCase,
                           ViewPostUseCase viewPostUseCase,
                           ReactPostUseCase reactPostUseCase,
-                          DeletePostUseCase deletePostUseCase) {
+                          DeletePostUseCase deletePostUseCase,
+                          EditPostUseCase editPostUseCase) {
         this.createPostUseCase = createPostUseCase;
         this.viewPostUseCase = viewPostUseCase;
         this.reactPostUseCase = reactPostUseCase;
         this.deletePostUseCase = deletePostUseCase;
+        this.editPostUseCase = editPostUseCase;
     }
 
     @PostMapping
@@ -99,6 +106,17 @@ public class PostController {
     public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
         deletePostUseCase.deletePost(id, currentUser);
         return ResponseEntity.ok(ApiResponse.<Void>builder().message("Post deleted successfully").build());
+    }
+
+    @PutMapping("/{id}")
+    @PreAuthorize("hasRole('USER')")
+    @Operation(summary = "Edit post", description = "Edit an existing post")
+    public ResponseEntity<ApiResponse<PostUpdateResponse>> editPost(
+            @PathVariable Long id,
+            @RequestBody @Valid PostUpdateRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        PostUpdateResponse response = editPostUseCase.editPost(id, request, currentUser);
+        return ResponseEntity.ok(ApiResponse.<PostUpdateResponse>builder().data(response).message("Post updated successfully").build());
     }
 
 }

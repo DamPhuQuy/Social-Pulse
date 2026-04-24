@@ -7,6 +7,7 @@ import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.application.dto.request.PostCreationRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.model.PostReactions;
@@ -34,6 +35,8 @@ public interface PostMapper {
     PostCreationResponse toPostCreationResponse(Post post);
 
     ViewPostResponse toViewPostResponse(Post post);
+
+    PostUpdateResponse toPostUpdateResponse(Post post);
 
     @Mapping(target = "id", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
