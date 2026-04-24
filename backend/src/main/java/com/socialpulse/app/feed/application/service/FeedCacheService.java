@@ -3,7 +3,7 @@ package com.socialpulse.app.feed.application.service;
 import java.time.Duration;
 import java.util.List;
 
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -11,13 +11,13 @@ import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
 public class FeedCacheService implements CacheFeedUseCase {
-    private final RedisTemplate<String, Object> redisTemplate;
+    private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
 
     private static final String FEED_CACHE_PREFIX = "user:feed:";
     private static final Duration CACHE_TTL = Duration.ofMinutes(10);
 
-    public FeedCacheService(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public FeedCacheService(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
     }
@@ -37,7 +37,7 @@ public class FeedCacheService implements CacheFeedUseCase {
     public List<FeedItem> getCachedFeed(Long userId) {
         String key = FEED_CACHE_PREFIX + userId;
         try {
-            String json = (String) redisTemplate.opsForValue().get(key);
+            String json = redisTemplate.opsForValue().get(key);
             if (json != null) {
                 return objectMapper.readValue(json, new TypeReference<List<FeedItem>>() {});
             }

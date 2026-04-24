@@ -3,7 +3,7 @@ package com.socialpulse.app.feed.infrastructure.config;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.data.redis.core.RedisTemplate;
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
@@ -34,8 +34,8 @@ public class FeedConfig {
     }
 
     @Bean
-    public ExtractFeaturesUseCase extractFeaturesUseCase(RedisTemplate<String, Object> redisTemplate) {
-        return new FeatureExtractionService(redisTemplate);
+    public ExtractFeaturesUseCase extractFeaturesUseCase(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+        return new FeatureExtractionService(redisTemplate, objectMapper);
     }
 
     @Bean
@@ -44,7 +44,7 @@ public class FeedConfig {
     }
 
     @Bean
-    public CacheFeedUseCase cacheFeedUseCase(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public CacheFeedUseCase cacheFeedUseCase(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
         return new FeedCacheService(redisTemplate, objectMapper);
     }
 
