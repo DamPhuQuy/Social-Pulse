@@ -98,6 +98,13 @@ public class Post {
 	public boolean isPrivate() {
 		return this.privacy == Privacy.PRIVATE;
 	}
+
+	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy) {
+		this.content = content;
+		this.imageUrl = imageUrl;
+		this.imagePublicId = imagePublicId;
+		this.privacy = privacy;
+	}
 }
 
 
