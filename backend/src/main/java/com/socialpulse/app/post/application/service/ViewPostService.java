@@ -25,6 +25,9 @@ public class ViewPostService implements ViewPostUseCase {
         Post post = postRepositoryPort.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
+        if(post.getDeletedAt() != null){
+            throw new AppException(PostCode.POST_NOT_FOUND);
+        }
         Long userId = currentUser.getId();
         if (post.getPrivacy() != Privacy.PUBLIC && !post.getUserId().equals(userId)) {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
