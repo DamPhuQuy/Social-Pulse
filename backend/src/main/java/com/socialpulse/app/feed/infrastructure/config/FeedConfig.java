@@ -39,12 +39,15 @@ public class FeedConfig {
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase(@Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
+    public PredictRankingUseCase predictRankingUseCase(
+            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
         return new AiRankingService(aiServiceUrl);
     }
 
     @Bean
-    public CacheFeedUseCase cacheFeedUseCase(RedisTemplate<String, Object> redisTemplate, ObjectMapper objectMapper) {
+    public CacheFeedUseCase cacheFeedUseCase(RedisTemplate<String, Object> redisTemplate) {
+        ObjectMapper objectMapper = new ObjectMapper();
+        objectMapper.findAndRegisterModules();
         return new FeedCacheService(redisTemplate, objectMapper);
     }
 
