@@ -39,7 +39,8 @@ public class FeedConfig {
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase(@Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
+    public PredictRankingUseCase predictRankingUseCase(
+            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
         return new AiRankingService(aiServiceUrl);
     }
 

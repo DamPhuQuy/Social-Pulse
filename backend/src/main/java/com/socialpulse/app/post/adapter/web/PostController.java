@@ -80,7 +80,7 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER') and hasAuthority('VIEW_POST')")
+    @PreAuthorize("hasRole('USER') and hasAuthority('READ_POSTS')")
     public ResponseEntity<ApiResponse<ViewPostResponse>> viewPost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<ViewPostResponse>builder().data(viewPostUseCase.viewPost(id, currentUser)).build());
     }
