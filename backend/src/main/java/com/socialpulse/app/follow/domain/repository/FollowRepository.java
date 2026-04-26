@@ -1,0 +1,19 @@
+package com.socialpulse.app.follow.domain.repository;
+
+import java.util.Optional;
+
+import com.socialpulse.app.follow.domain.model.Follow;
+
+public interface FollowRepository {
+    Follow save(Follow follow);
+
+    Optional<Follow> findByFollowerIdAndFollowingId(Long followerId, Long followingId);
+
+    void deleteByFollowerIdAndFollowingId(Long followerId, Long followingId);
+
+    boolean existsByFollowerIdAndFollowingId(Long followerId, Long followingId);
+
+    long countByFollowerId(Long followerId);
+
+    long countByFollowingId(Long followingId);
+}

@@ -1,5 +1,10 @@
 package com.socialpulse.app.user.infrastructure.config;
 
+import com.socialpulse.app.user.adapter.persistence.RoleRepositoryAdapter;
+import com.socialpulse.app.user.application.service.UserRoleService;
+import com.socialpulse.app.user.domain.repository.RoleRepository;
+import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
+import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -36,6 +41,13 @@ public class UserConfig {
         return new UserProfileRepositoryAdapter(jpaUserProfileRepository, userPersistenceMapper);
     }
 
+    @Bean
+    public RoleRepository roleRepository(
+            JpaRoleRepository jpaRoleRepository,
+            RolePersistenceMapper rolePersistenceMapper) {
+        return new RoleRepositoryAdapter(jpaRoleRepository, rolePersistenceMapper);
+    }
+
     // use cases --------------------------------------
 
     @Bean
@@ -49,9 +61,10 @@ public class UserConfig {
     public CreateUserUseCase createUserUseCase(
             UserRepository userRepository,
             AppPasswordEncoder appPasswordEncoder,
-            UserMapper userMapper
+            UserMapper userMapper,
+            UserRoleService userRoleService
     ) {
-        return new CreateUserService(userRepository, appPasswordEncoder, userMapper);
+        return new CreateUserService(userRepository, appPasswordEncoder, userMapper, userRoleService);
     }
 }
 

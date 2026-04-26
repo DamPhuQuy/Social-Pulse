@@ -8,7 +8,6 @@ import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
-import com.socialpulse.app.user.domain.enums.UserRole;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -30,9 +29,10 @@ public class DeletePostService implements DeletePostUseCase {
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
         boolean isAuthor = post.getUserId().equals(currentUser.getId());
-        boolean isAdmin = currentUser.getUser().getRole() == UserRole.ADMIN;
+        boolean hasDeleteAnyPermission = currentUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("post:delete:any"));
 
-        if (!isAuthor && !isAdmin) {
+        if (!isAuthor && !hasDeleteAnyPermission) {
             log.warn("User {} is not authorized to delete post {}", currentUser.getId(), postId);
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }

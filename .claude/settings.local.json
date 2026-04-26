@@ -2,7 +2,14 @@
   "permissions": {
     "allow": [
       "Bash(./mvnw clean *)",
-      "Bash(docker-compose up *)"
+      "Bash(docker-compose up *)",
+      "Bash(grep -E \"^d|\\\\.java$\")",
+      "Bash(mvn clean *)",
+      "Bash(docker image *)",
+      "Bash(docker build *)",
+      "Bash(tee build-clean.log)",
+      "Bash(java -version)",
+      "Bash(./mvnw dependency:tree)"
     ]
   }
 }
