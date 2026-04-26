@@ -46,7 +46,7 @@ public class UserController {
     }
 
     @GetMapping("/profile/{username}")
-    @PreAuthorize("hasAuthority('VIEW_OTHER_PROFILE')")
+    @PreAuthorize("hasAuthority('user:read')")
     @Operation(
             summary = "Get user profile by username",
             description = "Return public profile by username",

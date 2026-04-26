@@ -1,9 +1,13 @@
 package com.socialpulse.app.feed.application.service;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
 
+import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
+import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;
@@ -16,11 +20,15 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 
 public class AiRankingService implements PredictRankingUseCase {
     private final RestClient restClient;
+    private final BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase;
 
-    public AiRankingService(@Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
+    public AiRankingService(
+            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl,
+            BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase) {
         this.restClient = RestClient.builder()
                 .baseUrl(aiServiceUrl)
                 .build();
+        this.extractBehaviorFeaturesUseCase = extractBehaviorFeaturesUseCase;
     }
 
     @Override
@@ -89,17 +97,46 @@ public class AiRankingService implements PredictRankingUseCase {
                         .build())
                 .toList();
 
-        // Convert relationship features
+        // Extract behavior features for all authors
+        List<Long> authorIds = request.getFeatures().stream()
+                .map(feature -> feature.getAuthorFeatures().getUserId())
+                .distinct()
+                .toList();
+
+        List<UserInteractionFeatures> behaviorFeatures = extractBehaviorFeaturesUseCase.extractFeatures(userId, authorIds);
+
+        // Create a map for quick lookup
+        Map<Long, UserInteractionFeatures> behaviorFeaturesMap = behaviorFeatures.stream()
+                .collect(Collectors.toMap(UserInteractionFeatures::getAuthorId, f -> f));
+
+        // Convert relationship features with behavior data
         List<AiRelationshipFeatures> relationships = request.getFeatures().stream()
-                .map(feature -> AiRelationshipFeatures.builder()
-                        .userId(userId)
-                        .authorId(feature.getAuthorFeatures().getUserId())
-                        .follows(false) // Placeholder - should come from relationship service
-                        .interactionCount7d(0)
-                        .interactionCount30d(0)
-                        .hoursSinceLastInteraction(999.0)
-                        .affinityScore(0.0)
-                        .build())
+                .map(feature -> {
+                    Long authorId = feature.getAuthorFeatures().getUserId();
+                    UserInteractionFeatures behaviorFeature = behaviorFeaturesMap.get(authorId);
+
+                    if (behaviorFeature != null) {
+                        return AiRelationshipFeatures.builder()
+                                .userId(userId)
+                                .authorId(authorId)
+                                .follows(behaviorFeature.isFollows())
+                                .interactionCount7d(behaviorFeature.getInteractionCount7d())
+                                .interactionCount30d(behaviorFeature.getInteractionCount30d())
+                                .hoursSinceLastInteraction(behaviorFeature.getHoursSinceLastInteraction())
+                                .affinityScore(behaviorFeature.getAffinityScore())
+                                .build();
+                    } else {
+                        return AiRelationshipFeatures.builder()
+                                .userId(userId)
+                                .authorId(authorId)
+                                .follows(false)
+                                .interactionCount7d(0)
+                                .interactionCount30d(0)
+                                .hoursSinceLastInteraction(999.0)
+                                .affinityScore(0.0)
+                                .build();
+                    }
+                })
                 .toList();
 
         return AiRankingRequest.builder()

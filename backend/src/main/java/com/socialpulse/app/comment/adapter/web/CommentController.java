@@ -29,7 +29,7 @@ public class CommentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('CREATE_COMMENT')")
+    @PreAuthorize("hasAuthority('comment:create')")
     @Operation(
         summary = "Create comment",
         description = "Create a comment on a post",

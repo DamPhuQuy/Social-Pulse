@@ -1,11 +1,11 @@
-package com.socialpulse.app.auth.application.service.user;
+package com.socialpulse.app.security.user;
 
+import org.jspecify.annotations.NullMarked;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.userdetails.UserDetailsService;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.stereotype.Service;
 
-import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
@@ -18,13 +18,12 @@ public class CustomUserDetailsService implements UserDetailsService {
     }
 
     @Override
+    @NullMarked
     public UserDetails loadUserByUsername(String email) throws UsernameNotFoundException {
         User user = userRepository.findByEmail(email)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with email: " + email));
 
-        return CustomUserDetails.builder()
-                .user(user)
-                .build();
+        return new CustomUserDetails(user);
     }
 }
 

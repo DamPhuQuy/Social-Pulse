@@ -1,44 +1,56 @@
 package com.socialpulse.app.security.user;
 
-import java.util.ArrayList;
 import java.util.Collection;
-import java.util.List;
+import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
+import lombok.Getter;
+import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.userdetails.UserDetails;
 
-import com.socialpulse.app.user.domain.enums.UserRole;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 import com.socialpulse.app.user.domain.model.User;
 
-import lombok.Builder;
-
-@Builder
 public class CustomUserDetails implements UserDetails {
+
+    private static final String ROLE_PREFIX = "ROLE_";
+
     private final User user;
+    private final Collection<GrantedAuthority> authorities;
 
     public CustomUserDetails(User user) {
         this.user = user;
+        this.authorities = Optional.ofNullable(user.getRoles())
+                            .orElse(Set.of())
+                            .stream()
+                            .flatMap(role -> Stream.concat(
+                                    Stream.of(new SimpleGrantedAuthority(ROLE_PREFIX + role.getName())),
+                                    Optional.ofNullable(role.getPermissions())
+                                            .orElse(Set.of())
+                                            .stream()
+                                            .map(permission -> new SimpleGrantedAuthority(permission.getName())
+                            )))
+                            .collect(Collectors.toUnmodifiableSet());
     }
 
     @Override
+    @NullMarked
     public Collection<? extends GrantedAuthority> getAuthorities() {
-        UserRole role = user.getRole();
-
-        List<GrantedAuthority> authorities = new ArrayList<>();
-
-        authorities.add(new SimpleGrantedAuthority("ROLE_" + role.name()));
-
-        role.getPermissions().forEach((permission -> authorities.add(new SimpleGrantedAuthority(permission.name()))));
-
         return authorities;
     }
 
     public Long getId() {
         return user.getId();
+    }
+
+    public User user() {
+        return user;
     }
 
     @Override
@@ -48,16 +60,13 @@ public class CustomUserDetails implements UserDetails {
 
     // Spring Security dùng giá trị này làm principal và JJWT lưu vào JWT subject.
     @Override
+    @NullMarked
     public String getUsername() {
         return user.getEmail();
     }
 
-    // Expose User entity để AuthService khỏi tạo JWT claims (userId, role)
-    public User getUser() {
-        return user;
-    }
-
     @Override
+    @NullMarked
     public boolean isAccountNonExpired() {
         return true;
     }
@@ -68,6 +77,7 @@ public class CustomUserDetails implements UserDetails {
     }
 
     @Override
+    @NullMarked
     public boolean isCredentialsNonExpired() {
         return true;
     }

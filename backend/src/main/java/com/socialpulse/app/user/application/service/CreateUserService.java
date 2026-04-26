@@ -20,11 +20,13 @@ public class CreateUserService implements CreateUserUseCase {
     private final UserRepository userRepository;
     private final AppPasswordEncoder passwordEncode;
     private final UserMapper userMapper;
+    private final UserRoleService userRoleService;
 
-    public CreateUserService(UserRepository userRepository, AppPasswordEncoder passwordEncode, UserMapper userMapper) {
+    public CreateUserService(UserRepository userRepository, AppPasswordEncoder passwordEncode, UserMapper userMapper, UserRoleService userRoleService) {
         this.userRepository = userRepository;
         this.passwordEncode = passwordEncode;
         this.userMapper = userMapper;
+        this.userRoleService = userRoleService;
     }
 
     @Override
@@ -47,6 +49,8 @@ public class CreateUserService implements CreateUserUseCase {
         String encodedPassword = passwordEncode.encode(request.getRawPassword());
         User user = userMapper.toUser(request, normalizedEmail, encodedPassword);
         user.applyDefaultState();
+
+        userRoleService.assignDefaultRole(user);
 
         user = userRepository.save(user);
         String message = "User created successfully for email: " + user.getEmail();

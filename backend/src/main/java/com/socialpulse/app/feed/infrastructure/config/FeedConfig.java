@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.AiRankingService;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
@@ -40,8 +41,9 @@ public class FeedConfig {
 
     @Bean
     public PredictRankingUseCase predictRankingUseCase(
-            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
-        return new AiRankingService(aiServiceUrl);
+            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl,
+            BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase) {
+        return new AiRankingService(aiServiceUrl, extractBehaviorFeaturesUseCase);
     }
 
     @Bean

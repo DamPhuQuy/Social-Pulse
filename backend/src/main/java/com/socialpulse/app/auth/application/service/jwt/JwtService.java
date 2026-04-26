@@ -35,13 +35,15 @@ public class JwtService implements JwtUseCase {
         this.jwtProperties = jwtProperties;
     }
 
-    // inject userId and role into claims to let frontend use
+    // inject userId and roles into claims to let frontend use
     @Override
     public String generateToken(CustomUserDetails userDetails) {
         Map<String, Object> extraClaims = new HashMap<>();
 
         extraClaims.put("userId", userDetails.getId());
-        extraClaims.put("role", userDetails.getUser().getRole().name());
+        extraClaims.put("roles", userDetails.user().getRoles().stream()
+                .map(role -> role.getName())
+                .toList());
         extraClaims.put("type", "access");
 
         Date now = new Date();

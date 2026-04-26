@@ -1,6 +1,6 @@
 package com.socialpulse.app.user.application.dto.response;
 
-import com.socialpulse.app.user.domain.enums.UserRole;
+import java.util.Set;
 
 import lombok.Builder;
 import lombok.Getter;
@@ -12,5 +12,5 @@ import lombok.Setter;
 public class UserAuthorizedResponse {
     private Long id;
     private String email;
-    private UserRole role;
+    private Set<String> roles;
 }

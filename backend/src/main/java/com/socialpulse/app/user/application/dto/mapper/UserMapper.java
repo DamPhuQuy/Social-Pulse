@@ -17,7 +17,7 @@ public interface UserMapper {
     @Mapping(target = "email", source = "normalizedEmail")
     @Mapping(target = "passwordHash", source = "encodedPassword")
     @Mapping(target = "status", ignore = true)
-    @Mapping(target = "role", constant = "USER")
+    @Mapping(target = "roles", ignore = true)
     @Mapping(target = "verification", constant = "NOT_VERIFIED")
     @Mapping(target = "isLocked", ignore = true)
     @Mapping(target = "failedLoginAttempts", ignore = true)

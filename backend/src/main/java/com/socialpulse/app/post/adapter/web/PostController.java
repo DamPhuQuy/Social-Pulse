@@ -55,7 +55,7 @@ public class PostController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('USER') and hasAuthority('CREATE_POST')")
+    @PreAuthorize("hasRole('USER') and hasAuthority('post:create')")
     @Operation(
             summary = "Create post",
             description = "Create a new post for current authenticated user",
@@ -87,13 +87,13 @@ public class PostController {
     }
 
     @GetMapping("/{id}")
-    @PreAuthorize("hasRole('USER') and hasAuthority('READ_POSTS')")
+    @PreAuthorize("hasRole('USER') and hasAuthority('post:read')")
     public ResponseEntity<ApiResponse<ViewPostResponse>> viewPost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<ViewPostResponse>builder().data(viewPostUseCase.viewPost(id, currentUser)).build());
     }
 
     @PostMapping("/react")
-    @PreAuthorize("hasRole('USER') and hasAuthority('REACT_POST')")
+    @PreAuthorize("hasRole('USER')")
     public ResponseEntity<ApiResponse<PostReactionResponse>> react(
             @RequestBody @Valid PostReactionRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
