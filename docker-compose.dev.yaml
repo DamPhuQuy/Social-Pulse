@@ -1,0 +1,140 @@
+services:
+  db:
+    image: postgres:17-alpine
+    restart: unless-stopped
+    environment:
+      TZ: Asia/Ho_Chi_Minh
+      POSTGRES_USER: ${DB_USERNAME}
+      POSTGRES_PASSWORD: ${DB_PASSWORD}
+      POSTGRES_DB: ${DB_NAME}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    restart: unless-stopped
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    networks:
+      - app-network
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    env_file:
+      - .env
+    environment:
+      DB_HOST: db
+      REDIS_HOST: redis
+    volumes:
+      - type: bind
+        source: ./backend/src
+        target: /app/src
+      - type: bind
+        source: ./backend/pom.xml
+        target: /app/pom.xml
+      - type: volume
+        source: maven_cache
+        target: /root/.m2
+    depends_on:
+      db:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+    command: ["./mvn", "spring-boot:run"]
+    networks:
+      - app-network
+
+  ai:
+    build:
+      context: ./ai
+      dockerfile: Dockerfile.dev
+    restart: unless-stopped
+    ports:
+      - "8000:8000"
+    volumes:
+      - type: bind
+        source: ./ai/app
+        target: /app/app
+      - type: bind
+        source: ./ai/requirements.txt
+        target: /app/requirements.txt
+    depends_on:
+      backend:
+        condition: service_started
+    command:
+      [
+        "uvicorn",
+        "app.main:app",
+        "--host",
+        "0.0.0.0",
+        "--port",
+        "8000",
+        "--reload",
+      ]
+    networks:
+      - app-network
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile.dev
+    ports:
+      - "5173:5173"
+    restart: unless-stopped
+    environment:
+      VITE_API_BASE_URL: http://localhost:8080/api/v1
+    volumes:
+      - type: bind
+        source: ./frontend/src
+        target: /app/src
+      - type: bind
+        source: ./frontend/public
+        target: /app/public
+      - type: bind
+        source: ./frontend/index.html
+        target: /app/index.html
+      - type: bind
+        source: ./frontend/vite.config.ts
+        target: /app/vite.config.ts
+      - type: bind
+        source: ./frontend/tsconfig.json
+        target: /app/tsconfig.json
+      - type: bind
+        source: ./frontend/package.json
+        target: /app/package.json
+      - type: volume
+        source: frontend_node_modules
+        target: /app/node_modules
+    depends_on:
+      backend:
+        condition: service_started
+    networks:
+      - app-network
+
+volumes:
+  postgres_data:
+  maven_cache:
+  frontend_node_modules:
+
+networks:
+  app-network:
+    driver: bridge
