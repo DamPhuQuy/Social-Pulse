@@ -1,7 +1,6 @@
 package com.socialpulse.app.feed.application.service;
 
 import java.util.List;
-import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
 

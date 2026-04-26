@@ -9,7 +9,8 @@
       "Bash(docker build *)",
       "Bash(tee build-clean.log)",
       "Bash(java -version)",
-      "Bash(./mvnw dependency:tree)"
+      "Bash(./mvnw dependency:tree)",
+      "Bash(xargs grep *)"
     ]
   }
 }

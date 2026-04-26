@@ -11,7 +11,7 @@ import com.socialpulse.app.auth.adapter.persistence.OtpStorageAdapter;
 import com.socialpulse.app.auth.adapter.persistence.RefreshTokenRepositoryAdapter;
 import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
 import com.socialpulse.app.auth.application.usecase.JwtUseCase;
-import com.socialpulse.app.auth.application.usecase.LoginUseCase;
+import com.socialpulse.app.auth.application.usecase.AuthenticationUseCase;
 import com.socialpulse.app.auth.application.usecase.OtpUseCase;
 import com.socialpulse.app.auth.application.usecase.PasswordResetUseCase;
 import com.socialpulse.app.auth.application.usecase.RefreshTokenRevocationUseCase;
@@ -21,7 +21,7 @@ import com.socialpulse.app.auth.application.usecase.VerifyEmailUseCase;
 import com.socialpulse.app.auth.application.port.EmailPort;
 import com.socialpulse.app.auth.domain.repository.OtpRepository;
 import com.socialpulse.app.auth.domain.repository.RefreshTokenRepository;
-import com.socialpulse.app.auth.application.service.LoginService;
+import com.socialpulse.app.auth.application.service.AuthenticationService;
 import com.socialpulse.app.auth.application.service.RegisterService;
 import com.socialpulse.app.auth.application.service.VerifyEmailService;
 import com.socialpulse.app.auth.application.service.jwt.JwtService;
@@ -70,12 +70,12 @@ public class AuthConfig {
     }
 
     @Bean
-    public LoginUseCase loginUseCase(UserRepository userRepositoryPort,
-                                     AuthenticationManager authenticationManager,
-                                     JwtUseCase jwtUseCase,
-                                     RefreshTokenUseCase refreshTokenUseCase,
-                                     AuthMapper authMapper) {
-        return new LoginService(userRepositoryPort, authenticationManager, jwtUseCase, refreshTokenUseCase, authMapper);
+    public AuthenticationUseCase loginUseCase(UserRepository userRepositoryPort,
+                                              AuthenticationManager authenticationManager,
+                                              JwtUseCase jwtUseCase,
+                                              RefreshTokenUseCase refreshTokenUseCase,
+                                              AuthMapper authMapper) {
+        return new AuthenticationService(userRepositoryPort, authenticationManager, jwtUseCase, refreshTokenUseCase, authMapper);
     }
 
     @Bean

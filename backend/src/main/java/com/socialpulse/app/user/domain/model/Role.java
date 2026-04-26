@@ -21,4 +21,8 @@ public class Role {
     private Set<Permission> permissions = new HashSet<>();
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+
+    public boolean hasPermission(String permission) {
+        return permissions.stream().anyMatch(p -> p.getName().equals(permission));
+    }
 }
