@@ -1,5 +1,5 @@
 # Giai đoạn 1: Build ứng dụng
-FROM maven:3.9-eclipse-temurin-25 AS build
+FROM maven:3.9-eclipse-temurin-25-alpine AS build
 WORKDIR /app
 
 # Copy file cấu hình Maven trước để cache dependencies
@@ -11,7 +11,7 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Giai đoạn 2: Chạy ứng dụng (Runtime)
-FROM eclipse-temurin:25-jre
+FROM eclipse-temurin:25-jre-alpine
 WORKDIR /app
 
 # Copy file JAR đã build từ giai đoạn trước sang
@@ -28,7 +28,7 @@ ENTRYPOINT ["java", "-jar", "app.jar"]
 
 # AS build: Đặt tên cho giai đoạn đầu tiên. Mọi thứ cồng kềnh (Maven, mã nguồn chưa biên dịch) sẽ bị bỏ lại sau khi giai đoạn này kết thúc.
 
-# eclipse-temurin:17-jre-alpine:
+# eclipse-temurin:25-jre-alpine:
 
 # JRE: Chỉ chứa môi trường thực thi, không chứa bộ công cụ phát triển (JDK), giúp giảm dung lượng.
 

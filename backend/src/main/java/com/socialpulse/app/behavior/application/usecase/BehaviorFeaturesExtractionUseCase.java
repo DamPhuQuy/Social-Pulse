@@ -1,9 +1,9 @@
 package com.socialpulse.app.behavior.application.usecase;
 
-import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
-
 import java.util.List;
 
-public interface ExtractBehaviorFeaturesUseCase {
+import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
+
+public interface BehaviorFeaturesExtractionUseCase {
     List<UserInteractionFeatures> extractFeatures(Long userId, List<Long> authorIds);
 }

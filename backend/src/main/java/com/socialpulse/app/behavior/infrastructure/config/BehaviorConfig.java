@@ -1,9 +1,30 @@
 package com.socialpulse.app.behavior.infrastructure.config;
 
+import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.scheduling.annotation.EnableAsync;
+
+import com.socialpulse.app.behavior.adapter.persistence.UserBehaviorRepositoryAdapter;
+import com.socialpulse.app.behavior.application.service.BehaviorFeaturesExtractionService;
+import com.socialpulse.app.behavior.application.service.BehaviorTrackingService;
+import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
+import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
+import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
+import com.socialpulse.app.behavior.infrastructure.persistence.repository.UserBehaviorJpaRepository;
 
 @Configuration
-@EnableAsync
 public class BehaviorConfig {
+    @Bean
+    public UserBehaviorRepository userBehavior(UserBehaviorJpaRepository jpaRepository) {
+        return new UserBehaviorRepositoryAdapter(jpaRepository);
+    }
+
+    @Bean
+    public BehaviorTrackingUseCase trackBehaviorUseCase(UserBehaviorRepository repository) {
+        return new BehaviorTrackingService(repository);
+    }
+
+    @Bean
+    public BehaviorFeaturesExtractionUseCase behaviorFeaturesExtractionUseCase(UserBehaviorRepository repository) {
+        return new BehaviorFeaturesExtractionService(repository);
+    }
 }

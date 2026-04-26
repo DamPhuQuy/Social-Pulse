@@ -1,24 +1,29 @@
 package com.socialpulse.app.behavior.application.service;
 
+import java.time.Duration;
+import java.time.LocalDateTime;
+import java.util.Arrays;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
+import java.util.Optional;
+import java.util.stream.Collectors;
+
 import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
-import com.socialpulse.app.behavior.application.usecase.ExtractBehaviorFeaturesUseCase;
+import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
 import com.socialpulse.app.behavior.domain.enums.EventType;
 import com.socialpulse.app.behavior.domain.model.UserBehavior;
 import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
-import lombok.RequiredArgsConstructor;
+
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.stereotype.Service;
 
-import java.time.Duration;
-import java.time.LocalDateTime;
-import java.util.*;
-import java.util.stream.Collectors;
-
-@Service
-@RequiredArgsConstructor
 @Slf4j
-public class BehaviorFeatureExtractionService implements ExtractBehaviorFeaturesUseCase {
+public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtractionUseCase {
     private final UserBehaviorRepository behaviorRepository;
+
+    public BehaviorFeaturesExtractionService(UserBehaviorRepository behaviorRepository) {
+        this.behaviorRepository = behaviorRepository;
+    }
 
     private static final List<EventType> ENGAGEMENT_EVENTS = Arrays.asList(
             EventType.CLICK,
@@ -80,7 +85,7 @@ public class BehaviorFeatureExtractionService implements ExtractBehaviorFeatures
                 .max(LocalDateTime::compareTo);
 
         double hoursSinceLastInteraction = lastInteractionTime
-                .map(time -> Duration.between(time, now).toHours())
+                .map(time -> (double) Duration.between(time, now).toHours())
                 .orElse(999.0);
 
         // Calculate affinity score (weighted by recency and engagement type)

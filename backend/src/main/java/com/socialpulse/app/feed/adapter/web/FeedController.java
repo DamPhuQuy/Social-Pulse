@@ -2,7 +2,7 @@ package com.socialpulse.app.feed.adapter.web;
 
 import java.util.List;
 
-import com.socialpulse.app.behavior.application.usecase.TrackBehaviorUseCase;
+import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
 import com.socialpulse.app.behavior.domain.enums.EventType;
 import com.socialpulse.app.behavior.domain.model.UserBehavior;
 import org.springframework.http.ResponseEntity;
@@ -26,9 +26,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Feed", description = "AI-powered feed ranking APIs")
 public class FeedController {
     private final GetFeedUseCase getFeedUseCase;
-    private final TrackBehaviorUseCase trackBehaviorUseCase;
+    private final BehaviorTrackingUseCase trackBehaviorUseCase;
 
-    public FeedController(GetFeedUseCase getFeedUseCase, TrackBehaviorUseCase trackBehaviorUseCase) {
+    public FeedController(GetFeedUseCase getFeedUseCase, BehaviorTrackingUseCase trackBehaviorUseCase) {
         this.getFeedUseCase = getFeedUseCase;
         this.trackBehaviorUseCase = trackBehaviorUseCase;
     }

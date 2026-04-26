@@ -1,21 +1,25 @@
 package com.socialpulse.app.behavior.application.service;
 
-import com.socialpulse.app.behavior.application.usecase.TrackBehaviorUseCase;
-import com.socialpulse.app.behavior.domain.model.UserBehavior;
-import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import java.time.LocalDateTime;
+
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.time.LocalDateTime;
+import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
+import com.socialpulse.app.behavior.domain.model.UserBehavior;
+import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
+
+import lombok.extern.slf4j.Slf4j;
 
 @Service
-@RequiredArgsConstructor
 @Slf4j
-public class BehaviorTrackingService implements TrackBehaviorUseCase {
+public class BehaviorTrackingService implements BehaviorTrackingUseCase {
     private final UserBehaviorRepository behaviorRepository;
+
+    public BehaviorTrackingService(UserBehaviorRepository behaviorRepository) {
+        this.behaviorRepository = behaviorRepository;
+    }
 
     @Override
     @Async

@@ -1,17 +1,23 @@
 package com.socialpulse.app.behavior.adapter.web;
 
-import com.socialpulse.app.behavior.application.dto.TrackBehaviorRequest;
-import com.socialpulse.app.behavior.application.usecase.TrackBehaviorUseCase;
-import com.socialpulse.app.behavior.domain.model.UserBehavior;
-import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.*;
+import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RestController;
+
+import com.socialpulse.app.behavior.application.dto.TrackBehaviorRequest;
+import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
+import com.socialpulse.app.behavior.domain.model.UserBehavior;
 
 @RestController
 @RequestMapping("/api/v1/behaviors")
-@RequiredArgsConstructor
 public class BehaviorTrackingController {
-    private final TrackBehaviorUseCase trackBehaviorUseCase;
+    private final BehaviorTrackingUseCase trackBehaviorUseCase;
+
+    public BehaviorTrackingController(BehaviorTrackingUseCase trackBehaviorUseCase) {
+        this.trackBehaviorUseCase = trackBehaviorUseCase;
+    }
 
     @PostMapping("/track")
     public ResponseEntity<Void> trackBehavior(@RequestBody TrackBehaviorRequest request) {

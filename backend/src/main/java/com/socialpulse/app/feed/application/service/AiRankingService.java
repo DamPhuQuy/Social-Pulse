@@ -7,7 +7,7 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.web.client.RestClient;
 
 import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
-import com.socialpulse.app.behavior.application.usecase.ExtractBehaviorFeaturesUseCase;
+import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;
@@ -20,10 +20,11 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 
 public class AiRankingService implements PredictRankingUseCase {
     private final RestClient restClient;
-    private final ExtractBehaviorFeaturesUseCase extractBehaviorFeaturesUseCase;
+    private final BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase;
 
     public AiRankingService(
-            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl) {
+            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl,
+            BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase) {
         this.restClient = RestClient.builder()
                 .baseUrl(aiServiceUrl)
                 .build();

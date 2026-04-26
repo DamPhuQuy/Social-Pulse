@@ -1,22 +1,22 @@
 package com.socialpulse.app.behavior.adapter.persistence;
 
-import com.socialpulse.app.behavior.domain.enums.EventType;
-import com.socialpulse.app.behavior.domain.model.UserBehavior;
-import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
-import com.socialpulse.app.behavior.infrastructure.persistence.UserBehaviorJpaRepository;
-import com.socialpulse.app.behavior.infrastructure.persistence.entity.UserBehaviorEntity;
-import lombok.RequiredArgsConstructor;
-import org.springframework.stereotype.Component;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
 import java.util.stream.Collectors;
 
-@Component
-@RequiredArgsConstructor
+import com.socialpulse.app.behavior.domain.enums.EventType;
+import com.socialpulse.app.behavior.domain.model.UserBehavior;
+import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
+import com.socialpulse.app.behavior.infrastructure.persistence.entity.UserBehaviorEntity;
+import com.socialpulse.app.behavior.infrastructure.persistence.repository.UserBehaviorJpaRepository;
+
 public class UserBehaviorRepositoryAdapter implements UserBehaviorRepository {
     private final UserBehaviorJpaRepository jpaRepository;
+
+    public UserBehaviorRepositoryAdapter(UserBehaviorJpaRepository jpaRepository) {
+        this.jpaRepository = jpaRepository;
+    }
 
     @Override
     public UserBehavior save(UserBehavior behavior) {

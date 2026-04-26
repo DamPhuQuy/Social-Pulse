@@ -109,9 +109,7 @@ public class RefreshTokenService implements RefreshTokenUseCase {
         tokenRecord.setReplacedByToken(newTokenRecord.getId());
         refreshTokenRepository.save(tokenRecord);
 
-        CustomUserDetails userDetails = CustomUserDetails.builder()
-                .user(user)
-                .build();
+        CustomUserDetails userDetails = new CustomUserDetails(user);
 
         String newAccessToken = jwtUseCase.generateToken(userDetails);
         return authMapper.toTokenPair(newAccessToken, newRawRefreshToken);

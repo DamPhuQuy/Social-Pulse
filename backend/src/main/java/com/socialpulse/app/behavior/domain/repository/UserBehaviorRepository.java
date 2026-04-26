@@ -1,11 +1,11 @@
 package com.socialpulse.app.behavior.domain.repository;
 
-import com.socialpulse.app.behavior.domain.enums.EventType;
-import com.socialpulse.app.behavior.domain.model.UserBehavior;
-
 import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Map;
+
+import com.socialpulse.app.behavior.domain.enums.EventType;
+import com.socialpulse.app.behavior.domain.model.UserBehavior;
 
 public interface UserBehaviorRepository {
     UserBehavior save(UserBehavior behavior);

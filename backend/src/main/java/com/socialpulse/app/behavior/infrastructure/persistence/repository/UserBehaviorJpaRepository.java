@@ -1,14 +1,15 @@
-package com.socialpulse.app.behavior.infrastructure.persistence;
+package com.socialpulse.app.behavior.infrastructure.persistence.repository;
 
-import com.socialpulse.app.behavior.domain.enums.EventType;
-import com.socialpulse.app.behavior.infrastructure.persistence.entity.UserBehaviorEntity;
+import java.time.LocalDateTime;
+import java.util.List;
+
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
-import java.time.LocalDateTime;
-import java.util.List;
+import com.socialpulse.app.behavior.domain.enums.EventType;
+import com.socialpulse.app.behavior.infrastructure.persistence.entity.UserBehaviorEntity;
 
 @Repository
 public interface UserBehaviorJpaRepository extends JpaRepository<UserBehaviorEntity, Long> {
