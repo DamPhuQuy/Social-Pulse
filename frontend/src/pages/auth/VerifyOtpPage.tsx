@@ -1,19 +1,18 @@
-import Header from "@/components/Header";
-import { AuthCard } from "@/components/auth/AuthCard";
-import { OtpBlock } from "@/components/auth/OtpBlock";
+import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { Link, useLocation, useNavigate } from "react-router-dom";
+import { motion } from "framer-motion";
+import { Mail, ArrowRight, Activity, ChevronLeft, ShieldCheck, RefreshCcw } from "lucide-react";
+import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
 import { PATHS } from "@/constants/paths";
 import { verifyEmailOtp } from "@/services/auth/authService";
-import { Mail01Icon } from "@hugeicons/core-free-icons";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { Link, useLocation, useNavigate } from "react-router-dom";
-import { toast } from "sonner";
+import { InteractiveBackground } from "@/components/auth/InteractiveBackground";
+import { OtpBlock } from "@/components/auth/OtpBlock";
 
 const OTP_LENGTH = 6;
 const RESEND_SECONDS = 60;
 const MAX_FAILED_ATTEMPTS = 3;
 
-/** Formats a number of seconds as "MM:SS" */
 function formatCountdown(seconds: number): string {
   const mm = String(Math.floor(seconds / 60)).padStart(2, "0");
   const ss = String(seconds % 60).padStart(2, "0");
@@ -24,14 +23,11 @@ export default function VerifyOtpPage() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  /** Resolve email from: navigation state → query param → sessionStorage */
   const email = useMemo(() => {
     const stateEmail = (location.state as { email?: string } | null)?.email?.trim();
     if (stateEmail) return stateEmail;
-
     const queryEmail = new URLSearchParams(location.search).get("email")?.trim();
     if (queryEmail) return queryEmail;
-
     return sessionStorage.getItem("pendingVerificationEmail")?.trim() ?? "";
   }, [location.search, location.state]);
 
@@ -42,46 +38,40 @@ export default function VerifyOtpPage() {
   const [failedAttempts, setFailedAttempts] = useState(0);
   const [isVerified, setIsVerified] = useState(false);
 
-  /** Track the last OTP we submitted to avoid double-submitting the same code */
   const lastSubmittedOtpRef = useRef<string | null>(null);
-
   const hasReachedMaxAttempts = failedAttempts >= MAX_FAILED_ATTEMPTS;
 
-  // Persist email so the user doesn't lose context on page refresh
   useEffect(() => {
     if (email) sessionStorage.setItem("pendingVerificationEmail", email);
   }, [email]);
 
-  // Redirect to Login after successful verification
+  // Redirect to Login after successful verification (As requested: Register -> Verify -> Login)
   useEffect(() => {
     if (!isVerified) return;
-    const id = globalThis.setTimeout(() => {
+    const id = setTimeout(() => {
       navigate(`${PATHS.LOGIN}?email=${encodeURIComponent(email)}`);
-    }, 1200);
-    return () => globalThis.clearTimeout(id);
+    }, 2000);
+    return () => clearTimeout(id);
   }, [email, isVerified, navigate]);
 
-  // Resend countdown timer
   useEffect(() => {
     if (secondsLeft <= 0) return;
-    const id = globalThis.setInterval(() => {
+    const id = setInterval(() => {
       setSecondsLeft((prev) => {
         if (prev <= 1) {
-          globalThis.clearInterval(id);
+          clearInterval(id);
           return 0;
         }
         return prev - 1;
       });
     }, 1000);
-    return () => globalThis.clearInterval(id);
+    return () => clearInterval(id);
   }, [secondsLeft]);
 
   const submitOtpVerification = useCallback(
     async (otpCode: string) => {
       if (!email) {
-        toast.error("Missing email context.", {
-          description: "Please return to register and try again.",
-        });
+        toast.error("Missing email context.");
         return;
       }
 
@@ -91,134 +81,130 @@ export default function VerifyOtpPage() {
       if (result.ok) {
         setIsVerified(true);
         sessionStorage.removeItem("pendingVerificationEmail");
-        toast.success("OTP verified successfully.", {
-          description: "Redirecting to Login page...",
-        });
-        setIsVerifying(false);
-        return;
-      }
-
-      const nextAttempts = failedAttempts + 1;
-      setFailedAttempts(nextAttempts);
-
-      const attemptsLeft = MAX_FAILED_ATTEMPTS - nextAttempts;
-
-      if (attemptsLeft > 0) {
-        toast.error("Invalid OTP.", {
-          description: `You have ${attemptsLeft} attempt(s) left.`,
-        });
+        toast.success("Identity Verified", { description: "Your account is now active. Redirecting to Login..." });
       } else {
-        toast.error("Too many failed attempts.", {
-          description: "Please click Resend OTP to get a new code.",
-        });
+        const nextAttempts = failedAttempts + 1;
+        setFailedAttempts(nextAttempts);
+        const attemptsLeft = MAX_FAILED_ATTEMPTS - nextAttempts;
+        
+        if (attemptsLeft > 0) {
+          toast.error("Invalid Code", { description: `You have ${attemptsLeft} attempt(s) remaining.` });
+        } else {
+          toast.error("Verification Locked", { description: "Please resend a new OTP code." });
+        }
+        setOtp("");
+        lastSubmittedOtpRef.current = null;
       }
-
-      setOtp("");
-      lastSubmittedOtpRef.current = null;
       setIsVerifying(false);
     },
-    [email, failedAttempts],
+    [email, failedAttempts]
   );
 
-  // Auto-submit when all 6 digits are entered
   useEffect(() => {
     if (otp.length !== OTP_LENGTH) return;
-    if (isVerifying || isResending || hasReachedMaxAttempts || !email) return;
+    if (isVerifying || isResending || hasReachedMaxAttempts || !email || isVerified) return;
     if (otp === lastSubmittedOtpRef.current) return;
 
     lastSubmittedOtpRef.current = otp;
     void submitOtpVerification(otp);
-  }, [email, hasReachedMaxAttempts, isResending, isVerifying, otp, submitOtpVerification]);
+  }, [email, hasReachedMaxAttempts, isResending, isVerifying, otp, submitOtpVerification, isVerified]);
 
   const handleResendOtp = async () => {
     setIsResending(true);
-    // Small delay for UX feedback
-    await new Promise((resolve) => setTimeout(resolve, 700));
+    await new Promise((resolve) => setTimeout(resolve, 1000));
     setIsResending(false);
     setSecondsLeft(RESEND_SECONDS);
     setOtp("");
     setFailedAttempts(0);
     lastSubmittedOtpRef.current = null;
     setIsVerified(false);
-    toast.success("A new OTP code has been sent.", {
-      description: "Please check your email inbox.",
-    });
+    toast.success("New code sent", { description: "Please check your inbox." });
   };
 
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col">
-      <Header isHomePage={false} />
+    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white overflow-hidden">
+      <InteractiveBackground />
 
-      <main className="flex-1 flex items-center justify-center px-6 py-16">
-        <div className="w-full max-w-md">
-          <AuthCard
-            icon={Mail01Icon}
-            heading="Verify OTP"
-            description="Enter the 6-digit code sent to your email to complete registration."
-            hint={
-              email ? (
-                <span>
-                  Verification email:{" "}
-                  <span className="font-medium text-on-surface">{email}</span>
-                </span>
+      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 rounded-full blur-[160px] -z-10" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 rounded-full blur-[160px] -z-10" />
+
+      <nav className="absolute top-0 left-0 w-full p-8 flex items-center justify-between z-50">
+        <Link to={PATHS.ONBOARDING} className="flex items-center gap-3 group">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+            <Activity className="text-white w-5 h-5" />
+          </div>
+          <span className="text-xl font-bold tracking-tight text-gray-900">SocialPulse</span>
+        </Link>
+        <Link to={PATHS.REGISTER} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors group">
+          <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
+          Back to Register
+        </Link>
+      </nav>
+
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        transition={{ duration: 0.8, ease: "easeOut" }}
+        className="relative z-10 w-full max-w-xl px-6"
+      >
+        <div className="bg-white/70 backdrop-blur-2xl border border-white/50 rounded-[3rem] p-12 shadow-2xl shadow-blue-500/5">
+          <div className="text-center mb-10">
+            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+              {isVerified ? (
+                <ShieldCheck className="w-8 h-8 text-green-500" />
               ) : (
-                <span className="text-destructive">
-                  Missing email context. Please return to register first.
-                </span>
-              )
-            }
-          >
-            <div className="space-y-5">
-              {/* OTP input */}
-              <OtpBlock
-                value={otp}
-                onChange={setOtp}
-                length={OTP_LENGTH}
-                disabled={isResending || isVerifying || hasReachedMaxAttempts || !email}
-              />
+                <Mail className="w-8 h-8 text-blue-600" />
+              )}
+            </div>
+            <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+              {isVerified ? "Verified!" : "Check Email"}
+            </h1>
+            <p className="text-gray-500 font-medium max-w-sm mx-auto">
+              {isVerified 
+                ? "Your account is ready. Taking you to the login screen..."
+                : `We've sent a 6-digit code to ${email}. Enter it below to continue.`}
+            </p>
+          </div>
 
-              {/* Resend row */}
-              <div className="flex items-center justify-between gap-3 text-sm">
-                <p className="text-on-surface-variant">
-                  {secondsLeft > 0
-                    ? `Resend in ${formatCountdown(secondsLeft)}`
-                    : "Didn't receive the code?"}
-                </p>
-                <Button
+          <div className="space-y-8">
+            <OtpBlock
+              value={otp}
+              onChange={setOtp}
+              length={OTP_LENGTH}
+              disabled={isResending || isVerifying || hasReachedMaxAttempts || !email || isVerified}
+            />
+
+            <div className="flex flex-col items-center gap-4">
+              <div className="flex items-center justify-center gap-2 text-sm font-medium">
+                <span className="text-gray-400">
+                  {secondsLeft > 0 ? `Code expires in ${formatCountdown(secondsLeft)}` : "Didn't get a code?"}
+                </span>
+                <button
                   type="button"
-                  variant="link"
-                  className="h-auto p-0 text-primary"
-                  disabled={secondsLeft > 0 || isResending}
+                  disabled={secondsLeft > 0 || isResending || isVerified}
                   onClick={handleResendOtp}
+                  className="text-blue-600 font-bold hover:underline disabled:opacity-50 flex items-center gap-1"
                 >
-                  {isResending ? "Resending..." : "Resend OTP"}
-                </Button>
+                  {isResending ? (
+                    <RefreshCcw className="w-3 h-3 animate-spin" />
+                  ) : null}
+                  Resend Code
+                </button>
               </div>
 
-              {/* Status line */}
-              <p className="text-center text-xs text-on-surface-variant">
-                {isVerifying
-                  ? "Verifying your code..."
-                  : `${Math.max(MAX_FAILED_ATTEMPTS - failedAttempts, 0)} attempt(s) remaining`}
-              </p>
+              {!isVerified && (
+                <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                  {isVerifying ? "Securing connection..." : `${MAX_FAILED_ATTEMPTS - failedAttempts} attempts left`}
+                </p>
+              )}
             </div>
-
-            {/* Navigation links */}
-            <p className="text-center text-sm text-on-surface-variant">
-              <Link to={PATHS.REGISTER} className="text-primary font-semibold hover:underline">
-                Back to Register
-              </Link>
-              {" | "}
-              <Link
-                to={`${PATHS.LOGIN}${email ? `?email=${encodeURIComponent(email)}` : ""}`}
-                className="text-primary font-semibold hover:underline"
-              >
-                Go to Login
-              </Link>
-            </p>
-          </AuthCard>
+          </div>
         </div>
-      </main>
+
+        <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
+          Pulse-Sync Verification Active
+        </p>
+      </motion.div>
     </div>
   );
 }
