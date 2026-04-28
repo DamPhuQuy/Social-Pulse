@@ -1,163 +1,317 @@
-import Header from "@/components/Header";
-import { PATHS } from "@/constants/paths";
-import { ArrowRight02Icon, SparklesIcon, MagicWand01Icon, ChartHistogramIcon, ChatBotIcon } from "@hugeicons/core-free-icons";
-import { HugeiconsIcon } from "@hugeicons/react";
-import { Link } from "react-router-dom";
+import React, { useEffect, useRef } from 'react';
+import { motion } from 'framer-motion';
+import { Activity, Download, Globe, Zap, Share2, LogIn } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { PATHS } from '@/constants/paths';
 
-/**
- * The landing / home page of Social Pulse.
- * Redesigned with heavy typography, monochrome colors, a single accent color pop,
- * and realistic UI widgets in the bento layout.
- */
-export default function OnboardingPage() {
+// --- Social Pulse Interactive Background ---
+const InteractiveBackground: React.FC = () => {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const mouse = useRef({ x: 0, y: 0, lastX: 0, lastY: 0 });
+  const ripples = useRef<{ x: number; y: number; r: number; maxR: number; opacity: number }[]>([]);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    if (!ctx) return;
+
+    let animationFrameId: number;
+    let particles: Particle[] = [];
+
+    class Particle {
+      x: number;
+      y: number;
+      originX: number;
+      originY: number;
+      vx: number;
+      vy: number;
+      size: number;
+      color: string;
+      pulseScale: number;
+
+      constructor(w: number, h: number) {
+        this.x = Math.random() * w;
+        this.y = Math.random() * h;
+        this.originX = this.x;
+        this.originY = this.y;
+        this.vx = (Math.random() - 0.5) * 0.5;
+        this.vy = (Math.random() - 0.5) * 0.5;
+        this.size = Math.random() * 2 + 1;
+        this.pulseScale = 1;
+
+        const colors = ['#3b82f6', '#8b5cf6', '#06b6d4', '#ec4899'];
+        this.color = colors[Math.floor(Math.random() * colors.length)];
+      }
+
+      draw() {
+        if (!ctx) return;
+        ctx.beginPath();
+        ctx.arc(this.x, this.y, this.size * this.pulseScale, 0, Math.PI * 2);
+        ctx.fillStyle = this.color;
+        ctx.globalAlpha = 0.6;
+        ctx.fill();
+        ctx.globalAlpha = 1;
+      }
+
+      update(w: number, h: number) {
+        // Natural drift
+        this.x += this.vx;
+        this.y += this.vy;
+
+        // Bounce off walls
+        if (this.x < 0 || this.x > w) this.vx *= -1;
+        if (this.y < 0 || this.y > h) this.vy *= -1;
+
+        // Interaction with ripples (The "Pulse" effect)
+        this.pulseScale = 1;
+        ripples.current.forEach(ripple => {
+          const dx = this.x - ripple.x;
+          const dy = this.y - ripple.y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+
+          // If particle is on the edge of a ripple
+          const edgeWidth = 30;
+          if (dist > ripple.r - edgeWidth && dist < ripple.r + edgeWidth) {
+            this.pulseScale = 2.0 * (ripple.opacity);
+            // Reduced push from ripple for a more subtle effect
+            this.x += (dx / dist) * 0.3;
+            this.y += (dy / dist) * 0.3;
+          }
+        });
+
+        // Return to origin faster (Social stability)
+        const dxOrig = this.originX - this.x;
+        const dyOrig = this.originY - this.y;
+        this.x += dxOrig * 0.12; // Significantly increased for ultra-fast recovery
+        this.y += dyOrig * 0.12;
+
+        // Mouse attraction/connection
+        const dxMouse = mouse.current.x - this.x;
+        const dyMouse = mouse.current.y - this.y;
+        const distMouse = Math.sqrt(dxMouse * dxMouse + dyMouse * dyMouse);
+        if (distMouse < 150) {
+          this.pulseScale += (150 - distMouse) / 100;
+        }
+      }
+    }
+
+    const init = () => {
+      canvas.width = window.innerWidth;
+      canvas.height = window.innerHeight;
+      particles = [];
+      // High-density particle system
+      const count = Math.floor((canvas.width * canvas.height) / 6000);
+      for (let i = 0; i < count; i++) {
+        particles.push(new Particle(canvas.width, canvas.height));
+      }
+    };
+
+    const drawConnections = () => {
+      ctx.lineWidth = 0.7;
+      for (let i = 0; i < particles.length; i++) {
+        for (let j = i + 1; j < particles.length; j++) {
+          const dx = particles[i].x - particles[j].x;
+          const dy = particles[i].y - particles[j].y;
+          const dist = Math.sqrt(dx * dx + dy * dy);
+          if (dist < 120) {
+            ctx.beginPath();
+            ctx.moveTo(particles[i].x, particles[i].y);
+            ctx.lineTo(particles[j].x, particles[j].y);
+            ctx.strokeStyle = `rgba(59, 130, 246, ${0.2 * (1 - dist / 100)})`;
+            ctx.stroke();
+          }
+        }
+      }
+    };
+
+    const animate = () => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      // Update and draw ripples
+      ripples.current = ripples.current.filter(r => r.opacity > 0.01);
+      ripples.current.forEach(r => {
+        r.r += 3; // Reduced from 4 for smaller radius
+        r.opacity *= 0.96; // Increased from 0.98 for faster fade
+        ctx.beginPath();
+        ctx.arc(r.x, r.y, r.r, 0, Math.PI * 2);
+        ctx.strokeStyle = `rgba(6, 182, 212, ${r.opacity * 0.3})`;
+        ctx.lineWidth = 2;
+        ctx.stroke();
+      });
+
+      drawConnections();
+      particles.forEach(p => {
+        p.update(canvas.width, canvas.height);
+        p.draw();
+      });
+
+      animationFrameId = requestAnimationFrame(animate);
+    };
+
+    const handleMouseMove = (e: MouseEvent) => {
+      mouse.current.x = e.clientX;
+      mouse.current.y = e.clientY;
+
+      // Mouse movement creates ripples ("Social Ripple")
+      const distMoved = Math.sqrt(
+        Math.pow(mouse.current.x - mouse.current.lastX, 2) +
+        Math.pow(mouse.current.y - mouse.current.lastY, 2)
+      );
+
+      if (distMoved > 100) {
+        ripples.current.push({
+          x: e.clientX,
+          y: e.clientY,
+          r: 0,
+          maxR: 200,
+          opacity: 1
+        });
+        mouse.current.lastX = e.clientX;
+        mouse.current.lastY = e.clientY;
+      }
+    };
+
+    const handleClick = (e: MouseEvent) => {
+      ripples.current.push({
+        x: e.clientX,
+        y: e.clientY,
+        r: 0,
+        maxR: 300,
+        opacity: 1
+      });
+    };
+
+    window.addEventListener('mousemove', handleMouseMove);
+    window.addEventListener('mousedown', handleClick);
+    window.addEventListener('resize', init);
+    init();
+    animate();
+
+    return () => {
+      window.removeEventListener('mousemove', handleMouseMove);
+      window.removeEventListener('mousedown', handleClick);
+      window.removeEventListener('resize', init);
+      cancelAnimationFrame(animationFrameId);
+    };
+  }, []);
+
+  return <canvas ref={canvasRef} className="absolute inset-0 z-0 pointer-events-none" />;
+};
+
+const OnboardingPage: React.FC = () => {
+  const navigate = useNavigate();
+
   return (
-    <div className="bg-surface font-body text-on-surface min-h-screen flex flex-col selection:bg-primary/20 selection:text-primary">
-      <Header isHomePage={true} />
+    <div className="min-h-screen w-full relative overflow-x-hidden font-['Outfit'] bg-white selection:bg-blue-100">
+      {/* Social Pulse Background */}
+      <InteractiveBackground />
 
-      <main className="grow flex items-center justify-center pt-32 pb-16 px-6 lg:px-12 overflow-hidden">
-        <div className="max-w-[1400px] w-full grid grid-cols-1 lg:grid-cols-12 gap-12 lg:gap-16 items-center">
-          
-          {/* Left — Heavy Typography Hero */}
-          <div className="lg:col-span-6 flex flex-col space-y-10 z-10">
-            <div>
-              {/* Pill Tag */}
-              <div className="inline-flex items-center gap-2 bg-surface-container-low px-4 py-1.5 rounded-full border border-outline-variant text-sm font-bold text-on-surface mb-8 shadow-sm">
-                <HugeiconsIcon icon={SparklesIcon} className="size-4 text-primary" />
-                <span>AI-POWERED PLATFORM</span>
-              </div>
-
-              {/* Massive Headline */}
-              <h1 className="font-headline text-6xl md:text-8xl lg:text-[5.5rem] font-black tracking-tighter text-on-surface leading-[0.95]">
-                Find your <br />
-                community <br/>
-                pulse.
-              </h1>
-
-              <p className="text-xl md:text-2xl text-on-surface-variant max-w-lg leading-relaxed font-medium mt-8">
-                Experience a social platform designed for friendly,
-                meaningful interaction with people who share your interests.
-              </p>
-            </div>
-
-            <div className="flex flex-wrap items-center gap-6">
-              {/* Offset Hard Shadow Button */}
-              <Link
-                to={PATHS.REGISTER}
-                className="group flex items-center gap-2 bg-on-surface text-surface px-8 py-4 rounded-full font-bold text-lg transition-transform duration-200 border-2 border-on-surface hover:-translate-y-1 hover:-translate-x-1 hover:shadow-[6px_6px_0px_#0052FF]"
-              >
-                Get Started
-                <HugeiconsIcon icon={ArrowRight02Icon} strokeWidth={2.5} className="size-5" />
-              </Link>
-
-              <Link
-                to={PATHS.LEARN_MORE}
-                className="px-8 py-4 rounded-full font-bold text-lg text-on-surface hover:bg-surface-container transition-colors"
-              >
-                Learn more
-              </Link>
-            </div>
+      {/* Header/Nav */}
+      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6 backdrop-blur-md bg-white/40">
+        <motion.div
+          initial={{ opacity: 0, x: -20 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={() => navigate(PATHS.ONBOARDING)}
+          className="flex items-center gap-3 cursor-pointer group"
+        >
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+            <Activity className="text-white w-5 h-5" />
           </div>
+          <span className="text-xl font-bold tracking-tight text-gray-900">SocialPulse</span>
+        </motion.div>
 
-          {/* Right — Realistic UI Bento Grid (Monochrome + Pop of Color) */}
-          <div className="lg:col-span-6 grid grid-cols-2 grid-rows-2 gap-4 lg:gap-6 h-auto lg:h-[600px] z-10 perspective-1000">
-            
-            {/* Box 1: Chat UI (Real Component Feel) */}
-            <div className="col-span-2 row-span-1 bg-surface-container-lowest border-2 border-outline-variant/60 rounded-3xl p-6 shadow-sm flex flex-col gap-4">
-              <div className="flex items-center justify-between border-b border-outline-variant/40 pb-4">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-surface-container flex items-center justify-center border border-outline-variant font-bold text-xl text-primary">
-                    #
-                  </div>
-                  <div>
-                    <h3 className="font-bold text-on-surface leading-tight">NextJS Masters</h3>
-                    <p className="text-xs text-on-surface-variant font-medium">842 online</p>
-                  </div>
-                </div>
-                <HugeiconsIcon icon={ChatBotIcon} className="size-6 text-outline" />
-              </div>
-              
-              <div className="flex-1 flex flex-col justify-end gap-3">
-                {/* Chat Bubble 1 */}
-                <div className="self-start bg-surface-container px-4 py-3 rounded-2xl rounded-tl-sm text-sm font-medium text-on-surface border border-outline-variant/40 max-w-[80%]">
-                  Anyone tried the new React compiler yet?
-                </div>
-                {/* Chat Bubble 2 (User/Accent) */}
-                <div className="self-end bg-on-surface text-surface px-4 py-3 rounded-2xl rounded-tr-sm text-sm font-medium max-w-[80%] relative">
-                  Yes, it's incredibly fast! ⚡
-                  {/* Subtle accent dot */}
-                  <div className="absolute -bottom-1 -left-2 size-3 bg-primary rounded-full border-2 border-surface" />
-                </div>
-              </div>
-            </div>
-
-            {/* Box 2: Leaderboard Snippet */}
-            <div className="col-span-1 row-span-1 bg-surface-container-lowest border-2 border-outline-variant/60 rounded-3xl p-6 shadow-sm flex flex-col">
-              <h3 className="font-bold text-on-surface mb-4 flex items-center gap-2">
-                <HugeiconsIcon icon={MagicWand01Icon} className="size-5 text-primary" />
-                Top Contributors
-              </h3>
-              
-              <div className="flex flex-col gap-3">
-                {[
-                  { name: "Alex Chen", score: "9,240" },
-                  { name: "Sarah J.", score: "8,105", highlight: true },
-                  { name: "Mike T.", score: "7,490" }
-                ].map((user, idx) => (
-                  <div key={idx} className="flex items-center justify-between bg-surface-container p-3 rounded-xl border border-outline-variant/30">
-                    <div className="flex items-center gap-3">
-                      <div className="size-8 rounded-full bg-outline-variant/20 flex items-center justify-center font-bold text-xs bg-gray-200">
-                         {idx + 1}
-                      </div>
-                      <span className={`text-sm font-bold ${user.highlight ? "text-primary" : "text-on-surface"}`}>
-                        {user.name}
-                      </span>
-                    </div>
-                    <span className="text-xs font-bold text-on-surface-variant tracking-tight">{user.score}</span>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Box 3: AI Interest Graph */}
-            <div className="col-span-1 row-span-1 bg-on-surface rounded-3xl p-6 shadow-lg flex flex-col relative overflow-hidden">
-               <h3 className="font-bold text-surface mb-2 relative z-10 flex items-center gap-2">
-                 <HugeiconsIcon icon={ChartHistogramIcon} className="size-5 text-primary" />
-                 Pulse Analytics
-               </h3>
-               <p className="text-surface/60 text-xs font-medium z-10">AI-matched community interests</p>
-               
-               {/* Abstract chart visualization */}
-               <div className="absolute bottom-4 left-4 right-4 h-24 flex items-end justify-between gap-2 z-10">
-                  <div className="w-1/6 bg-surface/20 rounded-t-sm h-[40%]" />
-                  <div className="w-1/6 bg-surface/20 rounded-t-sm h-[60%]" />
-                  <div className="w-1/6 bg-primary rounded-t-sm h-[90%] relative">
-                     {/* Accent spark */}
-                     <div className="absolute -top-3 left-1/2 -translate-x-1/2 size-2 bg-surface rounded-full" />
-                  </div>
-                  <div className="w-1/6 bg-surface/20 rounded-t-sm h-[70%]" />
-                  <div className="w-1/6 bg-surface/20 rounded-t-sm h-[50%]" />
-               </div>
-            </div>
-          </div>
+        <div className="hidden md:flex items-center gap-10 text-sm font-medium text-gray-600">
+          {['About', 'Terms', 'Privacy', 'Contact'].map((item) => (
+            <a 
+              key={item} 
+              href={`#${item.toLowerCase()}`} 
+              onClick={(e) => {
+                if (item === 'About') {
+                  e.preventDefault();
+                  navigate(PATHS.ONBOARDING);
+                }
+              }}
+              className="hover:text-blue-600 transition-colors"
+            >
+              {item}
+            </a>
+          ))}
         </div>
+
+        <motion.button
+          initial={{ opacity: 0, x: 20 }}
+          animate={{ opacity: 1, x: 0 }}
+          onClick={() => navigate(PATHS.REGISTER)}
+          className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition-all font-bold text-white text-sm shadow-xl shadow-blue-500/30"
+        >
+          Join the Pulse <Share2 className="w-4 h-4" />
+        </motion.button>
+      </nav>
+
+      {/* Hero Section */}
+      <main className="relative z-10 min-h-screen flex flex-col items-center justify-center px-4 text-center">
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 1, ease: "easeOut" }}
+          className="max-w-5xl mx-auto"
+        >
+          {/* Pulsing Badge */}
+          <motion.div
+            animate={{ scale: [1, 1.1, 1] }}
+            transition={{ duration: 2, repeat: Infinity }}
+            className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 mb-10"
+          >
+            <span className="text-sm font-bold tracking-wide uppercase">WHERE YOUR NETWORK MOVES</span>
+          </motion.div>
+
+          <h1 className="text-6xl md:text-8xl lg:text-[6.5rem] font-bold text-gray-900 leading-[0.95] mb-12 tracking-wide">
+            Feel the <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">ripple</span> <br />
+            Control the <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wide">pulse</span>
+          </h1>
+
+          <p className="text-xl md:text-2xl text-gray-500 max-w-4xl mx-auto mb-12 leading-relaxed">
+            Experience a network that adapts to you. Your vibe, perfectly amplified.
+          </p>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.5, duration: 1 }}
+            className="flex flex-col sm:flex-row items-center justify-center gap-6"
+          >
+            <motion.button
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+              onClick={() => navigate('/home')}
+              className="px-12 py-5 bg-gray-900 text-white rounded-full font-bold text-xl transition-all shadow-2xl shadow-black/20"
+            >
+              Start Exploring
+            </motion.button>
+
+            <button 
+              onClick={() => navigate(PATHS.LOGIN)}
+              className="flex items-center gap-2 px-10 py-5 bg-white border border-gray-100 hover:bg-gray-50 text-gray-900 rounded-full font-bold text-xl transition-all shadow-sm group"
+            >
+              Log in <LogIn className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
+            </button>
+          </motion.div>
+        </motion.div>
       </main>
 
-      <footer className="mt-auto py-8 px-6 lg:px-12 border-t border-outline-variant/40 bg-surface z-10">
-        <div className="max-w-[1400px] mx-auto flex flex-col sm:flex-row justify-between items-center gap-4">
-          <div className="flex gap-8 text-sm font-bold text-on-surface-variant">
-            <Link to={PATHS.PRIVACY} className="hover:text-primary transition-colors">
-              Privacy Policy
-            </Link>
-            <Link to={PATHS.TERMS} className="hover:text-primary transition-colors">
-              Terms
-            </Link>
-          </div>
 
-          <span className="text-sm font-bold text-on-surface-variant/60">
-            &copy; {new Date().getFullYear()} Social Pulse.
-          </span>
-        </div>
+      <footer className="fixed bottom-8 w-full flex justify-center z-10 pointer-events-none">
+        <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase opacity-60">
+          © 2026 SocialPulse. All rights reserved.
+        </p>
       </footer>
+
+      {/* Decorative Glows */}
+      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 rounded-full blur-[160px] -z-10" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 rounded-full blur-[160px] -z-10" />
     </div>
   );
-}
+};
+
+export default OnboardingPage;
