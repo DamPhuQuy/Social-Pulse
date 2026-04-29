@@ -1,6 +1,6 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
-import { Activity, Share2, LogIn } from 'lucide-react';
+import { Activity, Share2, LogIn, Sun, Moon } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { PATHS } from '@/constants/paths';
 import { InteractiveBackground } from '@/components/auth/InteractiveBackground';
@@ -8,26 +8,42 @@ import { InteractiveBackground } from '@/components/auth/InteractiveBackground';
 const OnboardingPage: React.FC = () => {
   const navigate = useNavigate();
 
+  const [isDark, setIsDark] = useState(() => {
+    return localStorage.getItem('theme') === 'dark' || 
+      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  });
+
+  useEffect(() => {
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+      localStorage.setItem('theme', 'dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+      localStorage.setItem('theme', 'light');
+    }
+  }, [isDark]);
+
   return (
-    <div className="min-h-screen w-full relative overflow-x-hidden font-['Outfit'] bg-white selection:bg-blue-100">
+    <div className="min-h-screen w-full relative overflow-x-hidden font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 selection:bg-blue-100">
       {/* Social Pulse Background */}
       <InteractiveBackground />
 
       {/* Header/Nav */}
-      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6 backdrop-blur-md bg-white/40">
+      <nav className="fixed top-0 left-0 w-full z-50 flex items-center justify-between px-8 py-6 bg-transparent">
+
         <motion.div
           initial={{ opacity: 0, x: -20 }}
           animate={{ opacity: 1, x: 0 }}
           onClick={() => navigate(PATHS.ONBOARDING)}
           className="flex items-center gap-3 cursor-pointer group"
         >
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
             <Activity className="text-white w-5 h-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-gray-900">SocialPulse</span>
+          <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">SocialPulse</span>
         </motion.div>
 
-        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10 text-sm font-medium text-gray-600">
+        <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10 text-sm font-medium text-gray-600 dark:text-slate-400">
           {['About', 'Terms', 'Privacy', 'Contact'].map((item) => (
             <a
               key={item}
@@ -38,21 +54,32 @@ const OnboardingPage: React.FC = () => {
                   navigate(PATHS.ONBOARDING);
                 }
               }}
-              className="hover:text-blue-600 transition-colors"
+              className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
               {item}
             </a>
           ))}
         </div>
 
-        <motion.button
-          initial={{ opacity: 0, x: 20 }}
-          animate={{ opacity: 1, x: 0 }}
-          onClick={() => navigate(PATHS.REGISTER)}
-          className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition-all font-bold text-white text-sm shadow-xl shadow-blue-500/30"
-        >
-          Join the Pulse <Share2 className="w-4 h-4" />
-        </motion.button>
+        <div className="flex items-center gap-4">
+          <motion.button 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            onClick={() => setIsDark(!isDark)}
+            className="p-2.5 rounded-xl bg-white/50 dark:bg-slate-900/50 text-gray-500 dark:text-slate-400 hover:text-blue-600 dark:hover:text-blue-400 transition-all border border-slate-300 dark:border-slate-800"
+          >
+            {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
+          </motion.button>
+          
+          <motion.button
+            initial={{ opacity: 0, x: 20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={() => navigate(PATHS.REGISTER)}
+            className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition-all font-bold text-white text-sm shadow-xl shadow-blue-500/30"
+          >
+            Join the Pulse <Share2 className="w-4 h-4" />
+          </motion.button>
+        </div>
       </nav>
 
       {/* Hero Section */}
@@ -67,17 +94,17 @@ const OnboardingPage: React.FC = () => {
           <motion.div
             animate={{ scale: [1, 1.1, 1] }}
             transition={{ duration: 2, repeat: Infinity }}
-            className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-50 text-blue-600 border border-blue-100 mb-10"
+            className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 mb-10"
           >
             <span className="text-sm font-bold tracking-wide uppercase">WHERE YOUR NETWORK MOVES</span>
           </motion.div>
 
-          <h1 className="text-6xl md:text-8xl lg:text-[6.5rem] font-bold text-gray-900 leading-[0.95] mb-12 tracking-wide">
+          <h1 className="text-6xl md:text-8xl lg:text-[6.5rem] font-bold text-gray-900 dark:text-white leading-[0.95] mb-12 tracking-wide">
             Feel the <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">ripple</span> <br />
             Control the <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wide">pulse</span>
           </h1>
 
-          <p className="text-xl md:text-2xl text-gray-500 max-w-4xl mx-auto mb-12 leading-relaxed">
+          <p className="text-xl md:text-2xl text-gray-500 dark:text-slate-400 max-w-4xl mx-auto mb-12 leading-relaxed">
             Experience a network that adapts to you. Your vibe, perfectly amplified.
           </p>
 
@@ -90,15 +117,15 @@ const OnboardingPage: React.FC = () => {
             <motion.button
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
-              onClick={() => navigate('/home')}
-              className="px-12 py-5 bg-gray-900 text-white rounded-full font-bold text-xl transition-all shadow-2xl shadow-black/20"
+              onClick={() => navigate(PATHS.HOME)}
+              className="px-12 py-5 bg-gray-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-xl transition-all shadow-2xl shadow-black/20"
             >
               Start Exploring
             </motion.button>
 
             <button
               onClick={() => navigate(PATHS.LOGIN)}
-              className="flex items-center gap-2 px-10 py-5 bg-white border border-gray-100 hover:bg-gray-50 text-gray-900 rounded-full font-bold text-xl transition-all shadow-sm group"
+              className="flex items-center gap-2 px-10 py-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-900 dark:text-white rounded-full font-bold text-xl transition-all shadow-sm group"
             >
               Log in <LogIn className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
             </button>
@@ -108,14 +135,14 @@ const OnboardingPage: React.FC = () => {
 
 
       <footer className="fixed bottom-8 w-full flex justify-center z-10 pointer-events-none">
-        <p className="text-gray-400 text-[10px] font-bold tracking-[0.3em] uppercase opacity-60">
+        <p className="text-gray-400 dark:text-slate-600 text-[10px] font-bold tracking-[0.3em] uppercase opacity-60">
           © 2026 SocialPulse. All rights reserved.
         </p>
       </footer>
 
       {/* Decorative Glows */}
-      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 rounded-full blur-[160px] -z-10" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 rounded-full blur-[160px] -z-10" />
+      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-[160px] -z-10" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 dark:bg-purple-900/10 rounded-full blur-[160px] -z-10" />
     </div>
   );
 };

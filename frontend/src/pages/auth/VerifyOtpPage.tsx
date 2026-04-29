@@ -1,11 +1,10 @@
-import React, { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useLocation, useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Mail, ArrowRight, Activity, ChevronLeft, ShieldCheck, RefreshCcw } from "lucide-react";
+import { Mail, Activity, ChevronLeft, ShieldCheck, RefreshCcw } from "lucide-react";
 import { toast } from "sonner";
-import { Button } from "@/components/ui/button";
 import { PATHS } from "@/constants/paths";
-import { verifyEmailOtp } from "@/services/auth/authService";
+import { verifyEmailOtp, resendOtp } from "@/services/auth/authService";
 import { InteractiveBackground } from "@/components/auth/InteractiveBackground";
 import { OtpBlock } from "@/components/auth/OtpBlock";
 
@@ -110,32 +109,38 @@ export default function VerifyOtpPage() {
   }, [email, hasReachedMaxAttempts, isResending, isVerifying, otp, submitOtpVerification, isVerified]);
 
   const handleResendOtp = async () => {
+    if (!email) return;
     setIsResending(true);
-    await new Promise((resolve) => setTimeout(resolve, 1000));
+    const result = await resendOtp({ email });
     setIsResending(false);
-    setSecondsLeft(RESEND_SECONDS);
-    setOtp("");
-    setFailedAttempts(0);
-    lastSubmittedOtpRef.current = null;
-    setIsVerified(false);
-    toast.success("New code sent", { description: "Please check your inbox." });
+
+    if (result.ok) {
+      setSecondsLeft(RESEND_SECONDS);
+      setOtp("");
+      setFailedAttempts(0);
+      lastSubmittedOtpRef.current = null;
+      setIsVerified(false);
+      toast.success("New code sent", { description: "Please check your inbox." });
+    } else {
+      toast.error("Failed to resend", { description: result.message });
+    }
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       <InteractiveBackground />
 
-      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 rounded-full blur-[160px] -z-10" />
-      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 rounded-full blur-[160px] -z-10" />
+      <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-[160px] -z-10" />
+      <div className="fixed bottom-[-10%] right-[-10%] w-[60%] h-[60%] bg-purple-100/30 dark:bg-purple-900/10 rounded-full blur-[160px] -z-10" />
 
       <nav className="absolute top-0 left-0 w-full p-8 flex items-center justify-between z-50">
         <Link to={PATHS.ONBOARDING} className="flex items-center gap-3 group">
-          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-purple-600 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
+          <div className="w-10 h-10 bg-gradient-to-br from-blue-600 to-cyan-500 rounded-xl flex items-center justify-center shadow-lg shadow-blue-500/20 group-hover:scale-110 transition-transform">
             <Activity className="text-white w-5 h-5" />
           </div>
-          <span className="text-xl font-bold tracking-tight text-gray-900">SocialPulse</span>
+          <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">SocialPulse</span>
         </Link>
-        <Link to={PATHS.REGISTER} className="flex items-center gap-2 text-sm font-bold text-gray-600 hover:text-blue-600 transition-colors group">
+        <Link to={PATHS.REGISTER} className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-400 hover:text-blue-600 transition-colors group">
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
           Back to Register
         </Link>
@@ -147,19 +152,19 @@ export default function VerifyOtpPage() {
         transition={{ duration: 0.8, ease: "easeOut" }}
         className="relative z-10 w-full max-w-xl px-6"
       >
-        <div className="bg-white/70 backdrop-blur-2xl border border-white/50 rounded-[3rem] p-12 shadow-2xl shadow-blue-500/5">
+        <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-slate-300 dark:border-slate-800 rounded-[3rem] p-12 shadow-2xl shadow-blue-500/5">
           <div className="text-center mb-10">
-            <div className="w-16 h-16 bg-blue-50 rounded-2xl flex items-center justify-center mx-auto mb-6">
+            <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
               {isVerified ? (
                 <ShieldCheck className="w-8 h-8 text-green-500" />
               ) : (
-                <Mail className="w-8 h-8 text-blue-600" />
+                <Mail className="w-8 h-8 text-blue-600 dark:text-blue-400" />
               )}
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 mb-3 tracking-tight">
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
               {isVerified ? "Verified!" : "Check Email"}
             </h1>
-            <p className="text-gray-500 font-medium max-w-sm mx-auto">
+            <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
               {isVerified 
                 ? "Your account is ready. Taking you to the login screen..."
                 : `We've sent a 6-digit code to ${email}. Enter it below to continue.`}

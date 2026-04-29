@@ -30,7 +30,7 @@ docker-compose down
 **Truy cập:**
 - Frontend: [http://localhost:5173](http://localhost:5173)
 - API Docs: [http://localhost:8080/swagger-ui.html](http://localhost:8080/swagger-ui.html)
-
+- Database (pgAdmin): [http://localhost:5050](http://localhost:5050)
 ---
 
 ### 3. Chạy thủ công (Dành cho Dev)
