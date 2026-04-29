@@ -1,30 +1,24 @@
 import { useState, useEffect } from 'react';
-import { motion } from 'framer-motion';
-import {
-  Home,
-  Compass,
-  BarChart3,
-  Settings,
-  Search,
-  MoreHorizontal,
-  MessageCircle,
-  Heart,
-  Share2,
-  Bookmark,
-  LogOut,
-  Mic,
-  Smile,
+import { 
+  Home, 
+  Compass, 
+  Settings, 
+  Search, 
+  MoreHorizontal, 
+  MessageCircle, 
+  Heart, 
+  Share2, 
+  Bookmark, 
+  LogOut, 
+  Smile, 
   Image as ImageIcon,
   Video,
   BarChart as PollIcon,
   Activity,
   Zap,
-  TrendingUp,
   Moon,
   Sun,
-  Plus,
-  ArrowUpRight,
-  UserPlus
+  Plus
 } from "lucide-react";
 
 // --- Dummy Data ---
