@@ -56,7 +56,7 @@ export default function LoginPage() {
       setAccessToken(result.accessToken);
       setApiClientToken(result.accessToken);
       toast.success("Login successful.", { description: "Welcome back to Social Pulse." });
-      navigate(PATHS.ONBOARDING);
+      navigate(PATHS.HOME);
     } else {
       toast.error("Login failed.", { description: result.message });
     }
