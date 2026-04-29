@@ -9,6 +9,7 @@ export const PATHS = {
   LEARN_MORE: "/learn-more",
   TERMS: "/terms",
   PRIVACY: "/privacy",
+  HOME: "/home",
 } as const;
 
 export type AppPaths = (typeof PATHS)[keyof typeof PATHS];

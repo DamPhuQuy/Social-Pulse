@@ -29,7 +29,7 @@ type OtpBlockProps = {
  */
 export function OtpBlock({ value, onChange, length = 6, disabled = false }: OtpBlockProps) {
   return (
-    <div className="rounded-2xl border border-outline-variant bg-surface-container p-4 sm:p-5">
+    <div className="p-2 sm:p-4">
       <InputOTP
         value={value}
         onChange={(val) => onChange(val.replace(/\D/g, ""))}
@@ -37,12 +37,12 @@ export function OtpBlock({ value, onChange, length = 6, disabled = false }: OtpB
         containerClassName="justify-center"
         disabled={disabled}
       >
-        <InputOTPGroup className="gap-2 rounded-none">
+        <InputOTPGroup className="gap-3">
           {Array.from({ length }, (_, index) => (
             <InputOTPSlot
               key={index}
               index={index}
-              className="size-11 rounded-xl border border-outline-variant bg-surface-container-lowest text-base first:rounded-xl first:border"
+              className="size-14 rounded-xl border-[3px] border-gray-400 dark:border-slate-700 bg-white dark:bg-slate-900 text-2xl font-black text-gray-900 dark:text-white shadow-sm transition-all duration-200 data-[active=true]:border-blue-600 dark:data-[active=true]:border-blue-400 data-[active=true]:bg-blue-50/50 dark:data-[active=true]:bg-blue-900/20 data-[active=true]:ring-4 data-[active=true]:ring-blue-600/15 data-[active=true]:scale-105"
             />
           ))}
         </InputOTPGroup>
