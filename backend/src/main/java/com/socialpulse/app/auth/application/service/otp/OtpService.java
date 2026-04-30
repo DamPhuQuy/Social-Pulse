@@ -39,9 +39,9 @@ public class OtpService implements OtpUseCase {
     public void generateToStoreAndSendEmail(String email) {
         String normalizedEmail = normalizeEmail(email);
         String otpCode = generateOtpCode();
-                Otp otp = newOtp(normalizedEmail, otpCode);
-                otpStoragePort.save(normalizedEmail, serialize(otp));
-                emailPort.sendHtmlEmail(normalizedEmail, OTP_EMAIL_SUBJECT, buildOtpHtml(otpCode));
+        Otp otp = newOtp(normalizedEmail, otpCode);
+        otpStoragePort.save(normalizedEmail, serialize(otp));
+        emailPort.sendHtmlEmail(normalizedEmail, OTP_EMAIL_SUBJECT, buildOtpHtml(otpCode));
     }
 
     @Override

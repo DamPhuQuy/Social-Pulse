@@ -1,7 +1,19 @@
 package com.socialpulse.app.auth.application.service;
 
+import com.socialpulse.app.auth.application.dto.TokenPair;
+import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
+import com.socialpulse.app.auth.application.dto.request.LoginRequest;
+import com.socialpulse.app.auth.application.usecase.AuthenticationUseCase;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
+import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.exception.status.AuthCode;
+import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.enums.UserStatus;
+import com.socialpulse.app.user.domain.enums.VerificationStatus;
+import com.socialpulse.app.user.domain.model.User;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import java.util.Locale;
-
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.AuthenticationManager;
@@ -9,21 +21,8 @@ import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.authentication.DisabledException;
 import org.springframework.security.authentication.LockedException;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
-
-import com.socialpulse.app.auth.application.dto.TokenPair;
-import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
-import com.socialpulse.app.auth.application.dto.request.LoginRequest;
-import com.socialpulse.app.auth.application.usecase.JwtUseCase;
-import com.socialpulse.app.auth.application.usecase.AuthenticationUseCase;
-import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
-import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.exception.status.AuthCode;
-import com.socialpulse.app.security.user.CustomUserDetails;
-import com.socialpulse.app.user.domain.repository.UserRepository;
-import com.socialpulse.app.user.domain.enums.UserStatus;
-import com.socialpulse.app.user.domain.enums.VerificationStatus;
-import com.socialpulse.app.user.domain.model.User;
 
 public class AuthenticationService implements AuthenticationUseCase {
 
@@ -36,11 +35,13 @@ public class AuthenticationService implements AuthenticationUseCase {
     private final AuthMapper authMapper;
     private final Logger logger;
 
-    public AuthenticationService(UserRepository userRepository,
-                                 AuthenticationManager authenticationManager,
-                                 JwtUseCase jwtUseCase,
-                                 RefreshTokenUseCase refreshTokenUseCase,
-                                 AuthMapper authMapper) {
+    public AuthenticationService(
+        UserRepository userRepository,
+        AuthenticationManager authenticationManager,
+        JwtUseCase jwtUseCase,
+        RefreshTokenUseCase refreshTokenUseCase,
+        AuthMapper authMapper
+    ) {
         this.userRepository = userRepository;
         this.authenticationManager = authenticationManager;
         this.jwtUseCase = jwtUseCase;
@@ -52,24 +53,36 @@ public class AuthenticationService implements AuthenticationUseCase {
     @Override
     @Transactional(noRollbackFor = AppException.class)
     public TokenPair authenticate(LoginRequest request) {
-        String normalizedEmail = request.getEmail().trim().toLowerCase(Locale.ROOT);
+        String normalizedEmail = request
+            .getEmail()
+            .trim()
+            .toLowerCase(Locale.ROOT);
 
-        var user = userRepository.findByEmail(normalizedEmail)
-                .orElseThrow(() -> new AppException(AuthCode.INVALID_CREDENTIALS));
+        var user = userRepository
+            .findByEmail(normalizedEmail)
+            .orElseThrow(() -> new AppException(AuthCode.INVALID_CREDENTIALS));
 
         if (user.isLocked() || user.getStatus() == UserStatus.LOCKED) {
             throw new AppException(AuthCode.ACCOUNT_LOCKED);
         }
 
-        if (user.getVerification() != VerificationStatus.VERIFIED || user.getStatus() != UserStatus.ACTIVE) {
+        if (
+            user.getVerification() != VerificationStatus.VERIFIED ||
+            user.getStatus() != UserStatus.ACTIVE
+        ) {
             throw new AppException(AuthCode.ACCOUNT_NOT_VERIFIED);
         }
 
         try {
-            org.springframework.security.core.Authentication authentication = authenticationManager.authenticate(
-                    new UsernamePasswordAuthenticationToken(normalizedEmail, request.getPassword()));
+            Authentication authentication = authenticationManager.authenticate(
+                new UsernamePasswordAuthenticationToken(
+                    normalizedEmail,
+                    request.getPassword()
+                )
+            );
 
-            CustomUserDetails userDetails = (CustomUserDetails) authentication.getPrincipal();
+            CustomUserDetails userDetails =
+                (CustomUserDetails) authentication.getPrincipal();
 
             user.resetFailedLoginAttempts();
             user.updateLastLoginAt();
@@ -94,10 +107,12 @@ public class AuthenticationService implements AuthenticationUseCase {
         user.incrementFailedLoginAttempts();
         if (user.getFailedLoginAttempts() >= MAX_FAILED_ATTEMPTS) {
             user.lockAccount();
-            logger.warn("Account locked after {} failed attempts: {}", MAX_FAILED_ATTEMPTS, user.getEmail());
+            logger.warn(
+                "Account locked after {} failed attempts: {}",
+                MAX_FAILED_ATTEMPTS,
+                user.getEmail()
+            );
         }
         userRepository.save(user);
     }
 }
-
-
