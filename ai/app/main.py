@@ -1,100 +1,100 @@
 """
-Production FastAPI service with two-stage ranking
+FastAPI prediction service for Social Pulse feed ranking.
+
+This service loads the trained LightGBM model and provides
+a REST API for ranking posts based on extracted features.
 """
+
 from fastapi import FastAPI, HTTPException
-from pydantic import BaseModel, Field
-from typing import List, Optional
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+from typing import List, Dict, Any
 import lightgbm as lgb
-import pandas as pd
 import numpy as np
 from pathlib import Path
 import json
 from datetime import datetime
+import os
+from dotenv import load_dotenv
 
-# Import custom modules
-import sys
-sys.path.append(str(Path(__file__).parent))
-
-from data.feature_engineering import FeatureEngineer
-from models.ranker import TwoStageRanker, CandidateGenerator
+# Load environment variables
+load_dotenv()
 
 app = FastAPI(
     title="Social Pulse AI Ranking Service",
-    version="2.0.0",
-    description="Production-grade feed ranking with LightGBM Ranker"
+    version="1.0.0",
+    description="AI-powered feed ranking using LightGBM"
+)
+
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
 )
 
 # Global state
 model = None
-feature_engineer = None
-ranker = None
 model_metadata = None
+feature_names = None
 
 
-# Request/Response models
-class PostFeatures(BaseModel):
-    post_id: int
-    author_id: int
-    topic: str
-    created_at: str
-    content_length: int
-    has_image: bool
-    has_video: bool
-    author_follower_count: int
-    author_avg_engagement_rate: float
-    predicted_quality_score: float
+class FeatureVector(BaseModel):
+    """Feature vector for a single post"""
+    # Post features
+    hot_score: float = 0.0
+    upvote_ratio: float = 0.0
+    has_image: int = 0
+    content_length: int = 0
+    post_age_hours: float = 0.0
+    upvote_count: int = 0
+    downvote_count: int = 0
+    cmt_count: int = 0
+    share_count: int = 0
+    view_count: int = 0
 
-
-class UserFeatures(BaseModel):
-    user_id: int
-    follower_count: int
-    following_count: int
-    post_count: int
-    account_age_days: int
-    engagement_rate: float
-    avg_session_duration_minutes: float
-
-
-class RelationshipFeatures(BaseModel):
-    user_id: int
-    author_id: int
-    follows: bool = False
+    # Interaction features
     interaction_count_7d: int = 0
     interaction_count_30d: int = 0
-    hours_since_last_interaction: float = 999.0
     affinity_score: float = 0.0
+    last_interaction_hours: float = 999.0
+
 
 
 class RankingRequest(BaseModel):
+    """Request to rank posts for a user"""
     user_id: int
-    user_features: UserFeatures
-    candidate_posts: List[PostFeatures]
-    relationships: List[RelationshipFeatures]
+    posts: List[Dict[str, Any]]  # List of {post_id, features}
 
 
 class RankedPost(BaseModel):
+    """Ranked post with score"""
     post_id: int
-    ranking_score: float
+    score: float
     rank: int
 
 
 class RankingResponse(BaseModel):
+    """Response with ranked posts"""
     user_id: int
     ranked_posts: List[RankedPost]
-    total_candidates: int
+    total_posts: int
     model_version: str
     timestamp: str
 
 
 def load_model():
-    """Load model on startup"""
-    global model, feature_engineer, ranker, model_metadata
+    """Load trained model on startup"""
+    global model, model_metadata, feature_names
 
-    model_path = Path(__file__).parent / "models" / "ranking_model.txt"
-    metadata_path = Path(__file__).parent / "models" / "model_metadata.json"
+    model_path = Path(os.getenv('MODEL_PATH', 'models/ranking_model.txt'))
+    metadata_path = Path(os.getenv('MODEL_METADATA_PATH', 'models/model_metadata.json'))
 
     if not model_path.exists():
         print("⚠️  Model not found. Please train the model first.")
+        print(f"   Expected path: {model_path.absolute()}")
         print("   Run: python app/training/train_ranker.py")
         return
 
@@ -107,14 +107,11 @@ def load_model():
         if metadata_path.exists():
             with open(metadata_path, 'r') as f:
                 model_metadata = json.load(f)
-            print(f"✅ Model metadata loaded: version {model_metadata.get('version', 'unknown')}")
-
-        # Initialize feature engineer
-        feature_engineer = FeatureEngineer()
-        feature_engineer.feature_columns = model_metadata.get('feature_names', [])
-
-        # Initialize ranker
-        ranker = TwoStageRanker(model, feature_engineer)
+            feature_names = model_metadata.get('feature_names', [])
+            print(f"✅ Model metadata loaded")
+            print(f"   Version: {model_metadata.get('version', 'unknown')}")
+            print(f"   Features: {len(feature_names)}")
+            print(f"   Trained: {model_metadata.get('trained_at', 'unknown')}")
 
         print("✅ Ranking service ready!")
 
@@ -125,14 +122,19 @@ def load_model():
 
 @app.on_event("startup")
 def startup_event():
+    """Initialize service on startup"""
+    print("=" * 60)
+    print("Social Pulse AI Ranking Service")
+    print("=" * 60)
     load_model()
 
 
 @app.get("/")
 def read_root():
+    """Root endpoint"""
     return {
         "service": "Social Pulse AI Ranking Service",
-        "version": "2.0.0",
+        "version": "1.0.0",
         "status": "running",
         "model_loaded": model is not None,
         "model_type": "LightGBM Ranker (LambdaMART)"
@@ -141,6 +143,7 @@ def read_root():
 
 @app.get("/health")
 def health_check():
+    """Health check endpoint"""
     return {
         "status": "healthy" if model is not None else "model_not_loaded",
         "model_loaded": model is not None,
@@ -150,26 +153,26 @@ def health_check():
 
 @app.get("/model/info")
 def model_info():
-    """Get model metadata"""
+    """Get model information"""
     if model_metadata is None:
-        raise HTTPException(status_code=503, detail="Model metadata not available")
+        raise HTTPException(status_code=503, detail="Model not loaded")
 
     return {
         "model_type": model_metadata.get('model_type'),
         "objective": model_metadata.get('objective'),
         "n_features": model_metadata.get('n_features'),
         "feature_names": model_metadata.get('feature_names'),
-        "training_metrics": model_metadata.get('training_history', {}).get('val_metrics'),
+        "validation_metrics": model_metadata.get('training_history', {}).get('val_metrics'),
         "trained_at": model_metadata.get('trained_at'),
         "version": model_metadata.get('version')
     }
 
 
 @app.get("/model/feature-importance")
-def feature_importance():
-    """Get feature importance"""
+def get_feature_importance():
+    """Get feature importance from trained model"""
     if model_metadata is None:
-        raise HTTPException(status_code=503, detail="Model metadata not available")
+        raise HTTPException(status_code=503, detail="Model not loaded")
 
     importance = model_metadata.get('training_history', {}).get('feature_importance', {})
 
@@ -180,138 +183,116 @@ def feature_importance():
         "top_features": [
             {"feature": feat, "importance": imp}
             for feat, imp in top_features
-        ]
+        ],
+        "total_features": len(importance)
     }
 
 
-@app.post("/api/v1/rank/predict", response_model=RankingResponse)
+@app.post("/predict", response_model=RankingResponse)
 def predict_ranking(request: RankingRequest):
     """
-    Rank posts for a user
-    Uses two-stage pipeline: candidate generation + ML ranking
+    Predict ranking scores for posts.
+
+    The Java backend should send:
+    - user_id: ID of the user
+    - posts: List of {post_id, features} where features is a dict with all 26 feature values
+
+    Returns ranked posts sorted by score (highest first).
     """
     if model is None:
         raise HTTPException(status_code=503, detail="Model not loaded")
 
-    if not request.candidate_posts:
+    if not request.posts:
         return RankingResponse(
             user_id=request.user_id,
             ranked_posts=[],
-            total_candidates=0,
-            model_version=model_metadata.get('version', 'unknown'),
+            total_posts=0,
+            model_version=model_metadata.get('version', 'unknown') if model_metadata else 'unknown',
             timestamp=datetime.now().isoformat()
         )
 
     try:
-        # Convert request to DataFrames
-        posts_data = []
-        for post in request.candidate_posts:
-            posts_data.append({
-                'post_id': post.post_id,
-                'author_id': post.author_id,
-                'topic': post.topic,
-                'created_at': pd.to_datetime(post.created_at),
-                'content_length': post.content_length,
-                'has_image': post.has_image,
-                'has_video': post.has_video,
-                'author_follower_count': post.author_follower_count,
-                'author_avg_engagement_rate': post.author_avg_engagement_rate,
-                'predicted_quality_score': post.predicted_quality_score
-            })
-        posts_df = pd.DataFrame(posts_data)
+        # Extract features from posts
+        post_ids = []
+        feature_matrix = []
 
-        # User features
-        user_data = {
-            'user_id': [request.user_id],
-            'follower_count': [request.user_features.follower_count],
-            'following_count': [request.user_features.following_count],
-            'post_count': [request.user_features.post_count],
-            'account_age_days': [request.user_features.account_age_days],
-            'engagement_rate': [request.user_features.engagement_rate],
-            'avg_session_duration_minutes': [request.user_features.avg_session_duration_minutes],
-            'preferred_topics': [[]],  # Placeholder
-            'active_hours': [[]]  # Placeholder
-        }
-        users_df = pd.DataFrame(user_data)
+        for post_data in request.posts:
+            post_ids.append(post_data['post_id'])
+            features = post_data['features']
 
-        # Relationship features
-        relationships_data = []
-        for rel in request.relationships:
-            relationships_data.append({
-                'user_id': rel.user_id,
-                'author_id': rel.author_id,
-                'follows': rel.follows,
-                'interaction_count_7d': rel.interaction_count_7d,
-                'interaction_count_30d': rel.interaction_count_30d,
-                'hours_since_last_interaction': rel.hours_since_last_interaction,
-                'affinity_score': rel.affinity_score
-            })
-        relationships_df = pd.DataFrame(relationships_data) if relationships_data else pd.DataFrame()
+            # Build feature vector in correct order (matching FeatureSnapshot)
+            feature_vector = [
+                features.get('hot_score', 0.0),
+                features.get('upvote_ratio', 0.0),
+                features.get('has_image', 0),
+                features.get('content_length', 0),
+                features.get('post_age_hours', 0.0),
+                features.get('upvote_count', 0),
+                features.get('downvote_count', 0),
+                features.get('cmt_count', 0),
+                features.get('share_count', 0),
+                features.get('view_count', 0),
+                features.get('interaction_count_7d', 0),
+                features.get('interaction_count_30d', 0),
+                features.get('affinity_score', 0.0),
+                features.get('last_interaction_hours', 999.0)
+            ]
 
-        # Create mock interactions for feature extraction
-        mock_interactions = pd.DataFrame({
-            'user_id': [request.user_id] * len(posts_df),
-            'post_id': posts_df['post_id'].values,
-            'author_id': posts_df['author_id'].values,
-            'topic': posts_df['topic'].values,
-            'timestamp': [datetime.now()] * len(posts_df),
-            'engaged': [False] * len(posts_df),
-            'engagement_type': [0] * len(posts_df),
-            'dwell_time_seconds': [0] * len(posts_df),
-            'position': list(range(len(posts_df)))
-        })
+            feature_matrix.append(feature_vector)
 
-        # Extract features
-        features_df = feature_engineer.extract_features(
-            mock_interactions,
-            users_df,
-            posts_df,
-            relationships_df
-        )
+        # Convert to numpy array
+        X = np.array(feature_matrix, dtype=np.float32)
 
         # Predict scores
-        X = features_df[feature_engineer.feature_columns].values
         scores = model.predict(X)
 
-        # Rank posts
+        # Rank posts by score (descending)
         ranked_indices = np.argsort(scores)[::-1]
-        ranked_posts = []
 
-        for rank, idx in enumerate(ranked_indices, 1):
+        ranked_posts = []
+        for rank, idx in enumerate(ranked_indices, start=1):
             ranked_posts.append(RankedPost(
-                post_id=int(posts_df.iloc[idx]['post_id']),
-                ranking_score=float(scores[idx]),
+                post_id=post_ids[idx],
+                score=float(scores[idx]),
                 rank=rank
             ))
 
         return RankingResponse(
             user_id=request.user_id,
             ranked_posts=ranked_posts,
-            total_candidates=len(request.candidate_posts),
-            model_version=model_metadata.get('version', 'unknown'),
+            total_posts=len(request.posts),
+            model_version=model_metadata.get('version', 'unknown') if model_metadata else 'unknown',
             timestamp=datetime.now().isoformat()
         )
 
     except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Ranking failed: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(e)}")
 
 
-@app.post("/api/v1/rank/batch")
-def batch_ranking(requests: List[RankingRequest]):
-    """Batch ranking for multiple users"""
+@app.post("/predict/batch")
+def batch_predict(requests: List[RankingRequest]):
+    """Batch prediction for multiple users"""
     results = []
+
     for req in requests:
         try:
             result = predict_ranking(req)
-            results.append(result)
+            results.append(result.dict())
         except Exception as e:
             results.append({
                 "user_id": req.user_id,
-                "error": str(e)
+                "error": str(e),
+                "timestamp": datetime.now().isoformat()
             })
-    return results
+
+    return {"results": results, "total": len(requests)}
 
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8001)
+
+    host = os.getenv('API_HOST', '0.0.0.0')
+    port = int(os.getenv('API_PORT', '5000'))
+
+    print(f"\nStarting server on {host}:{port}")
+    uvicorn.run(app, host=host, port=port)

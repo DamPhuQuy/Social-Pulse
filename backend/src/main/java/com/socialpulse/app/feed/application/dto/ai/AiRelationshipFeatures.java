@@ -12,7 +12,6 @@ import lombok.NoArgsConstructor;
 public class AiRelationshipFeatures {
     private Long userId;
     private Long authorId;
-    private Boolean follows;
     private Integer interactionCount7d;
     private Integer interactionCount30d;
     private Double hoursSinceLastInteraction;

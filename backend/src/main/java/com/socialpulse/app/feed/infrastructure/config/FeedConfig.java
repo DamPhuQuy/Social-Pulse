@@ -8,6 +8,7 @@ import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
+import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.AiRankingService;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
@@ -20,6 +21,9 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
+import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
 public class FeedConfig {
@@ -35,15 +39,25 @@ public class FeedConfig {
     }
 
     @Bean
-    public ExtractFeaturesUseCase extractFeaturesUseCase(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
-        return new FeatureExtractionService(redisTemplate, objectMapper);
+    public ExtractFeaturesUseCase extractFeaturesUseCase(
+            StringRedisTemplate redisTemplate,
+            ObjectMapper objectMapper,
+            FollowRepository followRepository,
+            UserRepository userRepository,
+            PostRepository postRepository,
+            UserBehaviorRepository behaviorRepository) {
+        return new FeatureExtractionService(
+                redisTemplate, objectMapper,
+                followRepository, userRepository,
+                postRepository, behaviorRepository);
     }
 
     @Bean
     public PredictRankingUseCase predictRankingUseCase(
-            @Value("${ai.service.url:http://localhost:8001}") String aiServiceUrl,
+            @Value("${ai.service.url:http://localhost:5000}") String aiServiceUrl,
+            @Value("${ai.service.enabled:false}") boolean aiServiceEnabled,
             BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase) {
-        return new AiRankingService(aiServiceUrl, extractBehaviorFeaturesUseCase);
+        return new AiRankingService(aiServiceUrl, aiServiceEnabled, extractBehaviorFeaturesUseCase);
     }
 
     @Bean
@@ -64,3 +78,4 @@ public class FeedConfig {
                 cacheFeedUseCase);
     }
 }
+

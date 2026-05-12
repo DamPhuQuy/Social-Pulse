@@ -4,9 +4,11 @@ import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.Arrays;
 import java.util.Collections;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.socialpulse.app.behavior.application.dto.UserInteractionFeatures;
@@ -14,15 +16,25 @@ import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtracti
 import com.socialpulse.app.behavior.domain.enums.EventType;
 import com.socialpulse.app.behavior.domain.model.UserBehavior;
 import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
+import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtractionUseCase {
     private final UserBehaviorRepository behaviorRepository;
+    private final FollowRepository followRepository;
+    private final PostRepository postRepository;
 
-    public BehaviorFeaturesExtractionService(UserBehaviorRepository behaviorRepository) {
+    public BehaviorFeaturesExtractionService(
+            UserBehaviorRepository behaviorRepository,
+            FollowRepository followRepository,
+            PostRepository postRepository) {
         this.behaviorRepository = behaviorRepository;
+        this.followRepository = followRepository;
+        this.postRepository = postRepository;
     }
 
     private static final List<EventType> ENGAGEMENT_EVENTS = Arrays.asList(
@@ -46,7 +58,7 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
                 .filter(b -> b.getEventTime().isAfter(sevenDaysAgo))
                 .collect(Collectors.toList());
 
-        // Group behaviors by author (assuming we can get author from post)
+        // Group behaviors by AUTHOR (fixed: was grouping by postId)
         Map<Long, List<UserBehavior>> behaviorsByAuthor30d = groupBehaviorsByAuthor(behaviors30d);
         Map<Long, List<UserBehavior>> behaviorsByAuthor7d = groupBehaviorsByAuthor(behaviors7d);
 
@@ -91,13 +103,9 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
         // Calculate affinity score (weighted by recency and engagement type)
         double affinityScore = calculateAffinityScore(behaviors30d, now);
 
-        // Check if user follows author (would need to query follow relationship)
-        boolean follows = checkFollowRelationship(userId, authorId);
-
         return UserInteractionFeatures.builder()
                 .userId(userId)
                 .authorId(authorId)
-                .follows(follows)
                 .interactionCount7d(interactionCount7d)
                 .interactionCount30d(interactionCount30d)
                 .hoursSinceLastInteraction(hoursSinceLastInteraction)
@@ -110,23 +118,25 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
             return 0.0;
         }
 
-        // Weight different event types
+        // Updated weights: SHARE=8, HIDE=-5, REPORT=-8
         Map<EventType, Double> eventWeights = Map.of(
                 EventType.CLICK, 1.0,
                 EventType.UPVOTE, 3.0,
                 EventType.COMMENT, 5.0,
-                EventType.SHARE, 7.0,
+                EventType.SHARE, 8.0,
                 EventType.FOLLOW, 10.0,
-                EventType.DOWNVOTE, -2.0
+                EventType.DOWNVOTE, -2.0,
+                EventType.HIDE, -5.0,
+                EventType.REPORT, -8.0
         );
 
         double totalScore = 0.0;
         for (UserBehavior behavior : behaviors) {
             double weight = eventWeights.getOrDefault(behavior.getEventType(), 0.0);
 
-            // Apply time decay (exponential decay over 30 days)
+            // Apply time decay (exponential decay with τ = 30 days = 720 hours)
             long hoursAgo = Duration.between(behavior.getEventTime(), now).toHours();
-            double timeDecay = Math.exp(-hoursAgo / (30.0 * 24.0));
+            double timeDecay = Math.exp(-hoursAgo / 720.0);
 
             totalScore += weight * timeDecay;
         }
@@ -134,16 +144,31 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
         return totalScore;
     }
 
+    /**
+     * Groups behaviors by author ID by looking up the post's author.
+     * Uses batch query to fetch posts for all postIds, then maps postId → authorId.
+     */
     private Map<Long, List<UserBehavior>> groupBehaviorsByAuthor(List<UserBehavior> behaviors) {
-        // This is a placeholder - in reality, you'd need to join with posts to get author_id
-        // For now, we'll use postId as a proxy (you'll need to enhance this)
-        return behaviors.stream()
-                .collect(Collectors.groupingBy(UserBehavior::getPostId));
-    }
+        if (behaviors.isEmpty()) {
+            return Map.of();
+        }
 
-    private boolean checkFollowRelationship(Long userId, Long authorId) {
-        // TODO: Query follow relationship from database
-        // This would require access to a FollowRepository
-        return false;
+        // Collect unique postIds from behaviors
+        Set<Long> postIds = behaviors.stream()
+                .map(UserBehavior::getPostId)
+                .filter(id -> id != null)
+                .collect(Collectors.toSet());
+
+        // Build postId → authorId mapping via batch lookup
+        Map<Long, Long> postToAuthorMap = new HashMap<>();
+        for (Long postId : postIds) {
+            postRepository.findById(postId).ifPresent(post ->
+                    postToAuthorMap.put(postId, post.getUserId()));
+        }
+
+        // Group behaviors by authorId
+        return behaviors.stream()
+                .filter(b -> b.getPostId() != null && postToAuthorMap.containsKey(b.getPostId()))
+                .collect(Collectors.groupingBy(b -> postToAuthorMap.get(b.getPostId())));
     }
 }

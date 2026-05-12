@@ -10,6 +10,8 @@ import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtracti
 import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
 import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
 import com.socialpulse.app.behavior.infrastructure.persistence.repository.UserBehaviorJpaRepository;
+import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 
 @Configuration
 public class BehaviorConfig {
@@ -24,7 +26,11 @@ public class BehaviorConfig {
     }
 
     @Bean
-    public BehaviorFeaturesExtractionUseCase behaviorFeaturesExtractionUseCase(UserBehaviorRepository repository) {
-        return new BehaviorFeaturesExtractionService(repository);
+    public BehaviorFeaturesExtractionUseCase behaviorFeaturesExtractionUseCase(
+            UserBehaviorRepository repository,
+            FollowRepository followRepository,
+            PostRepository postRepository) {
+        return new BehaviorFeaturesExtractionService(repository, followRepository, postRepository);
     }
 }
+

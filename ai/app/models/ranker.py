@@ -161,7 +161,7 @@ class TwoStageRanker:
 
 if __name__ == "__main__":
     import lightgbm as lgb
-    from data.feature_engineering import FeatureEngineer
+    from ai.app.data.old_data.feature_engineering import FeatureEngineer
 
     # Load model
     print("Loading model...")

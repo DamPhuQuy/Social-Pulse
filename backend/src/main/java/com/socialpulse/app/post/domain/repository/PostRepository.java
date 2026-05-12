@@ -2,6 +2,7 @@ package com.socialpulse.app.post.domain.repository;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -21,5 +22,10 @@ public interface PostRepository {
     void updateShareCount(Map<Long, Long> updates);
 
     void deleteById(Long id);
+
+    long countByUserId(Long userId);
+
+    Map<Long, Long> countByUserIds(Set<Long> userIds);
 }
+
 

@@ -294,38 +294,147 @@ class RankingModelTrainer:
         return str(model_path)
 
 
+def load_training_data_from_csv(csv_path: str):
+    """Load training data exported from PostgreSQL"""
+
+    print(f"Loading training data from {csv_path}...")
+    df = pd.read_csv(csv_path)
+
+    print(f"Loaded {len(df)} samples")
+    print(f"Unique users: {df['user_id'].nunique()}")
+    print(f"Unique posts: {df['post_id'].nunique()}")
+    print(f"Positive rate: {df['relevance'].mean():.2%}")
+
+    return df
+
+
+def prepare_ranking_data(df: pd.DataFrame):
+    """
+    Prepare data for LightGBM Ranker
+
+    Returns:
+        X: Feature matrix
+        y: Labels (relevance scores)
+        groups: Number of posts per user
+        feature_names: List of feature names
+    """
+
+    feature_columns = [
+        # Content features
+        'keywords_relevance',
+        'hashtags_relevance',
+        'mentions_relevance',
+        'content_length',
+        'has_hashtags',
+        'has_url',
+        'has_multimedia',
+
+        # Author features
+        'author_follower_count',
+        'author_following_count',
+        'followers_followings_ratio',
+        'author_seniority',
+        'author_post_count',
+        'author_engagement_rate',
+
+        # Relationship features
+        'follows',
+        'interaction_count_7d',
+        'interaction_count_30d',
+        'hours_since_last_interaction',
+        'affinity_score',
+
+        # Engagement features
+        'popularity',
+        'upvote_count',
+        'downvote_count',
+        'comment_count',
+        'share_count',
+        'view_count'
+    ]
+
+    # Fill missing values
+    df[feature_columns] = df[feature_columns].fillna(0)
+
+    # Handle infinite values
+    df[feature_columns] = df[feature_columns].replace([np.inf, -np.inf], 0)
+
+    # Sort by user_id and impression_time to maintain temporal order
+    df = df.sort_values(['user_id', 'impression_time'])
+
+    # Extract features and labels
+    X = df[feature_columns].values
+    y = df['relevance'].values
+
+    # Calculate group sizes (number of posts per user)
+    groups = df.groupby('user_id').size().values
+
+    print(f"\nPrepared ranking data:")
+    print(f"  Features: {X.shape}")
+    print(f"  Labels: {y.shape}")
+    print(f"  Groups: {len(groups)} users")
+    print(f"  Avg posts per user: {groups.mean():.1f}")
+
+    return X, y, groups, feature_columns
+
+
 if __name__ == "__main__":
-    from data.feature_engineering import FeatureEngineer
+    import sys
+
+    # Check if training data exists
+    csv_path = '../data/training_data.csv'
+    if not Path(csv_path).exists():
+        print(f"Error: Training data not found at {csv_path}")
+        print("\nPlease run export_training_data.py first to export data from PostgreSQL:")
+        print("  python export_training_data.py")
+        sys.exit(1)
 
     # Load data
-    print("Loading data...")
-    users = pd.read_parquet('data/users.parquet')
-    posts = pd.read_parquet('data/posts.parquet')
-    relationships = pd.read_parquet('data/relationships.parquet')
-    interactions = pd.read_parquet('data/interactions.parquet')
+    df = load_training_data_from_csv(csv_path)
 
-    # Extract features
-    print("\nExtracting features...")
-    engineer = FeatureEngineer()
-    df = engineer.extract_features(interactions, users, posts, relationships)
+    # Check minimum data requirements
+    min_samples = 1000
+    min_users = 20
+
+    if len(df) < min_samples:
+        print(f"\nError: Insufficient training data")
+        print(f"  Current: {len(df)} samples")
+        print(f"  Required: {min_samples}+ samples")
+        print("\nPlease collect more training data before training models.")
+        sys.exit(1)
+
+    if df['user_id'].nunique() < min_users:
+        print(f"\nError: Insufficient users")
+        print(f"  Current: {df['user_id'].nunique()} users")
+        print(f"  Required: {min_users}+ users")
+        sys.exit(1)
 
     # Prepare ranking data
-    X, y, groups = engineer.prepare_ranking_data(df)
+    X, y, groups, feature_names = prepare_ranking_data(df)
 
     # Train model
-    print("\n" + "="*50)
-    print("Training LightGBM Ranker")
-    print("="*50)
+    print("\n" + "="*60)
+    print("Training LightGBM Ranker for Social Pulse Feed Ranking")
+    print("="*60)
 
     trainer = RankingModelTrainer()
-    model = trainer.train(X, y, groups, engineer.feature_columns)
+    model = trainer.train(X, y, groups, feature_names, validation_split=0.2)
 
     # Save model
-    trainer.save_model()
+    trainer.save_model(output_dir='../models')
 
     # Print top features
-    print("\n" + "="*50)
+    print("\n" + "="*60)
     print("Top 10 Most Important Features:")
-    print("="*50)
+    print("="*60)
     for i, (feat, importance) in enumerate(list(trainer.training_history['feature_importance'].items())[:10], 1):
         print(f"{i:2d}. {feat:40s} {importance:10.1f}")
+
+    print("\n" + "="*60)
+    print("Training Complete!")
+    print("="*60)
+    print(f"\nModel saved to: ../models/ranking_model.txt")
+    print(f"Next steps:")
+    print(f"  1. Review feature importance in ../models/feature_importance.csv")
+    print(f"  2. Start prediction service: python ../main.py")
+    print(f"  3. Integrate with Java backend")

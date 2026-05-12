@@ -11,6 +11,13 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.behavior.domain.enums.EventType;
+import com.socialpulse.app.feed.application.dto.InteractionFeatures;
+import com.socialpulse.app.feed.application.dto.PostFeatures;
+import com.socialpulse.app.feed.application.dto.RankingFeatures;
+import com.socialpulse.app.feed.application.dto.TrainingDataStats;
+import com.socialpulse.app.feed.domain.enums.Source;
+import com.socialpulse.app.feed.domain.model.CandidatePost;
+import com.socialpulse.app.feed.domain.model.FeatureSnapshot;
 import com.socialpulse.app.feed.domain.model.FeedImpression;
 import com.socialpulse.app.feed.domain.model.TrainingDataRecord;
 import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
@@ -37,8 +44,6 @@ public class TrainingDataCollectionService {
     private final TrainingDataRepository trainingDataRepository;
     private final PostRepository postRepository;
     private final FeatureExtractionService featureExtractionService;
-    private final ContentAnalysisService contentAnalysisService;
-    private final UserInterestProfileService userInterestProfileService;
 
     // Engagement events that count as positive labels
     private static final List<EventType> POSITIVE_EVENTS = List.of(
@@ -52,26 +57,16 @@ public class TrainingDataCollectionService {
         FeedImpressionRepository impressionRepository,
         TrainingDataRepository trainingDataRepository,
         PostRepository postRepository,
-        FeatureExtractionService featureExtractionService,
-        ContentAnalysisService contentAnalysisService,
-        UserInterestProfileService userInterestProfileService
+        FeatureExtractionService featureExtractionService
     ) {
         this.impressionRepository = impressionRepository;
         this.trainingDataRepository = trainingDataRepository;
         this.postRepository = postRepository;
         this.featureExtractionService = featureExtractionService;
-        this.contentAnalysisService = contentAnalysisService;
-        this.userInterestProfileService = userInterestProfileService;
     }
 
     /**
      * Record when a user sees a post in their feed
-     * This is called when the feed is generated and shown to the user
-     *
-     * @param userId User who saw the post
-     * @param postId Post that was shown
-     * @param position Position in the feed (0-indexed)
-     * @param rankingStrategy Strategy used to rank the feed
      */
     @Async
     @Transactional
@@ -115,11 +110,6 @@ public class TrainingDataCollectionService {
 
     /**
      * Record when a user interacts with a post
-     * This updates the impression record and creates a training sample
-     *
-     * @param userId User who interacted
-     * @param postId Post that was interacted with
-     * @param eventType Type of interaction
      */
     @Async
     @Transactional
@@ -161,9 +151,6 @@ public class TrainingDataCollectionService {
         }
     }
 
-    /**
-     * Create training data sample from impression and interaction
-     */
     private void createTrainingDataFromImpression(
         FeedImpression impression,
         EventType eventType
@@ -173,15 +160,13 @@ public class TrainingDataCollectionService {
             Long postId = impression.getPostId();
             Long authorId = impression.getAuthorId();
 
-            // Extract features at impression time
-            CompleteRankingFeatures features = extractFeaturesForTraining(
-                userId, postId, authorId, impression.getImpressionTime()
+            boolean isClicked = POSITIVE_EVENTS.contains(eventType);
+            int relevance = isClicked ? 1 : 0;
+
+            FeatureSnapshot features = extractFeaturesForTraining(
+                userId, postId, authorId, impression.getImpressionTime(), isClicked
             );
 
-            // Determine label (relevance)
-            int relevance = POSITIVE_EVENTS.contains(eventType) ? 1 : 0;
-
-            // Create training record
             TrainingDataRecord record = TrainingDataRecord.builder()
                 .userId(userId)
                 .postId(postId)
@@ -205,9 +190,6 @@ public class TrainingDataCollectionService {
         }
     }
 
-    /**
-     * Create training data sample from interaction (when no impression exists)
-     */
     private void createTrainingDataFromInteraction(
         Long userId,
         Long postId,
@@ -222,12 +204,12 @@ public class TrainingDataCollectionService {
             Post post = postOpt.get();
             Long authorId = post.getUserId();
 
-            // Extract features at current time
-            CompleteRankingFeatures features = extractFeaturesForTraining(
-                userId, postId, authorId, LocalDateTime.now()
-            );
+            boolean isClicked = POSITIVE_EVENTS.contains(eventType);
+            int relevance = isClicked ? 1 : 0;
 
-            int relevance = POSITIVE_EVENTS.contains(eventType) ? 1 : 0;
+            FeatureSnapshot features = extractFeaturesForTraining(
+                userId, postId, authorId, LocalDateTime.now(), isClicked
+            );
 
             TrainingDataRecord record = TrainingDataRecord.builder()
                 .userId(userId)
@@ -248,117 +230,56 @@ public class TrainingDataCollectionService {
         }
     }
 
-    /**
-     * Extract all features for a user-post pair at a specific time
-     */
-    private CompleteRankingFeatures extractFeaturesForTraining(
+    private FeatureSnapshot extractFeaturesForTraining(
         Long userId,
         Long postId,
         Long authorId,
-        LocalDateTime impressionTime
+        LocalDateTime snapshotTime,
+        Boolean isClicked
     ) {
         Optional<Post> postOpt = postRepository.findById(postId);
         if (postOpt.isEmpty()) {
             throw new IllegalArgumentException("Post not found: " + postId);
         }
-
-        Post post = postOpt.get();
-
-        // Extract content features
-        ContentFeatures contentFeatures = extractContentFeatures(userId, post);
-
-        // Extract author features
-        AuthorFeatures authorFeatures = extractAuthorFeatures(authorId);
-
-        // Extract relationship features
-        RelationshipFeatures relationshipFeatures = extractRelationshipFeatures(
-            userId, authorId, impressionTime
-        );
-
-        // Extract engagement features (at impression time)
-        EngagementFeatures engagementFeatures = extractEngagementFeatures(post);
-
-        return CompleteRankingFeatures.builder()
-            .postId(postId)
-            .contentFeatures(contentFeatures)
-            .authorFeatures(authorFeatures)
-            .relationshipFeatures(relationshipFeatures)
-            .engagementFeatures(engagementFeatures)
+        
+        CandidatePost cp = CandidatePost.builder()
+            .post(postOpt.get())
+            .source(Source.RANDOM)
             .build();
+            
+        List<RankingFeatures> featsList = featureExtractionService.extractFeatures(userId, List.of(cp));
+        if (featsList.isEmpty()) {
+            throw new RuntimeException("Could not extract features");
+        }
+        
+        RankingFeatures rf = featsList.get(0);
+        return convertToSnapshot(rf, isClicked, snapshotTime);
     }
-
-    private ContentFeatures extractContentFeatures(Long userId, Post post) {
-        String content = post.getContent();
-
-        // Extract keywords and hashtags
-        List<String> keywords = contentAnalysisService.extractKeywords(content);
-        List<String> hashtags = contentAnalysisService.extractHashtags(content);
-
-        // Get user interest profiles
-        Map<String, Double> keywordProfile = userInterestProfileService.buildKeywordProfile(userId);
-        Map<String, Double> hashtagProfile = userInterestProfileService.buildHashtagProfile(userId);
-
-        // Calculate relevance scores
-        double keywordsRelevance = userInterestProfileService.calculateKeywordRelevance(
-            keywords, keywordProfile
-        );
-        double hashtagsRelevance = userInterestProfileService.calculateHashtagRelevance(
-            hashtags, hashtagProfile
-        );
-
-        return ContentFeatures.builder()
-            .keywordsRelevance(keywordsRelevance)
-            .hashtagsRelevance(hashtagsRelevance)
-            .mentionsRelevance(0)  // TODO: implement mention detection
-            .contentLength(contentAnalysisService.getContentLength(content))
-            .hasHashtags(contentAnalysisService.containsHashtags(content) ? 1 : 0)
-            .hasUrl(contentAnalysisService.containsUrl(content) ? 1 : 0)
-            .hasMultimedia(post.getImageUrl() != null ? 1 : 0)
-            .build();
-    }
-
-    private AuthorFeatures extractAuthorFeatures(Long authorId) {
-        // TODO: Query actual user stats from database
-        return AuthorFeatures.builder()
-            .authorId(authorId)
-            .followerCount(0)
-            .followingCount(0)
-            .followersFollowingsRatio(0.0)
-            .seniority(0.0)
-            .postCount(0)
-            .engagementRate(0.0)
-            .build();
-    }
-
-    private RelationshipFeatures extractRelationshipFeatures(
-        Long userId,
-        Long authorId,
-        LocalDateTime impressionTime
-    ) {
-        // TODO: Implement actual relationship feature extraction
-        return RelationshipFeatures.builder()
-            .follows(0)
-            .interactionCount7d(0)
-            .interactionCount30d(0)
-            .hoursSinceLastInteraction(999.0)
-            .affinityScore(0.0)
-            .build();
-    }
-
-    private EngagementFeatures extractEngagementFeatures(Post post) {
-        long popularity = safeCount(post.getUpvoteCount())
-            + safeCount(post.getDownvoteCount())
-            + safeCount(post.getCmtCount())
-            + safeCount(post.getShareCount())
-            + safeCount(post.getViewCount());
-
-        return EngagementFeatures.builder()
-            .popularity(popularity)
-            .upvoteCount(safeCount(post.getUpvoteCount()))
-            .downvoteCount(safeCount(post.getDownvoteCount()))
-            .commentCount(safeCount(post.getCmtCount()))
-            .shareCount(safeCount(post.getShareCount()))
-            .viewCount(safeCount(post.getViewCount()))
+    
+    private FeatureSnapshot convertToSnapshot(RankingFeatures rf, Boolean clicked, LocalDateTime snapshotTime) {
+        PostFeatures pf = rf.getPostFeatures();
+        InteractionFeatures intF = rf.getInteractionFeatures();
+        
+        return FeatureSnapshot.builder()
+            .viewerId(rf.getViewerFeatures().getUserId())
+            .postId(pf.getPostId())
+            .authorId(rf.getAuthorFeatures().getUserId())
+            .hotScore(pf.getHotScore())
+            .upvoteRatio(pf.getUpvoteRatio())
+            .hasImage(pf.getHasImage())
+            .contentLength(pf.getContentLength())
+            .postAgeHours(pf.getPostAgeHours())
+            .upvoteCount(safeCount(pf.getUpvoteCount()))
+            .downvoteCount(safeCount(pf.getDownvoteCount()))
+            .cmtCount(safeCount(pf.getCmtCount()))
+            .shareCount(safeCount(pf.getShareCount()))
+            .viewCount(safeCount(pf.getViewCount()))
+            .interactionCount7d(intF != null ? intF.getInteractionCount7d() : 0)
+            .interactionCount30d(intF != null ? intF.getInteractionCount30d() : 0)
+            .affinityScore(intF != null ? intF.getAffinityScore() : 0.0)
+            .lastInteractionHours(intF != null ? intF.getLastInteractionHours() : 999.0)
+            .clicked(clicked)
+            .snapshotTime(snapshotTime)
             .build();
     }
 
@@ -366,18 +287,10 @@ public class TrainingDataCollectionService {
         return value == null ? 0L : value;
     }
 
-    /**
-     * Generate negative samples (impressions without interactions)
-     * This should be run periodically to create training samples for posts
-     * that users saw but didn't interact with
-     *
-     * @param hoursAgo Look back this many hours for impressions
-     */
     @Transactional
     public void generateNegativeSamples(int hoursAgo) {
         LocalDateTime cutoffTime = LocalDateTime.now().minusHours(hoursAgo);
 
-        // Find impressions without interactions
         List<FeedImpression> negativeImpressions = impressionRepository
             .findNonInteractedImpressionsSince(cutoffTime);
 
@@ -385,11 +298,12 @@ public class TrainingDataCollectionService {
 
         for (FeedImpression impression : negativeImpressions) {
             try {
-                CompleteRankingFeatures features = extractFeaturesForTraining(
+                FeatureSnapshot features = extractFeaturesForTraining(
                     impression.getUserId(),
                     impression.getPostId(),
                     impression.getAuthorId(),
-                    impression.getImpressionTime()
+                    impression.getImpressionTime(),
+                    false
                 );
 
                 TrainingDataRecord record = TrainingDataRecord.builder()
@@ -415,14 +329,6 @@ public class TrainingDataCollectionService {
         log.info("Completed generating negative samples");
     }
 
-    /**
-     * Export training data to CSV for model training
-     *
-     * @param startDate Start date for export
-     * @param endDate End date for export
-     * @param minInteractionsPerUser Minimum interactions per user to include
-     * @return List of training records
-     */
     @Transactional(readOnly = true)
     public List<TrainingDataRecord> exportTrainingData(
         LocalDateTime startDate,
@@ -434,7 +340,6 @@ public class TrainingDataCollectionService {
         List<TrainingDataRecord> records = trainingDataRepository
             .findByImpressionTimeBetween(startDate, endDate);
 
-        // Filter users with minimum interactions
         Map<Long, Long> userInteractionCounts = records.stream()
             .collect(Collectors.groupingBy(
                 TrainingDataRecord::getUserId,
@@ -451,9 +356,6 @@ public class TrainingDataCollectionService {
         return filteredRecords;
     }
 
-    /**
-     * Get training data statistics
-     */
     @Transactional(readOnly = true)
     public TrainingDataStats getTrainingDataStats() {
         long totalSamples = trainingDataRepository.count();

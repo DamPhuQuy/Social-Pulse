@@ -11,8 +11,6 @@ import lombok.NoArgsConstructor;
 @Builder
 public class AiUserFeatures {
     private Long userId;
-    private Integer followerCount;
-    private Integer followingCount;
     private Integer postCount;
     private Integer accountAgeDays;
     private Double engagementRate;
