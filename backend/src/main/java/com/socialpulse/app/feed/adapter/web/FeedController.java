@@ -2,9 +2,7 @@ package com.socialpulse.app.feed.adapter.web;
 
 import java.util.List;
 
-import com.socialpulse.app.behavior.application.usecase.BehaviorTrackingUseCase;
-import com.socialpulse.app.behavior.domain.enums.EventType;
-import com.socialpulse.app.behavior.domain.model.UserBehavior;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -26,11 +24,8 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 @Tag(name = "Feed", description = "AI-powered feed ranking APIs")
 public class FeedController {
     private final GetFeedUseCase getFeedUseCase;
-    private final BehaviorTrackingUseCase trackBehaviorUseCase;
-
-    public FeedController(GetFeedUseCase getFeedUseCase, BehaviorTrackingUseCase trackBehaviorUseCase) {
+    public FeedController(GetFeedUseCase getFeedUseCase) {
         this.getFeedUseCase = getFeedUseCase;
-        this.trackBehaviorUseCase = trackBehaviorUseCase;
     }
 
     @GetMapping
@@ -56,17 +51,7 @@ public class FeedController {
 
         List<FeedItemResponse> feed = getFeedUseCase.getFeed(page, size, currentUser);
 
-        // Track impressions for all posts in the feed
-        int position = page * size;
-        for (FeedItemResponse item : feed) {
-            UserBehavior impression = UserBehavior.builder()
-                    .userId(currentUser.getId())
-                    .postId(item.getPostId())
-                    .eventType(EventType.IMPRESSION)
-                    .position(position++)
-                    .build();
-            trackBehaviorUseCase.trackBehavior(impression);
-        }
+
 
         return ResponseEntity.ok(
             ApiResponse.<List<FeedItemResponse>>builder()

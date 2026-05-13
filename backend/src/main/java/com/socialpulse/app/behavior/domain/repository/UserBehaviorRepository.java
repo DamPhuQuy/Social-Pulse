@@ -20,3 +20,4 @@ public interface UserBehaviorRepository {
 
     Map<Long, Long> countInteractionsByPost(Long userId, List<EventType> eventTypes, LocalDateTime since);
 }
+

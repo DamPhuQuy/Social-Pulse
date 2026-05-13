@@ -17,6 +17,9 @@ public class PostFeatures {
     private Long viewCount;
     private Long shareCount;
     private Double hotScore;
-    private Double recencyScore;
-    private String postType;
+    private Double upvoteRatio;
+    private Boolean hasImage;
+    private Integer contentLength;
+    private Boolean isSharePost;
+    private Double postAgeHours;
 }

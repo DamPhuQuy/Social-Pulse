@@ -90,3 +90,4 @@ public class UserBehaviorRepositoryAdapter implements UserBehaviorRepository {
                 .build();
     }
 }
+

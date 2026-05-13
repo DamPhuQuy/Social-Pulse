@@ -1,6 +1,9 @@
 package com.socialpulse.app.user.adapter.persistence;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
@@ -49,6 +52,17 @@ public class UserRepositoryAdapter implements UserRepository {
     public boolean existsByEmail(String email) {
         return jpaUserRepository.existsByEmail(email);
     }
+
+    @Override
+    public List<User> findByIds(Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return jpaUserRepository.findAllByIdIn(ids).stream()
+                .map(userPersistenceMapper::toDomain)
+                .collect(Collectors.toList());
+    }
 }
+
 
 

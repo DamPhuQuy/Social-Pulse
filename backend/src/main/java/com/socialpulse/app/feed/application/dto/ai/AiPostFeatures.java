@@ -12,12 +12,17 @@ import lombok.NoArgsConstructor;
 public class AiPostFeatures {
     private Long postId;
     private Long authorId;
-    private String topic;
     private String createdAt;
     private Integer contentLength;
     private Boolean hasImage;
-    private Boolean hasVideo;
-    private Integer authorFollowerCount;
-    private Double authorAvgEngagementRate;
-    private Double predictedQualityScore;
+    private Long upvoteCount;
+    private Long downvoteCount;
+    private Long commentCount;
+    private Long shareCount;
+    private Long viewCount;
+    private Double hotScore;
+    private Double upvoteRatio;
+    private Boolean isSharePost;
+    private Double postAgeHours;
 }
+

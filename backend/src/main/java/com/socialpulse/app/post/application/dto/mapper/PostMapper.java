@@ -34,6 +34,9 @@ public interface PostMapper {
 
     PostCreationResponse toPostCreationResponse(Post post);
 
+    @Mapping(target = "username", ignore = true)
+    @Mapping(target = "userAvatar", ignore = true)
+    @Mapping(target = "myVote", ignore = true)
     ViewPostResponse toViewPostResponse(Post post);
 
     PostUpdateResponse toPostUpdateResponse(Post post);

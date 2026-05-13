@@ -11,8 +11,7 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UserFeatures {
     private Long userId;
-    private Integer followerCount;
-    private Integer followingCount;
     private Double engagementRate;
-    private Integer postCount;
+    private Long postCount;
+    private Long accountAgeDays;
 }

@@ -38,3 +38,6 @@ build/
 .claude
 
 /node_modules
+.metals/
+*.zst
+.bsp/
