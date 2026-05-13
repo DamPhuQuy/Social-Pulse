@@ -5,6 +5,6 @@ import com.socialpulse.app.comment.application.dto.response.CommentCreationRespo
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 public interface CreateCommentUseCase {
-    CommentCreationResponse createComment(CommentCreationRequest request, CustomUserDetails currentUser);
+    CommentCreationResponse createComment(Long postId, CommentCreationRequest request, CustomUserDetails currentUser);
 }
 

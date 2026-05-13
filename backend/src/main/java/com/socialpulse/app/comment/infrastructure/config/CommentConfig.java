@@ -43,6 +43,15 @@ public class CommentConfig {
 				validateParentCommentUseCase, commentMapper);
 	}
 
+	@Bean
+	public com.socialpulse.app.comment.application.usecase.GetTopLevelCommentsUseCase getTopLevelCommentsUseCase(
+			CommentRepository commentRepositoryPort,
+			UserRepository userRepositoryPort,
+			CommentMapper commentMapper) {
+		return new com.socialpulse.app.comment.application.service.GetTopLevelCommentsService(
+				commentRepositoryPort, userRepositoryPort, commentMapper);
+	}
+
 }
 
 

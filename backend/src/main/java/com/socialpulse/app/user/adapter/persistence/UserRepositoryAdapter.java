@@ -49,6 +49,14 @@ public class UserRepositoryAdapter implements UserRepository {
     public boolean existsByEmail(String email) {
         return jpaUserRepository.existsByEmail(email);
     }
+
+    @Override
+    public java.util.List<User> findAllById(java.util.List<Long> ids) {
+        return jpaUserRepository.findAllById(ids)
+                .stream()
+                .map(userPersistenceMapper::toDomain)
+                .toList();
+    }
 }
 
 

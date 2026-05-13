@@ -1,6 +1,10 @@
 package com.socialpulse.app.comment.adapter.persistence;
 
+import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
 
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.comment.domain.model.Comment;
@@ -29,6 +33,14 @@ public class CommentRepositoryAdapter implements CommentRepository {
 		return commentPersistenceMapper.toDomain(
 				jpaCommentRepository.save(commentPersistenceMapper.toEntity(comment))
 		);
+	}
+
+	@Override
+	public List<Comment> findTopLevelCommentsByPostId(Long postId, long lastId, int limit) {
+		return jpaCommentRepository.findTopLevelCommentsByPostId(postId, lastId, PageRequest.of(0, limit))
+				.stream()
+				.map(commentPersistenceMapper::toDomain)
+				.collect(Collectors.toList());
 	}
 
 }
