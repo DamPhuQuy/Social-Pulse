@@ -17,7 +17,6 @@ import com.socialpulse.app.behavior.domain.enums.EventType;
 import com.socialpulse.app.behavior.domain.model.UserBehavior;
 import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
-import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 
 import lombok.extern.slf4j.Slf4j;
@@ -42,8 +41,7 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
             EventType.UPVOTE,
             EventType.DOWNVOTE,
             EventType.COMMENT,
-            EventType.SHARE,
-            EventType.FOLLOW
+            EventType.SHARE
     );
 
     @Override
@@ -124,10 +122,7 @@ public class BehaviorFeaturesExtractionService implements BehaviorFeaturesExtrac
                 EventType.UPVOTE, 3.0,
                 EventType.COMMENT, 5.0,
                 EventType.SHARE, 8.0,
-                EventType.FOLLOW, 10.0,
-                EventType.DOWNVOTE, -2.0,
-                EventType.HIDE, -5.0,
-                EventType.REPORT, -8.0
+                EventType.DOWNVOTE, -2.0
         );
 
         double totalScore = 0.0;

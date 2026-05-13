@@ -51,7 +51,7 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
 
     private static final List<EventType> ENGAGEMENT_EVENTS = Arrays.asList(
             EventType.CLICK, EventType.UPVOTE, EventType.DOWNVOTE,
-            EventType.COMMENT, EventType.SHARE, EventType.FOLLOW
+            EventType.COMMENT, EventType.SHARE
     );
 
     private static final Map<EventType, Double> AFFINITY_WEIGHTS = Map.of(
@@ -59,10 +59,7 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
             EventType.UPVOTE, 3.0,
             EventType.COMMENT, 5.0,
             EventType.SHARE, 8.0,
-            EventType.FOLLOW, 10.0,
-            EventType.DOWNVOTE, -2.0,
-            EventType.HIDE, -5.0,
-            EventType.REPORT, -8.0
+            EventType.DOWNVOTE, -2.0
     );
 
     public FeatureExtractionService(
