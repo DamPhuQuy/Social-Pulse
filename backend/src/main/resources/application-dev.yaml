@@ -36,6 +36,13 @@ app:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   version: 1.0.0
 
+ai:
+  service:
+    enabled: ${AI_SERVICE_ENABLED:false}
+    url: ${AI_SERVICE_URL:http://localhost:5000}
+    timeout-ms: ${AI_SERVICE_TIMEOUT_MS:1500}
+    ranking-path: ${AI_SERVICE_RANKING_PATH:/rank}
+
 cloudinary:
   url: ${CLOUDINARY_URL:}
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}

@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
@@ -18,21 +19,29 @@ import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 public class FeedRankingService implements RankFeedUseCase {
+    private static final String FEATURE_SCHEMA_VERSION = "v1";
+
     private final SelectCandidatesUseCase selectCandidatesUseCase;
     private final ExtractFeaturesUseCase extractFeaturesUseCase;
     private final PredictRankingUseCase predictRankingUseCase;
     private final CacheFeedUseCase cacheFeedUseCase;
+    private final FallbackRankingService fallbackRankingService;
 
     public FeedRankingService(
             SelectCandidatesUseCase selectCandidatesUseCase,
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
-            CacheFeedUseCase cacheFeedUseCase) {
+            CacheFeedUseCase cacheFeedUseCase,
+            FallbackRankingService fallbackRankingService) {
         this.selectCandidatesUseCase = selectCandidatesUseCase;
         this.extractFeaturesUseCase = extractFeaturesUseCase;
         this.predictRankingUseCase = predictRankingUseCase;
         this.cacheFeedUseCase = cacheFeedUseCase;
+        this.fallbackRankingService = fallbackRankingService;
     }
 
     @Override
@@ -43,21 +52,26 @@ public class FeedRankingService implements RankFeedUseCase {
         }
 
         List<CandidatePost> candidates = selectCandidatesUseCase.selectCandidates(userId);
-
         if (candidates.isEmpty()) {
             return List.of();
         }
 
+        List<RankingResponse> scores = fallbackRankingService.rank(candidates);
+
         List<RankingFeatures> features = extractFeaturesUseCase.extractFeatures(userId, candidates);
+        if (!features.isEmpty()) {
+            RankingRequest request = RankingRequest.builder()
+                    .featureSchemaVersion(FEATURE_SCHEMA_VERSION)
+                    .features(features)
+                    .build();
 
-        RankingRequest request = RankingRequest.builder()
-                .features(features)
-                .build();
-
-        List<RankingResponse> scores = predictRankingUseCase.predictScores(request);
-
-        Map<Long, Double> scoreMap = scores.stream()
-                .collect(Collectors.toMap(RankingResponse::getPostId, RankingResponse::getScore));
+            List<RankingResponse> predictedScores = predictRankingUseCase.predictScores(request);
+            if (isValidPredictionSet(predictedScores, candidates)) {
+                scores = predictedScores;
+            } else {
+                log.debug("Falling back to deterministic feed ranking for userId={}", userId);
+            }
+        }
 
         Map<Long, Source> sourceMap = candidates.stream()
                 .collect(Collectors.toMap(
@@ -77,7 +91,6 @@ public class FeedRankingService implements RankFeedUseCase {
                 .toList();
 
         cacheFeedUseCase.cacheFeed(userId, rankedFeed);
-
         return rankedFeed;
     }
 
@@ -93,5 +106,25 @@ public class FeedRankingService implements RankFeedUseCase {
         }
 
         return allFeed.subList(start, end);
+    }
+
+    private boolean isValidPredictionSet(List<RankingResponse> predictedScores, List<CandidatePost> candidates) {
+        if (predictedScores == null || predictedScores.isEmpty()) {
+            return false;
+        }
+
+        Set<Long> candidateIds = candidates.stream()
+                .map(candidate -> candidate.getPost().getId())
+                .collect(Collectors.toSet());
+
+        if (predictedScores.size() != candidateIds.size()) {
+            return false;
+        }
+
+        return predictedScores.stream().allMatch(score ->
+                score.getPostId() != null
+                        && score.getScore() != null
+                        && FEATURE_SCHEMA_VERSION.equals(score.getFeatureSchemaVersion())
+                        && candidateIds.contains(score.getPostId()));
     }
 }

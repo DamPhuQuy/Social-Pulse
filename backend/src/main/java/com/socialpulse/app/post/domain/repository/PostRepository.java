@@ -1,5 +1,6 @@
 package com.socialpulse.app.post.domain.repository;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -12,6 +13,8 @@ import com.socialpulse.app.post.domain.model.Post;
 
 public interface PostRepository {
     Optional<Post> findById(Long id);
+
+    List<Post> findByIds(Set<Long> ids);
 
     Post save(Post post);
 

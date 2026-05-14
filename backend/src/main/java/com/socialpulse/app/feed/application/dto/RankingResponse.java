@@ -12,4 +12,5 @@ import lombok.NoArgsConstructor;
 public class RankingResponse {
     private Long postId;
     private Double score;
+    private String featureSchemaVersion;
 }

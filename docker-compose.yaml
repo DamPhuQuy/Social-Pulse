@@ -64,17 +64,6 @@ services:
     networks:
       - app-network
 
-  ai:
-    build: ./ai
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    depends_on:
-      backend:
-        condition: service_started
-    networks:
-      - app-network
-
   frontend:
     build:
       context: ./frontend
