@@ -54,6 +54,12 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public java.util.List<User> findAllById(java.util.List<Long> ids) {
+        return jpaUserRepository.findAllById(ids)
+                .stream()
+                .map(userPersistenceMapper::toDomain)
+                .toList();
+    }
     public List<User> findByIds(Set<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();

@@ -13,13 +13,13 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Getter
-public class CommentCreationResponse {
+public class CommentResponse {
     private Long id;
-    private Long postId;
     private UserSummary user;
-    private Long parentCommentId;
     private String content;
     private LocalDateTime createdAt;
     private boolean edited;
+    private Long upvoteCount;
+    private Long downvoteCount;
     private int replyCount;
 }

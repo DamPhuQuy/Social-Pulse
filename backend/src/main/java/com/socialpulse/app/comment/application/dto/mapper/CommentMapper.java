@@ -13,7 +13,7 @@ import com.socialpulse.app.user.domain.model.User;
 public interface CommentMapper {
 
     @Mapping(target = "id", ignore = true)
-    @Mapping(target = "postId", source = "request.postId")
+    @Mapping(target = "postId", source = "postId")
     @Mapping(target = "userId", source = "userId")
     @Mapping(target = "parentCommentId", source = "parentCommentId")
     @Mapping(target = "content", source = "request.content")
@@ -21,16 +21,28 @@ public interface CommentMapper {
     @Mapping(target = "upvoteCount", constant = "0L")
     @Mapping(target = "downvoteCount", constant = "0L")
     @Mapping(target = "deleted", constant = "false")
-    Comment toComment(CommentCreationRequest request, Long userId, Long parentCommentId);
+    @Mapping(target = "edited", constant = "false")
+    Comment toComment(Long postId, CommentCreationRequest request, Long userId, Long parentCommentId);
 
     @Mapping(target = "id", source = "comment.id")
     @Mapping(target = "postId", source = "comment.postId")
     @Mapping(target = "parentCommentId", source = "comment.parentCommentId")
     @Mapping(target = "content", source = "comment.content")
     @Mapping(target = "createdAt", source = "comment.createdAt")
+    @Mapping(target = "edited", source = "comment.edited")
     @Mapping(target = "user", source = "user")
     @Mapping(target = "replyCount", constant = "0")
     CommentCreationResponse toCommentCreationResponse(Comment comment, User user);
+
+    @Mapping(target = "id", source = "comment.id")
+    @Mapping(target = "content", source = "comment.content")
+    @Mapping(target = "createdAt", source = "comment.createdAt")
+    @Mapping(target = "edited", source = "comment.edited")
+    @Mapping(target = "user", source = "user")
+    @Mapping(target = "replyCount", constant = "0")
+    @Mapping(target = "upvoteCount", source = "comment.upvoteCount")
+    @Mapping(target = "downvoteCount", source = "comment.downvoteCount")
+    com.socialpulse.app.comment.application.dto.response.CommentResponse toCommentResponse(Comment comment, User user);
 
     @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
     UserSummary toUserSummary(User user);

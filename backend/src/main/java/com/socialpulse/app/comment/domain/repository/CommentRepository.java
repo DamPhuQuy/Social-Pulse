@@ -9,5 +9,6 @@ public interface CommentRepository {
 
 	Comment save(Comment comment);
 
+	java.util.List<Comment> findTopLevelCommentsByPostId(Long postId, long lastId, int limit);
 }
 

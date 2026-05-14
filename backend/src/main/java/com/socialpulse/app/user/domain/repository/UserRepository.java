@@ -14,11 +14,12 @@ public interface UserRepository {
     Optional<User> findByUsername(String username);
 
     Optional<User> findByEmail(String email);
-
+    
     boolean existsByUsername(String username);
 
     boolean existsByEmail(String email);
 
+    java.util.List<User> findAllById(java.util.List<Long> ids);
     List<User> findByIds(Set<Long> ids);
 }
 

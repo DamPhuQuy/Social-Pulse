@@ -36,17 +36,17 @@ public class CreateCommentService implements CreateCommentUseCase {
     }
 
     @Override
-    public CommentCreationResponse createComment(CommentCreationRequest request, CustomUserDetails currentUser) {
-        postRepositoryPort.findById(request.getPostId())
+    public CommentCreationResponse createComment(Long postId, CommentCreationRequest request, CustomUserDetails currentUser) {
+        postRepositoryPort.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
         User user = userRepositoryPort.findById(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
         Comment parent = validateParentCommentUseCase
-                .validateAndGetParentComment(request.getPostId(), request.getParentCommentId());
+                .validateAndGetParentComment(postId, request.getParentCommentId());
 
-        Comment comment = commentMapper.toComment(request, user.getId(), parent == null ? null : parent.getId());
+        Comment comment = commentMapper.toComment(postId, request, user.getId(), parent == null ? null : parent.getId());
 
         Comment savedComment = commentRepositoryPort.save(comment);
 

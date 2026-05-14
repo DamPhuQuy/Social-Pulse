@@ -86,10 +86,10 @@ public class PostController {
             .body(ApiResponse.<PostCreationResponse>builder().data(response).build());
     }
 
-    @GetMapping("/{id}")
+    @GetMapping("/{postId}")
     @PreAuthorize("hasRole('USER') and hasAuthority('post:read')")
-    public ResponseEntity<ApiResponse<ViewPostResponse>> viewPost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
-        return ResponseEntity.ok(ApiResponse.<ViewPostResponse>builder().data(viewPostUseCase.viewPost(id, currentUser)).build());
+    public ResponseEntity<ApiResponse<ViewPostResponse>> viewPost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(ApiResponse.<ViewPostResponse>builder().data(viewPostUseCase.viewPost(postId, currentUser)).build());
     }
 
     @PostMapping("/react")
@@ -100,22 +100,22 @@ public class PostController {
         return ResponseEntity.ok(ApiResponse.<PostReactionResponse>builder().data(reactPostUseCase.react(request, currentUser)).build());
     }
 
-    @DeleteMapping("/{id}")
+    @DeleteMapping("/{postId}")
     @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
     @Operation(summary = "Delete post", description = "Soft delete a post. Only the author or an admin can delete.")
-    public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long id, @AuthenticationPrincipal CustomUserDetails currentUser) {
-        deletePostUseCase.deletePost(id, currentUser);
+    public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails currentUser) {
+        deletePostUseCase.deletePost(postId, currentUser);
         return ResponseEntity.ok(ApiResponse.<Void>builder().message("Post deleted successfully").build());
     }
 
-    @PutMapping("/{id}")
+    @PutMapping("/{postId}")
     @PreAuthorize("hasRole('USER')")
     @Operation(summary = "Edit post", description = "Edit an existing post")
     public ResponseEntity<ApiResponse<PostUpdateResponse>> editPost(
-            @PathVariable Long id,
+            @PathVariable Long postId,
             @RequestBody @Valid PostUpdateRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
-        PostUpdateResponse response = editPostUseCase.editPost(id, request, currentUser);
+        PostUpdateResponse response = editPostUseCase.editPost(postId, request, currentUser);
         return ResponseEntity.ok(ApiResponse.<PostUpdateResponse>builder().data(response).message("Post updated successfully").build());
     }
 

@@ -28,7 +28,6 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
     long countByUserId(Long userId);
 
-    @Query("SELECT p.userId, COUNT(p) FROM PostEntity p WHERE p.userId IN :userIds GROUP BY p.userId")
+    @Query("SELECT p.user.id, COUNT(p) FROM PostEntity p WHERE p.user.id IN :userIds GROUP BY p.user.id")
     List<Object[]> countByUserIds(@Param("userIds") java.util.Set<Long> userIds);
 }
-

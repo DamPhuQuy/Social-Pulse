@@ -6,9 +6,13 @@ import org.springframework.context.annotation.Configuration;
 import com.socialpulse.app.comment.adapter.persistence.CommentRepositoryAdapter;
 import com.socialpulse.app.comment.application.dto.mapper.CommentMapper;
 import com.socialpulse.app.comment.application.usecase.CreateCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.DeleteCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.UpdateCommentUseCase;
 import com.socialpulse.app.comment.application.usecase.ValidateParentCommentUseCase;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.comment.application.service.CreateCommentService;
+import com.socialpulse.app.comment.application.service.DeleteCommentService;
+import com.socialpulse.app.comment.application.service.UpdateCommentService;
 import com.socialpulse.app.comment.application.service.ValidateParentCommentService;
 import com.socialpulse.app.comment.infrastructure.persistence.mapper.CommentPersistenceMapper;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentRepository;
@@ -41,6 +45,27 @@ public class CommentConfig {
 												 CommentMapper commentMapper) {
 		return new CreateCommentService(commentRepositoryPort, postRepositoryPort, userRepositoryPort,
 				validateParentCommentUseCase, commentMapper);
+	}
+
+	@Bean
+	public com.socialpulse.app.comment.application.usecase.GetTopLevelCommentsUseCase getTopLevelCommentsUseCase(
+			CommentRepository commentRepositoryPort,
+			UserRepository userRepositoryPort,
+			CommentMapper commentMapper) {
+		return new com.socialpulse.app.comment.application.service.GetTopLevelCommentsService(
+				commentRepositoryPort, userRepositoryPort, commentMapper);
+	}
+
+	@Bean
+	public UpdateCommentUseCase updateCommentUseCase(CommentRepository commentRepositoryPort,
+													 UserRepository userRepositoryPort,
+													 CommentMapper commentMapper) {
+		return new UpdateCommentService(commentRepositoryPort, userRepositoryPort, commentMapper);
+	}
+
+	@Bean
+	public DeleteCommentUseCase deleteCommentUseCase(CommentRepository commentRepositoryPort) {
+		return new DeleteCommentService(commentRepositoryPort);
 	}
 
 }
