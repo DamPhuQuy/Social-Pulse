@@ -14,7 +14,6 @@ public class UserInteractionFeatures {
     private Long authorId;
 
     // Relationship features
-    private boolean follows;
     private int interactionCount7d;
     private int interactionCount30d;
     private double hoursSinceLastInteraction;

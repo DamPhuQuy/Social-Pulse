@@ -14,4 +14,6 @@ public class RankingFeatures {
     private PostFeatures postFeatures;
     private UserFeatures authorFeatures;
     private UserFeatures viewerFeatures;
+    private InteractionFeatures interactionFeatures;
 }
+

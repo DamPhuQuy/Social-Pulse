@@ -1,6 +1,8 @@
 package com.socialpulse.app.follow.adapter.persistence;
 
+import java.util.HashSet;
 import java.util.Optional;
+import java.util.Set;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
@@ -63,4 +65,14 @@ public class FollowRepositoryAdapter implements FollowRepository {
     public long countByFollowingId(Long followingId) {
         return jpaFollowRepository.countByFollowingId(followingId);
     }
+
+    @Override
+    public Set<Long> findFollowedUserIds(Long followerId, Set<Long> candidateFolloweeIds) {
+        if (candidateFolloweeIds == null || candidateFolloweeIds.isEmpty()) {
+            return Set.of();
+        }
+        return new HashSet<>(jpaFollowRepository.findFollowingIdsByFollowerIdAndFollowingIdIn(
+                followerId, candidateFolloweeIds));
+    }
 }
+

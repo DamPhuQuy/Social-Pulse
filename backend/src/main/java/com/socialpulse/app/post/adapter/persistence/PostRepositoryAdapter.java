@@ -2,6 +2,8 @@ package com.socialpulse.app.post.adapter.persistence;
 
 import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -51,6 +53,24 @@ public class PostRepositoryAdapter implements PostRepository {
     public void deleteById(Long id) {
         jpaPostRepository.deleteById(id);
     }
+
+    @Override
+    public long countByUserId(Long userId) {
+        return jpaPostRepository.countByUserId(userId);
+    }
+
+    @Override
+    public Map<Long, Long> countByUserIds(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpaPostRepository.countByUserIds(userIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Long) row[1]
+                ));
+    }
 }
+
 
 
