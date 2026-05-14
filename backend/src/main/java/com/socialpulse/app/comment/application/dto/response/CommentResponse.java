@@ -18,6 +18,7 @@ public class CommentResponse {
     private UserSummary user;
     private String content;
     private LocalDateTime createdAt;
+    private boolean edited;
     private Long upvoteCount;
     private Long downvoteCount;
     private int replyCount;

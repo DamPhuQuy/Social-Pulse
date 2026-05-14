@@ -20,5 +20,6 @@ public class CommentCreationResponse {
     private Long parentCommentId;
     private String content;
     private LocalDateTime createdAt;
+    private boolean edited;
     private int replyCount;
 }

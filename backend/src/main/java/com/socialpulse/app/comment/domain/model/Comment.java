@@ -21,6 +21,7 @@ public class Comment {
 	private Long upvoteCount;
 	private Long downvoteCount;
 	private boolean deleted;
+	private boolean edited;
 
 	public void incrementUpvoteCount() {
 		this.upvoteCount = safeCount(this.upvoteCount) + 1L;
@@ -40,6 +41,11 @@ public class Comment {
 
 	public void markDeleted() {
 		this.deleted = true;
+	}
+
+	public void updateContent(String newContent) {
+		this.content = newContent;
+		this.edited = true;
 	}
 
 	private long safeCount(Long value) {

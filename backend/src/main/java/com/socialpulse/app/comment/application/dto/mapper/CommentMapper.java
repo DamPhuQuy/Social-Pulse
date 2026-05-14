@@ -21,6 +21,7 @@ public interface CommentMapper {
     @Mapping(target = "upvoteCount", constant = "0L")
     @Mapping(target = "downvoteCount", constant = "0L")
     @Mapping(target = "deleted", constant = "false")
+    @Mapping(target = "edited", constant = "false")
     Comment toComment(Long postId, CommentCreationRequest request, Long userId, Long parentCommentId);
 
     @Mapping(target = "id", source = "comment.id")
@@ -28,6 +29,7 @@ public interface CommentMapper {
     @Mapping(target = "parentCommentId", source = "comment.parentCommentId")
     @Mapping(target = "content", source = "comment.content")
     @Mapping(target = "createdAt", source = "comment.createdAt")
+    @Mapping(target = "edited", source = "comment.edited")
     @Mapping(target = "user", source = "user")
     @Mapping(target = "replyCount", constant = "0")
     CommentCreationResponse toCommentCreationResponse(Comment comment, User user);
@@ -35,6 +37,7 @@ public interface CommentMapper {
     @Mapping(target = "id", source = "comment.id")
     @Mapping(target = "content", source = "comment.content")
     @Mapping(target = "createdAt", source = "comment.createdAt")
+    @Mapping(target = "edited", source = "comment.edited")
     @Mapping(target = "user", source = "user")
     @Mapping(target = "replyCount", constant = "0")
     @Mapping(target = "upvoteCount", source = "comment.upvoteCount")

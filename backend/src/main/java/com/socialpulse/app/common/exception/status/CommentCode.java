@@ -9,7 +9,8 @@ public enum CommentCode implements AppCode {
     PARENT_MUST_BELONG_TO_SAME_POST(400, "Parent comment must belong to the same post"),
     CANNOT_REPLY_TO_DELETED_COMMENT(400, "Cannot reply to a deleted comment"),
     COMMENT_NOT_OWNER(403, "You are not the owner of this comment"),
-    COMMENT_NOT_BELONG_TO_POST(400, "Comment does not belong to the specified post");
+    COMMENT_NOT_BELONG_TO_POST(400, "Comment does not belong to the specified post"),
+    CANNOT_EDIT_DELETED_COMMENT(400, "Cannot edit a deleted comment");
 
     private final int code;
     private final String message;

@@ -11,8 +11,10 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
+import com.socialpulse.app.comment.application.dto.request.CommentUpdateRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.application.usecase.CreateCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.UpdateCommentUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
@@ -31,10 +33,14 @@ import java.util.List;
 @Tag(name = "Comments", description = "Comment management APIs")
 public class CommentController {
     private final CreateCommentUseCase createCommentUseCase;
+    private final UpdateCommentUseCase updateCommentUseCase;
     private final GetTopLevelCommentsUseCase getTopLevelCommentsUseCase;
 
-    public CommentController(CreateCommentUseCase createCommentUseCase, GetTopLevelCommentsUseCase getTopLevelCommentsUseCase) {
+    public CommentController(CreateCommentUseCase createCommentUseCase,
+                           UpdateCommentUseCase updateCommentUseCase,
+                           GetTopLevelCommentsUseCase getTopLevelCommentsUseCase) {
         this.createCommentUseCase = createCommentUseCase;
+        this.updateCommentUseCase = updateCommentUseCase;
         this.getTopLevelCommentsUseCase = getTopLevelCommentsUseCase;
     }
 
@@ -95,7 +101,53 @@ public class CommentController {
                 .data(responses)
                 .build());
     }
-    
-    
+
+    @PutMapping("/{commentId}")
+    @PreAuthorize("hasAuthority('comment:update')")
+    @Operation(
+        summary = "Update comment",
+        description = "Update a comment content",
+        responses = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "Comment updated successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "400",
+                description = "Invalid request data"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "Unauthorized"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - Not the owner of the comment"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "404",
+                description = "Comment not found"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "500",
+                description = "Internal server error"
+            )
+        }
+    )
+    public ResponseEntity<ApiResponse<CommentCreationResponse>> updateComment(
+        @PathVariable Long postId,
+        @PathVariable Long commentId,
+        @AuthenticationPrincipal CustomUserDetails currentUser,
+        @RequestBody @Valid CommentUpdateRequest request) {
+
+        CommentCreationResponse response = updateCommentUseCase.updateComment(postId, commentId, request, currentUser);
+
+        return ResponseEntity.ok(ApiResponse.<CommentCreationResponse>builder()
+                .code(200)
+                .message("Comment updated successfully.")
+                .data(response)
+                .build());
+    }
+
 }
 
