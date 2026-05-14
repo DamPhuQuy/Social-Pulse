@@ -1,0 +1,38 @@
+package com.socialpulse.app.comment.application.service;
+
+import com.socialpulse.app.comment.application.usecase.DeleteCommentUseCase;
+import com.socialpulse.app.comment.domain.model.Comment;
+import com.socialpulse.app.comment.domain.repository.CommentRepository;
+import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.common.exception.status.CommentCode;
+import com.socialpulse.app.security.user.CustomUserDetails;
+
+public class DeleteCommentService implements DeleteCommentUseCase {
+
+    private final CommentRepository commentRepository;
+
+    public DeleteCommentService(CommentRepository commentRepository) {
+        this.commentRepository = commentRepository;
+    }
+
+    @Override
+    public void deleteComment(Long postId, Long commentId, CustomUserDetails currentUser) {
+        Comment comment = commentRepository.findById(commentId)
+                .orElseThrow(() -> new AppException(CommentCode.COMMENT_NOT_FOUND));
+
+        if (!comment.getPostId().equals(postId)) {
+            throw new AppException(CommentCode.COMMENT_NOT_BELONG_TO_POST);
+        }
+
+        if (!comment.getUserId().equals(currentUser.getId())) {
+            throw new AppException(CommentCode.COMMENT_NOT_OWNER);
+        }
+
+        if (comment.isDeleted()) {
+            throw new AppException(CommentCode.COMMENT_ALREADY_DELETED);
+        }
+
+        comment.markDeleted();
+        commentRepository.save(comment);
+    }
+}

@@ -10,7 +10,8 @@ public enum CommentCode implements AppCode {
     CANNOT_REPLY_TO_DELETED_COMMENT(400, "Cannot reply to a deleted comment"),
     COMMENT_NOT_OWNER(403, "You are not the owner of this comment"),
     COMMENT_NOT_BELONG_TO_POST(400, "Comment does not belong to the specified post"),
-    CANNOT_EDIT_DELETED_COMMENT(400, "Cannot edit a deleted comment");
+    CANNOT_EDIT_DELETED_COMMENT(400, "Cannot edit a deleted comment"),
+    COMMENT_ALREADY_DELETED(400, "Comment is already deleted");
 
     private final int code;
     private final String message;

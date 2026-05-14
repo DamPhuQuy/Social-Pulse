@@ -3,7 +3,7 @@ package com.socialpulse.app.comment.application.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import org.springframework.stereotype.Service;
+// import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.comment.application.dto.mapper.CommentMapper;
 import com.socialpulse.app.comment.application.dto.response.CommentResponse;

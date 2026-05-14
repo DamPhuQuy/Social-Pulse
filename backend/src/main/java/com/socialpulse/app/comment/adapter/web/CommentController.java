@@ -4,6 +4,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -14,6 +15,7 @@ import com.socialpulse.app.comment.application.dto.request.CommentCreationReques
 import com.socialpulse.app.comment.application.dto.request.CommentUpdateRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.application.usecase.CreateCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.DeleteCommentUseCase;
 import com.socialpulse.app.comment.application.usecase.UpdateCommentUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
@@ -34,13 +36,16 @@ import java.util.List;
 public class CommentController {
     private final CreateCommentUseCase createCommentUseCase;
     private final UpdateCommentUseCase updateCommentUseCase;
+    private final DeleteCommentUseCase deleteCommentUseCase;
     private final GetTopLevelCommentsUseCase getTopLevelCommentsUseCase;
 
     public CommentController(CreateCommentUseCase createCommentUseCase,
                            UpdateCommentUseCase updateCommentUseCase,
+                           DeleteCommentUseCase deleteCommentUseCase,
                            GetTopLevelCommentsUseCase getTopLevelCommentsUseCase) {
         this.createCommentUseCase = createCommentUseCase;
         this.updateCommentUseCase = updateCommentUseCase;
+        this.deleteCommentUseCase = deleteCommentUseCase;
         this.getTopLevelCommentsUseCase = getTopLevelCommentsUseCase;
     }
 
@@ -146,6 +151,47 @@ public class CommentController {
                 .code(200)
                 .message("Comment updated successfully.")
                 .data(response)
+                .build());
+    }
+
+    @DeleteMapping("/{commentId}")
+    @PreAuthorize("hasAuthority('comment:delete')")
+    @Operation(
+        summary = "Delete comment",
+        description = "Soft delete a comment (only owner can delete)",
+        responses = {
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "200",
+                description = "Comment deleted successfully"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "401",
+                description = "Unauthorized"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "403",
+                description = "Forbidden - Not the owner of the comment"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "404",
+                description = "Comment not found"
+            ),
+            @io.swagger.v3.oas.annotations.responses.ApiResponse(
+                responseCode = "500",
+                description = "Internal server error"
+            )
+        }
+    )
+    public ResponseEntity<ApiResponse<Void>> deleteComment(
+        @PathVariable Long postId,
+        @PathVariable Long commentId,
+        @AuthenticationPrincipal CustomUserDetails currentUser) {
+
+        deleteCommentUseCase.deleteComment(postId, commentId, currentUser);
+
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .code(200)
+                .message("Comment deleted successfully.")
                 .build());
     }
 
