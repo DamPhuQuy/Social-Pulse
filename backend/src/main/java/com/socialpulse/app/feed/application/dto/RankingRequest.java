@@ -12,5 +12,7 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class RankingRequest {
+    @Builder.Default
+    private String featureSchemaVersion = "v1";
     private List<RankingFeatures> features;
 }

@@ -21,7 +21,6 @@ public class GetFeedService implements GetFeedUseCase {
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
         Long userId = currentUser.getId();
-
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
 
         return feedItems.stream()

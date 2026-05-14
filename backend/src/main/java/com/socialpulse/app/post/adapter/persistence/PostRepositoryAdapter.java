@@ -1,5 +1,6 @@
 package com.socialpulse.app.post.adapter.persistence;
 
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
@@ -27,6 +28,16 @@ public class PostRepositoryAdapter implements PostRepository {
     @Override
     public Optional<Post> findById(Long id) {
         return jpaPostRepository.findById(id).map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Post> findByIds(Set<Long> ids) {
+        if (ids == null || ids.isEmpty()) {
+            return List.of();
+        }
+        return jpaPostRepository.findAllByIdIn(ids).stream()
+                .map(postPersistenceMapper::toDomain)
+                .toList();
     }
 
     @Override

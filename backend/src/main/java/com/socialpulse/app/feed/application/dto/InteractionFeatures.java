@@ -21,5 +21,5 @@ public class InteractionFeatures {
     // Temporal (interaction-derived)
     private double lastInteractionHours;
 
-    // NOTE: ctr and skipRate intentionally omitted until impression tracking is accurate
+    // Pushshift-only recommender scope does not use CTR or exposure-derived skip features.
 }

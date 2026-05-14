@@ -21,7 +21,7 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 
 @RestController
 @RequestMapping("/api/v1/feed")
-@Tag(name = "Feed", description = "AI-powered feed ranking APIs")
+@Tag(name = "Feed", description = "Personalized feed APIs")
 public class FeedController {
     private final GetFeedUseCase getFeedUseCase;
     public FeedController(GetFeedUseCase getFeedUseCase) {
@@ -32,7 +32,7 @@ public class FeedController {
     @PreAuthorize("hasRole('USER') and hasAuthority('VIEW_POST')")
     @Operation(
             summary = "Get personalized feed",
-            description = "Get AI-ranked personalized feed for current user with pagination",
+            description = "Get personalized feed for current user with pagination",
             responses = {
                 @io.swagger.v3.oas.annotations.responses.ApiResponse(
                     responseCode = "200",

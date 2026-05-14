@@ -1,6 +1,7 @@
 package com.socialpulse.app.post.infrastructure.persistence.repository;
 
 import java.util.List;
+import java.util.Set;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -17,6 +18,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
     // get posts by user id
     Page<PostEntity> findByUserId(Long userId, Pageable pageable);
+
+    List<PostEntity> findAllByIdIn(Set<Long> ids);
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 

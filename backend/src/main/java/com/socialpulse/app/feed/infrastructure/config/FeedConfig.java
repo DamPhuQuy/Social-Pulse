@@ -7,11 +7,10 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.behavior.application.usecase.BehaviorFeaturesExtractionUseCase;
-import com.socialpulse.app.behavior.domain.repository.UserBehaviorRepository;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.AiRankingService;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
+import com.socialpulse.app.feed.application.service.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.FeatureExtractionService;
 import com.socialpulse.app.feed.application.service.FeedCacheService;
 import com.socialpulse.app.feed.application.service.FeedRankingService;
@@ -44,20 +43,25 @@ public class FeedConfig {
             ObjectMapper objectMapper,
             FollowRepository followRepository,
             UserRepository userRepository,
-            PostRepository postRepository,
-            UserBehaviorRepository behaviorRepository) {
+            PostRepository postRepository) {
         return new FeatureExtractionService(
                 redisTemplate, objectMapper,
                 followRepository, userRepository,
-                postRepository, behaviorRepository);
+                postRepository);
     }
 
     @Bean
     public PredictRankingUseCase predictRankingUseCase(
             @Value("${ai.service.url:http://localhost:5000}") String aiServiceUrl,
             @Value("${ai.service.enabled:false}") boolean aiServiceEnabled,
-            BehaviorFeaturesExtractionUseCase extractBehaviorFeaturesUseCase) {
-        return new AiRankingService(aiServiceUrl, aiServiceEnabled, extractBehaviorFeaturesUseCase);
+            @Value("${ai.service.timeout-ms:1500}") int timeoutMs,
+            @Value("${ai.service.ranking-path:/rank}") String rankingPath) {
+        return new AiRankingService(aiServiceUrl, aiServiceEnabled, timeoutMs, rankingPath);
+    }
+
+    @Bean
+    public FallbackRankingService fallbackRankingService() {
+        return new FallbackRankingService();
     }
 
     @Bean
@@ -70,12 +74,14 @@ public class FeedConfig {
             SelectCandidatesUseCase selectCandidatesUseCase,
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
-            CacheFeedUseCase cacheFeedUseCase) {
+            CacheFeedUseCase cacheFeedUseCase,
+            FallbackRankingService fallbackRankingService) {
         return new FeedRankingService(
                 selectCandidatesUseCase,
                 extractFeaturesUseCase,
                 predictRankingUseCase,
-                cacheFeedUseCase);
+                cacheFeedUseCase,
+                fallbackRankingService);
     }
 }
 
