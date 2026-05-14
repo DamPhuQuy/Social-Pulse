@@ -59,6 +59,7 @@ public class UserRepositoryAdapter implements UserRepository {
                 .stream()
                 .map(userPersistenceMapper::toDomain)
                 .toList();
+    }
     public List<User> findByIds(Set<Long> ids) {
         if (ids == null || ids.isEmpty()) {
             return List.of();
