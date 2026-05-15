@@ -5,7 +5,13 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
-@
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@AllArgsConstructor
 final class TrainingArguments {
     private final Path submissionsPath;
     private final Path commentsPath;
@@ -21,37 +27,6 @@ final class TrainingArguments {
     private final int maxThresholds;
     private final double learningRate;
     private final long seed;
-
-    private TrainingArguments(
-            Path submissionsPath,
-            Path commentsPath,
-            Path outputPath,
-            Path metricsOutputPath,
-            int sampleSize,
-            int scanLimitPosts,
-            int scanLimitComments,
-            int minContentLength,
-            int nEstimators,
-            int maxDepth,
-            int minSamplesLeaf,
-            int maxThresholds,
-            double learningRate,
-            long seed) {
-        this.submissionsPath = submissionsPath;
-        this.commentsPath = commentsPath;
-        this.outputPath = outputPath;
-        this.metricsOutputPath = metricsOutputPath;
-        this.sampleSize = sampleSize;
-        this.scanLimitPosts = scanLimitPosts;
-        this.scanLimitComments = scanLimitComments;
-        this.minContentLength = minContentLength;
-        this.nEstimators = nEstimators;
-        this.maxDepth = maxDepth;
-        this.minSamplesLeaf = minSamplesLeaf;
-        this.maxThresholds = maxThresholds;
-        this.learningRate = learningRate;
-        this.seed = seed;
-    }
 
     static TrainingArguments parse(String[] args) {
         Map<String, String> values = new HashMap<>();
