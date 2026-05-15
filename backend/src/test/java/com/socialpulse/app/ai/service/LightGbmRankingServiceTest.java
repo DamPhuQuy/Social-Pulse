@@ -1,6 +1,7 @@
 package com.socialpulse.app.ai.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -227,6 +228,27 @@ class LightGbmRankingServiceTest {
                 .build());
 
         assertEquals(0, responses.size());
+    }
+
+    @Test
+    void loadsBundledClasspathArtifact() {
+        LightGbmProperties properties = new LightGbmProperties();
+        properties.setEnabled(true);
+        properties.setFeatureSchemaVersion("v1");
+
+        LightGbmRankingService service = new LightGbmRankingService(
+                properties,
+                objectMapper,
+                new DefaultResourceLoader(),
+                new LightGbmFeatureVectorizer());
+
+        var responses = service.predictScores(RankingRequest.builder()
+                .featureSchemaVersion("v1")
+                .features(List.of(rankingFeatures(100L, 12.0, 1.0)))
+                .build());
+
+        assertEquals(1, responses.size());
+        assertTrue(Double.isFinite(responses.get(0).getScore()));
     }
 
     private RankingFeatures rankingFeatures(Long postId, double hotScore, double affinityScore) {

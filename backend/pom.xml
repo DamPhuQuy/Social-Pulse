@@ -30,6 +30,8 @@
 		<java.version>21</java.version>
 		<mapstruct.version>1.6.3</mapstruct.version>
 		<postgres.version>42.7.5</postgres.version>
+		<zstd-jni.version>1.5.7-4</zstd-jni.version>
+		<exec-maven-plugin.version>3.6.2</exec-maven-plugin.version>
 	</properties>
 	<dependencies>
 		<dependency>
@@ -101,6 +103,11 @@
 		<dependency>
 			<groupId>org.springframework.boot</groupId>
 			<artifactId>spring-boot-starter-mail</artifactId>
+		</dependency>
+		<dependency>
+			<groupId>com.github.luben</groupId>
+			<artifactId>zstd-jni</artifactId>
+			<version>${zstd-jni.version}</version>
 		</dependency>
 		<!-- JJWT: tạo và xác thực JWT. jjwt-api là compile-time interface,
 		     jjwt-impl + jjwt-jackson là runtime implementations -->
@@ -179,6 +186,11 @@
 						</exclude>
 					</excludes>
 				</configuration>
+			</plugin>
+			<plugin>
+				<groupId>org.codehaus.mojo</groupId>
+				<artifactId>exec-maven-plugin</artifactId>
+				<version>${exec-maven-plugin.version}</version>
 			</plugin>
 		</plugins>
 	</build>
