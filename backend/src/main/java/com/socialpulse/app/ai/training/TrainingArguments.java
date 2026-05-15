@@ -5,6 +5,7 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+@
 final class TrainingArguments {
     private final Path submissionsPath;
     private final Path commentsPath;

@@ -1,4 +1,4 @@
-package com.socialpulse.app.ai.service;
+package com.socialpulse.app.ai.inference;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -9,11 +9,10 @@ import org.springframework.core.io.ResourceLoader;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.config.LightGbmProperties;
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.lightgbm.LightGbmModel;
-import com.socialpulse.app.ai.lightgbm.LightGbmModelArtifact;
-import com.socialpulse.app.ai.lightgbm.LightGbmModelScorer;
+import com.socialpulse.app.ai.inference.config.LightGbmProperties;
+import com.socialpulse.app.ai.shared.LightGbmModel;
+import com.socialpulse.app.ai.shared.LightGbmModelArtifact;
+import com.socialpulse.app.ai.shared.LightGbmModelScorer;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.application.dto.RankingResponse;

@@ -8,9 +8,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.config.LightGbmProperties;
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.service.LightGbmRankingService;
+import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
+import com.socialpulse.app.ai.inference.LightGbmRankingService;
+import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
 import com.socialpulse.app.feed.application.service.FallbackRankingService;

@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftFeatureEngineering {
     private static final double SECONDS_PER_HOUR = 3600.0;

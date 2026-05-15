@@ -1,4 +1,4 @@
-package com.socialpulse.app.ai.lightgbm;
+package com.socialpulse.app.ai.shared;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import com.fasterxml.jackson.annotation.JsonProperty;

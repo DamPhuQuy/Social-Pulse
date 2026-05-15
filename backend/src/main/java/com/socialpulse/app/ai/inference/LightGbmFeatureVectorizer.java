@@ -1,9 +1,10 @@
-package com.socialpulse.app.ai.lightgbm;
+package com.socialpulse.app.ai.inference;
 
-import java.util.List;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 import com.socialpulse.app.feed.application.dto.InteractionFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;

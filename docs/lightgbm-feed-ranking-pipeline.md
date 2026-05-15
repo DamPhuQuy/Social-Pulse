@@ -21,7 +21,7 @@ Train a LightGBM ranking model offline from the Pushshift Reddit dataset, export
 
 ## Current backend contract
 
-- Feature schema version is centralized in `com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema`
+- Feature schema version is centralized in `com.socialpulse.app.ai.shared.LightGbmFeatureSchema`
 - Feed ranking request schema now comes from config instead of hardcoded `v1`
 - Local model loader supports:
   - raw `booster.dump_model()`

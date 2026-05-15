@@ -1,4 +1,4 @@
-package com.socialpulse.app.ai.lightgbm;
+package com.socialpulse.app.ai.shared;
 
 import java.util.List;
 

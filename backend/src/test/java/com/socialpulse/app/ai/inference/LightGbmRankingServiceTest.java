@@ -1,4 +1,4 @@
-package com.socialpulse.app.ai.service;
+package com.socialpulse.app.ai.inference;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertTrue;
@@ -12,8 +12,7 @@ import org.junit.jupiter.api.io.TempDir;
 import org.springframework.core.io.DefaultResourceLoader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.config.LightGbmProperties;
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
+import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.application.dto.InteractionFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;

@@ -1,4 +1,4 @@
-package com.socialpulse.app.ai.lightgbm;
+package com.socialpulse.app.ai.shared;
 
 import java.util.Map;
 
@@ -50,7 +50,7 @@ public class LightGbmModelScorer {
 
     private ResolvedFeature resolveFeatureValue(String featureName, Map<String, Double> features) {
         if (!features.containsKey(featureName)) {
-            return new ResolvedFeature(LightGbmFeatureVectorizer.DEFAULT_NUMERIC_VALUE, false);
+            return new ResolvedFeature(LightGbmFeatureSchema.DEFAULT_NUMERIC_VALUE, false);
         }
 
         Double value = features.get(featureName);

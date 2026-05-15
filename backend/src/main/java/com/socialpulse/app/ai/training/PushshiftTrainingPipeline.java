@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftTrainingPipeline {
     private static final String DATASET_NAME = "pushshift_reddit_apr2019";

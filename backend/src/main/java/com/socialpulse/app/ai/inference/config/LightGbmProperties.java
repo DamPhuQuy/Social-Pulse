@@ -1,8 +1,8 @@
-package com.socialpulse.app.ai.config;
+package com.socialpulse.app.ai.inference.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 import lombok.Getter;
 import lombok.Setter;

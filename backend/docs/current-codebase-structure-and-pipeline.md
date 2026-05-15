@@ -64,8 +64,8 @@ Tuy nhien, theo code hien tai chua thay `@EnableAsync` va chua thay `@EnableSche
 
 - `db/migration`
   - 12 migration tu `V1__init.sql` den `V12__add_edited_to_comments.sql`
-- `ai/README.md`
-  - quy uoc artifact cho model LightGBM
+- `ai/lightgbm-ranking-model.json`
+  - artifact model duoc backend load de score feed
 
 ## 3. Ban do package hien tai
 
@@ -87,9 +87,9 @@ Cay package muc cao:
 ```text
 com.socialpulse.app
 |- ai
-|  |- config
-|  |- lightgbm
-|  `- service
+|  |- inference
+|  |- shared
+|  `- training
 |- auth
 |  |- adapter
 |  |- application
