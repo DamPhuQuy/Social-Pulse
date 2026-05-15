@@ -1,6 +1,5 @@
 package com.socialpulse.app.feed.infrastructure.config;
 
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
@@ -11,10 +10,8 @@ import org.springframework.jdbc.core.JdbcTemplate;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.ai.config.LightGbmProperties;
 import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.service.CompositePredictRankingService;
 import com.socialpulse.app.ai.service.LightGbmRankingService;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
-import com.socialpulse.app.feed.application.service.AiRankingService;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
 import com.socialpulse.app.feed.application.service.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.FeatureExtractionService;
@@ -76,19 +73,13 @@ public class FeedConfig {
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase(
-            LightGbmRankingService lightGbmRankingService,
-            @Value("${ai.service.url:http://localhost:5000}") String aiServiceUrl,
-            @Value("${ai.service.enabled:false}") boolean aiServiceEnabled,
-            @Value("${ai.service.timeout-ms:1500}") int timeoutMs,
-            @Value("${ai.service.ranking-path:/rank}") String rankingPath) {
-        AiRankingService aiRankingService = new AiRankingService(aiServiceUrl, aiServiceEnabled, timeoutMs, rankingPath);
-        return new CompositePredictRankingService(lightGbmRankingService, aiRankingService);
+    public PredictRankingUseCase predictRankingUseCase(LightGbmRankingService lightGbmRankingService) {
+        return lightGbmRankingService;
     }
 
     @Bean
-    public FallbackRankingService fallbackRankingService() {
-        return new FallbackRankingService();
+    public FallbackRankingService fallbackRankingService(LightGbmProperties lightGbmProperties) {
+        return new FallbackRankingService(lightGbmProperties.getFeatureSchemaVersion());
     }
 
     @Bean
@@ -102,12 +93,14 @@ public class FeedConfig {
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
-            FallbackRankingService fallbackRankingService) {
+            FallbackRankingService fallbackRankingService,
+            LightGbmProperties lightGbmProperties) {
         return new FeedRankingService(
                 selectCandidatesUseCase,
                 extractFeaturesUseCase,
                 predictRankingUseCase,
                 cacheFeedUseCase,
-                fallbackRankingService);
+                fallbackRankingService,
+                lightGbmProperties.getFeatureSchemaVersion());
     }
 }

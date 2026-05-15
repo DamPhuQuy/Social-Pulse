@@ -10,30 +10,10 @@ import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.UserFeatures;
 
 public class LightGbmFeatureVectorizer {
-    public static final List<String> FEATURE_ORDER = List.of(
-            "content_length",
-            "has_multimedia",
-            "is_share_post",
-            "post_age_hours",
-            "hot_score",
-            "upvote_ratio",
-            "author_seniority",
-            "author_post_count",
-            "author_engagement_rate",
-            "interaction_count_7d",
-            "interaction_count_30d",
-            "hours_since_last_interaction",
-            "affinity_score",
-            "upvote_count",
-            "downvote_count",
-            "comment_count",
-            "share_count",
-            "view_count",
-            "popularity");
-
-    public static final double DEFAULT_NUMERIC_VALUE = 0.0;
-    public static final double DEFAULT_UPVOTE_RATIO = 0.5;
-    public static final double DEFAULT_LAST_INTERACTION_HOURS = 999.0;
+    public static final List<String> FEATURE_ORDER = LightGbmFeatureSchema.FEATURE_ORDER;
+    public static final double DEFAULT_NUMERIC_VALUE = LightGbmFeatureSchema.DEFAULT_NUMERIC_VALUE;
+    public static final double DEFAULT_UPVOTE_RATIO = LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO;
+    public static final double DEFAULT_LAST_INTERACTION_HOURS = LightGbmFeatureSchema.DEFAULT_LAST_INTERACTION_HOURS;
 
     public Map<String, Double> toFeatureMap(RankingFeatures features) {
         PostFeatures postFeatures = features.getPostFeatures();

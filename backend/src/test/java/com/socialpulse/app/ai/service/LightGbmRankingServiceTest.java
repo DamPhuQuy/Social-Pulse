@@ -89,9 +89,109 @@ class LightGbmRankingServiceTest {
     }
 
     @Test
+    void predictsRankingScoresFromWrappedArtifactFile() throws Exception {
+        Path modelPath = tempDir.resolve("lightgbm-ranking-artifact.json");
+        Files.writeString(modelPath, """
+                {
+                  "artifact_version": "1",
+                  "feature_schema_version": "v1",
+                  "training_dataset": "pushshift_reddit",
+                  "trained_at": "2026-05-15T00:00:00Z",
+                  "label_strategy": "implicit_pairwise",
+                  "model_dump": {
+                    "objective": "lambdarank",
+                    "feature_names": ["hot_score", "affinity_score"],
+                    "tree_info": [
+                      {
+                        "shrinkage": 1.0,
+                        "tree_structure": {
+                          "split_feature": 0,
+                          "threshold": 10.0,
+                          "decision_type": "<=",
+                          "default_left": true,
+                          "left_child": { "leaf_value": 0.2 },
+                          "right_child": { "leaf_value": 0.9 }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """);
+
+        LightGbmProperties properties = new LightGbmProperties();
+        properties.setEnabled(true);
+        properties.setModelLocation(modelPath.toUri().toString());
+        properties.setFeatureSchemaVersion("v1");
+
+        LightGbmRankingService service = new LightGbmRankingService(
+                properties,
+                objectMapper,
+                new DefaultResourceLoader(),
+                new LightGbmFeatureVectorizer());
+
+        RankingRequest request = RankingRequest.builder()
+                .featureSchemaVersion("v1")
+                .features(List.of(
+                        rankingFeatures(100L, 6.0, 0.5),
+                        rankingFeatures(200L, 15.0, 2.0)))
+                .build();
+
+        var responses = service.predictScores(request);
+
+        assertEquals(2, responses.size());
+        assertEquals(0.2, responses.get(0).getScore(), 1e-9);
+        assertEquals(0.9, responses.get(1).getScore(), 1e-9);
+    }
+
+    @Test
     void returnsEmptyWhenDisabled() {
         LightGbmProperties properties = new LightGbmProperties();
         properties.setEnabled(false);
+        properties.setFeatureSchemaVersion("v1");
+
+        LightGbmRankingService service = new LightGbmRankingService(
+                properties,
+                objectMapper,
+                new DefaultResourceLoader(),
+                new LightGbmFeatureVectorizer());
+
+        var responses = service.predictScores(RankingRequest.builder()
+                .featureSchemaVersion("v1")
+                .features(List.of(rankingFeatures(100L, 6.0, 0.5)))
+                .build());
+
+        assertEquals(0, responses.size());
+    }
+
+    @Test
+    void returnsEmptyWhenArtifactSchemaDoesNotMatchConfiguredSchema() throws Exception {
+        Path modelPath = tempDir.resolve("lightgbm-ranking-artifact-mismatch.json");
+        Files.writeString(modelPath, """
+                {
+                  "feature_schema_version": "v2",
+                  "model_dump": {
+                    "objective": "lambdarank",
+                    "feature_names": ["hot_score"],
+                    "tree_info": [
+                      {
+                        "shrinkage": 1.0,
+                        "tree_structure": {
+                          "split_feature": 0,
+                          "threshold": 10.0,
+                          "decision_type": "<=",
+                          "default_left": true,
+                          "left_child": { "leaf_value": 0.2 },
+                          "right_child": { "leaf_value": 0.9 }
+                        }
+                      }
+                    ]
+                  }
+                }
+                """);
+
+        LightGbmProperties properties = new LightGbmProperties();
+        properties.setEnabled(true);
+        properties.setModelLocation(modelPath.toUri().toString());
         properties.setFeatureSchemaVersion("v1");
 
         LightGbmRankingService service = new LightGbmRankingService(

@@ -2,15 +2,39 @@ Place the exported LightGBM ranking model at:
 
 `classpath:ai/lightgbm-ranking-model.json`
 
-This Java scorer expects the JSON structure produced by LightGBM's Python `Booster.dump_model()`, not the plain-text `model.txt` dump.
+This Java scorer accepts either:
 
-Minimal export example after training in Python:
+- the raw JSON produced by LightGBM's Python `Booster.dump_model()`
+- or a wrapped artifact exported by your training pipeline with metadata plus `model_dump`
+
+It does not accept the plain-text `model.txt` dump.
+
+Minimal raw export example after training in Python:
 
 ```python
 import json
 
 with open("lightgbm-ranking-model.json", "w", encoding="utf-8") as f:
     json.dump(booster.dump_model(), f)
+```
+
+Recommended pipeline artifact export:
+
+```python
+import json
+from datetime import datetime, timezone
+
+artifact = {
+    "artifact_version": "1",
+    "feature_schema_version": "v1",
+    "training_dataset": "pushshift_reddit",
+    "trained_at": datetime.now(timezone.utc).isoformat(),
+    "label_strategy": "implicit_pairwise",
+    "model_dump": booster.dump_model(),
+}
+
+with open("lightgbm-ranking-model.json", "w", encoding="utf-8") as f:
+    json.dump(artifact, f)
 ```
 
 Feature mapping contract:
@@ -45,6 +69,7 @@ Default preprocessing values used by the backend vectorizer:
 - `upvote_ratio`: `0.5`
 - `hours_since_last_interaction`: `999.0`
 - Missing boolean flags: `0.0`
+- Default schema version: `v1`
 
 Scoring behavior:
 
@@ -56,4 +81,5 @@ Scoring behavior:
 Fallback behavior:
 
 - `ai.lightgbm.enabled=true` and model load success: use local LightGBM scorer
-- Otherwise: fall back to the existing HTTP AI ranking service
+- Otherwise: return no model predictions and let `FeedRankingService` use deterministic fallback ranking
+- If the wrapped artifact's `feature_schema_version` differs from `ai.lightgbm.feature-schema-version`, the model is rejected

@@ -2,6 +2,8 @@ package com.socialpulse.app.ai.config;
 
 import org.springframework.boot.context.properties.ConfigurationProperties;
 
+import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+
 import lombok.Getter;
 import lombok.Setter;
 
@@ -11,5 +13,5 @@ import lombok.Setter;
 public class LightGbmProperties {
     private boolean enabled = false;
     private String modelLocation = "classpath:ai/lightgbm-ranking-model.json";
-    private String featureSchemaVersion = "v1";
+    private String featureSchemaVersion = LightGbmFeatureSchema.DEFAULT_SCHEMA_VERSION;
 }

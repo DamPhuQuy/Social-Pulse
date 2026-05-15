@@ -7,10 +7,12 @@ import java.util.List;
 import org.springframework.core.io.Resource;
 import org.springframework.core.io.ResourceLoader;
 
+import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.ai.config.LightGbmProperties;
 import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
 import com.socialpulse.app.ai.lightgbm.LightGbmModel;
+import com.socialpulse.app.ai.lightgbm.LightGbmModelArtifact;
 import com.socialpulse.app.ai.lightgbm.LightGbmModelScorer;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
@@ -95,15 +97,68 @@ public class LightGbmRankingService implements PredictRankingUseCase {
         }
 
         try (InputStream inputStream = resource.getInputStream()) {
-            LightGbmModel model = objectMapper.readValue(inputStream, LightGbmModel.class);
-            log.info("Loaded LightGBM model from {} with {} trees and objective={}",
+            LoadedArtifact loadedArtifact = readArtifact(inputStream);
+            if (loadedArtifact == null) {
+                return null;
+            }
+
+            if (loadedArtifact.featureSchemaVersion() != null
+                    && !loadedArtifact.featureSchemaVersion().isBlank()
+                    && !properties.getFeatureSchemaVersion().equals(loadedArtifact.featureSchemaVersion())) {
+                log.warn("Skipping LightGBM model at {} due to artifact schema mismatch. expected={}, actual={}",
+                        properties.getModelLocation(),
+                        properties.getFeatureSchemaVersion(),
+                        loadedArtifact.featureSchemaVersion());
+                return null;
+            }
+
+            LightGbmModel model = loadedArtifact.model();
+            log.info("Loaded LightGBM model from {} with {} trees, objective={}, schema={}, dataset={}, trainedAt={}",
                     properties.getModelLocation(),
                     model.getTreeInfo().size(),
-                    model.getObjectiveName());
+                    model.getObjectiveName(),
+                    loadedArtifact.featureSchemaVersion(),
+                    loadedArtifact.trainingDataset(),
+                    loadedArtifact.trainedAt());
             return new LightGbmModelScorer(model);
         } catch (IOException | IllegalArgumentException e) {
             log.warn("Failed to load LightGBM model from {}: {}", properties.getModelLocation(), e.getMessage());
             return null;
         }
+    }
+
+    private LoadedArtifact readArtifact(InputStream inputStream) throws IOException {
+        JsonNode root = objectMapper.readTree(inputStream);
+
+        if (root == null || root.isNull()) {
+            throw new IllegalArgumentException("LightGBM artifact is empty");
+        }
+
+        if (root.has("tree_info")) {
+            LightGbmModel model = objectMapper.treeToValue(root, LightGbmModel.class);
+            return new LoadedArtifact(model, properties.getFeatureSchemaVersion(), null, null);
+        }
+
+        if (root.has("model_dump")) {
+            LightGbmModelArtifact artifact = objectMapper.treeToValue(root, LightGbmModelArtifact.class);
+            if (artifact.getModelDump() == null) {
+                throw new IllegalArgumentException("LightGBM artifact is missing model_dump");
+            }
+
+            return new LoadedArtifact(
+                    artifact.getModelDump(),
+                    artifact.getFeatureSchemaVersion(),
+                    artifact.getTrainingDataset(),
+                    artifact.getTrainedAt());
+        }
+
+        throw new IllegalArgumentException("Unsupported LightGBM artifact format");
+    }
+
+    private record LoadedArtifact(
+            LightGbmModel model,
+            String featureSchemaVersion,
+            String trainingDataset,
+            String trainedAt) {
     }
 }

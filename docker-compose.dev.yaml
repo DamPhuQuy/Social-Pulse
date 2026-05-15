@@ -4,15 +4,15 @@ services:
     restart: unless-stopped
     environment:
       TZ: Asia/Ho_Chi_Minh
-      POSTGRES_USER: ${DB_USERNAME}
-      POSTGRES_PASSWORD: ${DB_PASSWORD}
-      POSTGRES_DB: ${DB_NAME}
+      POSTGRES_USER: ${DB_USERNAME:-postgres}
+      POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
+      POSTGRES_DB: ${DB_NAME:-postgres}
     ports:
       - "5432:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME} -d ${DB_NAME}"]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -59,37 +59,7 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-    command: ["./mvn", "spring-boot:run"]
-    networks:
-      - app-network
-
-  ai:
-    build:
-      context: ./ai
-      dockerfile: Dockerfile.dev
-    restart: unless-stopped
-    ports:
-      - "8000:8000"
-    volumes:
-      - type: bind
-        source: ./ai/app
-        target: /app/app
-      - type: bind
-        source: ./ai/requirements.txt
-        target: /app/requirements.txt
-    depends_on:
-      backend:
-        condition: service_started
-    command:
-      [
-        "uvicorn",
-        "app.main:app",
-        "--host",
-        "0.0.0.0",
-        "--port",
-        "8000",
-        "--reload",
-      ]
+    command: ["mvn", "spring-boot:run"]
     networks:
       - app-network
 
