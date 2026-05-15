@@ -19,20 +19,20 @@ final class PushshiftDatasetScanner {
     private static final long REDDIT_EPOCH = 1134028003L;
 
     ScanResult scanSubmissions(TrainingArguments arguments) throws IOException {
-        Random random = new Random(arguments.seed());
-        List<SubmissionRecord> reservoir = new ArrayList<>(arguments.sampleSize());
+        Random random = new Random(arguments.getSeed());
+        List<SubmissionRecord> reservoir = new ArrayList<>(arguments.getSampleSize());
         Map<String, AuthorAggregate> authorAggregates = new HashMap<>();
 
         int scanned = 0;
         int filtered = 0;
         int accepted = 0;
 
-        try (TrainingJsonSupport.JsonLineReader reader = new TrainingJsonSupport.JsonLineReader(arguments.submissionsPath())) {
+        try (TrainingJsonSupport.JsonLineReader reader = new TrainingJsonSupport.JsonLineReader(arguments.getSubmissionsPath())) {
             JsonNode payload;
             while ((payload = reader.readNext()) != null) {
                 scanned++;
 
-                SubmissionRecord record = preprocessSubmission(payload, arguments.minContentLength());
+                SubmissionRecord record = preprocessSubmission(payload, arguments.getMinContentLength());
                 if (record == null) {
                     filtered++;
                     continue;
@@ -43,16 +43,16 @@ final class PushshiftDatasetScanner {
                 AuthorAggregate aggregate = authorAggregates.computeIfAbsent(record.author(), ignored -> new AuthorAggregate());
                 aggregate.increment(popularity);
 
-                if (reservoir.size() < arguments.sampleSize()) {
+                if (reservoir.size() < arguments.getSampleSize()) {
                     reservoir.add(record);
                 } else {
                     int replacementIndex = random.nextInt(accepted);
-                    if (replacementIndex < arguments.sampleSize()) {
+                    if (replacementIndex < arguments.getSampleSize()) {
                         reservoir.set(replacementIndex, record);
                     }
                 }
 
-                if (accepted >= arguments.scanLimitPosts()) {
+                if (accepted >= arguments.getScanLimitPosts()) {
                     break;
                 }
             }

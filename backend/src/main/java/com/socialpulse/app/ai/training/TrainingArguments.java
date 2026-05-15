@@ -77,62 +77,6 @@ final class TrainingArguments {
         }
     }
 
-    Path submissionsPath() {
-        return submissionsPath;
-    }
-
-    Path commentsPath() {
-        return commentsPath;
-    }
-
-    Path outputPath() {
-        return outputPath;
-    }
-
-    Path metricsOutputPath() {
-        return metricsOutputPath;
-    }
-
-    int sampleSize() {
-        return sampleSize;
-    }
-
-    int scanLimitPosts() {
-        return scanLimitPosts;
-    }
-
-    int scanLimitComments() {
-        return scanLimitComments;
-    }
-
-    int minContentLength() {
-        return minContentLength;
-    }
-
-    int nEstimators() {
-        return nEstimators;
-    }
-
-    int maxDepth() {
-        return maxDepth;
-    }
-
-    int minSamplesLeaf() {
-        return minSamplesLeaf;
-    }
-
-    int maxThresholds() {
-        return maxThresholds;
-    }
-
-    double learningRate() {
-        return learningRate;
-    }
-
-    long seed() {
-        return seed;
-    }
-
     private static Path requiredPath(Map<String, String> values, String key) {
         String value = values.get(key);
         if (value == null || value.isBlank()) {

@@ -24,7 +24,7 @@ final class GradientBoostedTreeTrainer {
         double[] trainPredictions = constantPrediction(trainRows.size(), bias);
         double[] validationPredictions = constantPrediction(validationRows.size(), bias);
 
-        for (int estimator = 0; estimator < arguments.nEstimators(); estimator++) {
+        for (int estimator = 0; estimator < arguments.getNEstimators(); estimator++) {
             double[] residuals = new double[trainTargets.length];
             for (int index = 0; index < trainTargets.length; index++) {
                 residuals[index] = trainTargets[index] - trainPredictions[index];
@@ -40,17 +40,17 @@ final class GradientBoostedTreeTrainer {
                     residuals,
                     indices,
                     0,
-                    arguments.maxDepth(),
-                    arguments.minSamplesLeaf(),
-                    arguments.maxThresholds());
+                    arguments.getMaxDepth(),
+                    arguments.getMinSamplesLeaf(),
+                    arguments.getMaxThresholds());
 
-            treeInfo.add(treeInfo(arguments.learningRate(), tree.toArtifactMap()));
+            treeInfo.add(treeInfo(arguments.getLearningRate(), tree.toArtifactMap()));
 
             for (int index = 0; index < trainRows.size(); index++) {
-                trainPredictions[index] += arguments.learningRate() * tree.predict(trainRows.get(index).features());
+                trainPredictions[index] += arguments.getLearningRate() * tree.predict(trainRows.get(index).features());
             }
             for (int index = 0; index < validationRows.size(); index++) {
-                validationPredictions[index] += arguments.learningRate() * tree.predict(validationRows.get(index).features());
+                validationPredictions[index] += arguments.getLearningRate() * tree.predict(validationRows.get(index).features());
             }
         }
 
