@@ -37,6 +37,10 @@ app:
   version: 1.0.0
 
 ai:
+  lightgbm:
+    enabled: ${AI_LIGHTGBM_ENABLED:false}
+    model-location: ${AI_LIGHTGBM_MODEL_LOCATION:classpath:ai/lightgbm-ranking-model.json}
+    feature-schema-version: ${AI_LIGHTGBM_FEATURE_SCHEMA_VERSION:v1}
   service:
     enabled: ${AI_SERVICE_ENABLED:false}
     url: ${AI_SERVICE_URL:http://localhost:5000}
