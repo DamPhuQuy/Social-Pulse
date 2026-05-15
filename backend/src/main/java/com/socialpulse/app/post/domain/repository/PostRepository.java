@@ -29,6 +29,7 @@ public interface PostRepository {
     long countByUserId(Long userId);
 
     Map<Long, Long> countByUserIds(Set<Long> userIds);
-}
 
+    Map<Long, Double> averagePopularityByUserIds(Set<Long> userIds);
+}
 

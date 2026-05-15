@@ -81,7 +81,18 @@ public class PostRepositoryAdapter implements PostRepository {
                         row -> (Long) row[1]
                 ));
     }
-}
 
+    @Override
+    public Map<Long, Double> averagePopularityByUserIds(Set<Long> userIds) {
+        if (userIds == null || userIds.isEmpty()) {
+            return Map.of();
+        }
+        return jpaPostRepository.averagePopularityByUserIds(userIds).stream()
+                .collect(Collectors.toMap(
+                        row -> (Long) row[0],
+                        row -> (Double) row[1]
+                ));
+    }
+}
 
 

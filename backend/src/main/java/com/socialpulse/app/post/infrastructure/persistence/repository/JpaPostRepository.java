@@ -30,4 +30,13 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
     @Query("SELECT p.user.id, COUNT(p) FROM PostEntity p WHERE p.user.id IN :userIds GROUP BY p.user.id")
     List<Object[]> countByUserIds(@Param("userIds") java.util.Set<Long> userIds);
+
+    @Query("""
+            SELECT p.user.id,
+                   AVG(COALESCE(p.upvoteCount, 0) + COALESCE(p.cmtCount, 0) + COALESCE(p.shareCount, 0))
+            FROM PostEntity p
+            WHERE p.user.id IN :userIds
+            GROUP BY p.user.id
+            """)
+    List<Object[]> averagePopularityByUserIds(@Param("userIds") Set<Long> userIds);
 }

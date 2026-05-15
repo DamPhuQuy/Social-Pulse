@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class UserFeatures {
-    private Long userId;
-    private Double engagementRate;
+public class AuthorFeatures {
+    private Long authorId;
+    private Double seniorityYears;
     private Long postCount;
-    private Long accountAgeDays;
+    private Double averagePopularity;
 }

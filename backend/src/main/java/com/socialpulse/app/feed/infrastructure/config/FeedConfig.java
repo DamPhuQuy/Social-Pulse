@@ -23,7 +23,6 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
-import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -45,12 +44,11 @@ public class FeedConfig {
     public ExtractFeaturesUseCase extractFeaturesUseCase(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
-            FollowRepository followRepository,
             UserRepository userRepository,
             PostRepository postRepository) {
         return new FeatureExtractionService(
                 redisTemplate, objectMapper,
-                followRepository, userRepository,
+                userRepository,
                 postRepository);
     }
 

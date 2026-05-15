@@ -6,7 +6,6 @@ import java.util.Set;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
-import lombok.Getter;
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
 import org.springframework.security.core.GrantedAuthority;
@@ -17,6 +16,9 @@ import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 import com.socialpulse.app.user.domain.model.User;
 
+import lombok.Getter;
+
+@Getter
 public class CustomUserDetails implements UserDetails {
 
     private static final String ROLE_PREFIX = "ROLE_";

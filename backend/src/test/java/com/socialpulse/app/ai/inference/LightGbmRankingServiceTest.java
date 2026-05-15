@@ -13,11 +13,10 @@ import org.springframework.core.io.DefaultResourceLoader;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.ai.inference.config.LightGbmProperties;
-import com.socialpulse.app.feed.application.dto.InteractionFeatures;
+import com.socialpulse.app.feed.application.dto.AuthorFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.RankingRequest;
-import com.socialpulse.app.feed.application.dto.UserFeatures;
 
 class LightGbmRankingServiceTest {
     private final ObjectMapper objectMapper = new ObjectMapper();
@@ -31,7 +30,7 @@ class LightGbmRankingServiceTest {
         Files.writeString(modelPath, """
                 {
                   "objective": "lambdarank",
-                  "feature_names": ["hot_score", "affinity_score"],
+                  "feature_names": ["hot_score", "author_engagement_rate"],
                   "tree_info": [
                     {
                       "shrinkage": 1.0,
@@ -48,7 +47,7 @@ class LightGbmRankingServiceTest {
                       "shrinkage": 1.0,
                       "tree_structure": {
                         "split_feature": 1,
-                        "threshold": 1.0,
+                        "threshold": 15.0,
                         "decision_type": "<=",
                         "default_left": true,
                         "left_child": { "leaf_value": 0.0 },
@@ -75,8 +74,8 @@ class LightGbmRankingServiceTest {
         RankingRequest request = RankingRequest.builder()
                 .featureSchemaVersion("v1")
                 .features(List.of(
-                        rankingFeatures(100L, 6.0, 0.5),
-                        rankingFeatures(200L, 15.0, 2.0)))
+                        rankingFeatures(100L, 6.0, 12.0),
+                        rankingFeatures(200L, 15.0, 20.0)))
                 .build();
 
         var responses = service.predictScores(request);
@@ -100,7 +99,7 @@ class LightGbmRankingServiceTest {
                   "label_strategy": "implicit_pairwise",
                   "model_dump": {
                     "objective": "lambdarank",
-                    "feature_names": ["hot_score", "affinity_score"],
+                    "feature_names": ["hot_score", "author_engagement_rate"],
                     "tree_info": [
                       {
                         "shrinkage": 1.0,
@@ -132,8 +131,8 @@ class LightGbmRankingServiceTest {
         RankingRequest request = RankingRequest.builder()
                 .featureSchemaVersion("v1")
                 .features(List.of(
-                        rankingFeatures(100L, 6.0, 0.5),
-                        rankingFeatures(200L, 15.0, 2.0)))
+                        rankingFeatures(100L, 6.0, 12.0),
+                        rankingFeatures(200L, 15.0, 20.0)))
                 .build();
 
         var responses = service.predictScores(request);
@@ -157,7 +156,7 @@ class LightGbmRankingServiceTest {
 
         var responses = service.predictScores(RankingRequest.builder()
                 .featureSchemaVersion("v1")
-                .features(List.of(rankingFeatures(100L, 6.0, 0.5)))
+                .features(List.of(rankingFeatures(100L, 6.0, 12.0)))
                 .build());
 
         assertEquals(0, responses.size());
@@ -202,7 +201,7 @@ class LightGbmRankingServiceTest {
 
         var responses = service.predictScores(RankingRequest.builder()
                 .featureSchemaVersion("v1")
-                .features(List.of(rankingFeatures(100L, 6.0, 0.5)))
+                .features(List.of(rankingFeatures(100L, 6.0, 12.0)))
                 .build());
 
         assertEquals(0, responses.size());
@@ -223,7 +222,7 @@ class LightGbmRankingServiceTest {
 
         var responses = service.predictScores(RankingRequest.builder()
                 .featureSchemaVersion("v1")
-                .features(List.of(rankingFeatures(100L, 6.0, 0.5)))
+                .features(List.of(rankingFeatures(100L, 6.0, 12.0)))
                 .build());
 
         assertEquals(0, responses.size());
@@ -243,14 +242,14 @@ class LightGbmRankingServiceTest {
 
         var responses = service.predictScores(RankingRequest.builder()
                 .featureSchemaVersion("v1")
-                .features(List.of(rankingFeatures(100L, 12.0, 1.0)))
+                .features(List.of(rankingFeatures(100L, 12.0, 15.0)))
                 .build());
 
         assertEquals(1, responses.size());
         assertTrue(Double.isFinite(responses.get(0).getScore()));
     }
 
-    private RankingFeatures rankingFeatures(Long postId, double hotScore, double affinityScore) {
+    private RankingFeatures rankingFeatures(Long postId, double hotScore, double authorAveragePopularity) {
         return RankingFeatures.builder()
                 .postId(postId)
                 .postFeatures(PostFeatures.builder()
@@ -258,24 +257,19 @@ class LightGbmRankingServiceTest {
                         .upvoteRatio(0.7)
                         .contentLength(120)
                         .postAgeHours(3.0)
-                        .hasImage(true)
+                        .hasMultimedia(true)
                         .isSharePost(false)
                         .upvoteCount(20L)
                         .downvoteCount(2L)
-                        .cmtCount(5L)
+                        .commentCount(5L)
                         .shareCount(1L)
                         .viewCount(100L)
+                        .popularity(26.0)
                         .build())
-                .authorFeatures(UserFeatures.builder()
-                        .accountAgeDays(365L)
+                .authorFeatures(AuthorFeatures.builder()
+                        .seniorityYears(1.0)
                         .postCount(50L)
-                        .engagementRate(0.15)
-                        .build())
-                .interactionFeatures(InteractionFeatures.builder()
-                        .interactionCount7d(4)
-                        .interactionCount30d(10)
-                        .lastInteractionHours(12.0)
-                        .affinityScore(affinityScore)
+                        .averagePopularity(authorAveragePopularity)
                         .build())
                 .build();
     }

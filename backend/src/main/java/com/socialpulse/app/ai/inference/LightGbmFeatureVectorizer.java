@@ -5,10 +5,9 @@ import java.util.List;
 import java.util.Map;
 
 import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
-import com.socialpulse.app.feed.application.dto.InteractionFeatures;
+import com.socialpulse.app.feed.application.dto.AuthorFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
-import com.socialpulse.app.feed.application.dto.UserFeatures;
 
 public class LightGbmFeatureVectorizer {
     public static final List<String> FEATURE_ORDER = LightGbmFeatureSchema.FEATURE_ORDER;
@@ -18,31 +17,28 @@ public class LightGbmFeatureVectorizer {
 
     public Map<String, Double> toFeatureMap(RankingFeatures features) {
         PostFeatures postFeatures = features.getPostFeatures();
-        UserFeatures authorFeatures = features.getAuthorFeatures();
-        InteractionFeatures interactionFeatures = features.getInteractionFeatures();
+        AuthorFeatures authorFeatures = features.getAuthorFeatures();
 
         Map<String, Double> vector = new LinkedHashMap<>();
         vector.put("content_length", safeInt(postFeatures != null ? postFeatures.getContentLength() : null));
-        vector.put("has_multimedia", toBinary(postFeatures != null ? postFeatures.getHasImage() : null));
+        vector.put("has_multimedia", toBinary(postFeatures != null ? postFeatures.getHasMultimedia() : null));
         vector.put("is_share_post", toBinary(postFeatures != null ? postFeatures.getIsSharePost() : null));
         vector.put("post_age_hours", safeDouble(postFeatures != null ? postFeatures.getPostAgeHours() : null));
         vector.put("hot_score", safeDouble(postFeatures != null ? postFeatures.getHotScore() : null));
         vector.put("upvote_ratio", safeDouble(postFeatures != null ? postFeatures.getUpvoteRatio() : null, DEFAULT_UPVOTE_RATIO));
 
-        double accountAgeDays = safeLong(authorFeatures != null ? authorFeatures.getAccountAgeDays() : null);
-        vector.put("author_seniority", accountAgeDays / 365.0);
+        vector.put("author_seniority", safeDouble(authorFeatures != null ? authorFeatures.getSeniorityYears() : null));
         vector.put("author_post_count", safeLong(authorFeatures != null ? authorFeatures.getPostCount() : null));
-        vector.put("author_engagement_rate", safeDouble(authorFeatures != null ? authorFeatures.getEngagementRate() : null));
+        vector.put("author_engagement_rate", safeDouble(authorFeatures != null ? authorFeatures.getAveragePopularity() : null));
 
-        vector.put("interaction_count_7d", safeInt(interactionFeatures != null ? interactionFeatures.getInteractionCount7d() : null));
-        vector.put("interaction_count_30d", safeInt(interactionFeatures != null ? interactionFeatures.getInteractionCount30d() : null));
-        vector.put("hours_since_last_interaction",
-                safeDouble(interactionFeatures != null ? interactionFeatures.getLastInteractionHours() : null, DEFAULT_LAST_INTERACTION_HOURS));
-        vector.put("affinity_score", safeDouble(interactionFeatures != null ? interactionFeatures.getAffinityScore() : null));
+        vector.put("interaction_count_7d", DEFAULT_NUMERIC_VALUE);
+        vector.put("interaction_count_30d", DEFAULT_NUMERIC_VALUE);
+        vector.put("hours_since_last_interaction", DEFAULT_LAST_INTERACTION_HOURS);
+        vector.put("affinity_score", DEFAULT_NUMERIC_VALUE);
 
         double upvoteCount = safeLong(postFeatures != null ? postFeatures.getUpvoteCount() : null);
         double downvoteCount = safeLong(postFeatures != null ? postFeatures.getDownvoteCount() : null);
-        double commentCount = safeLong(postFeatures != null ? postFeatures.getCmtCount() : null);
+        double commentCount = safeLong(postFeatures != null ? postFeatures.getCommentCount() : null);
         double shareCount = safeLong(postFeatures != null ? postFeatures.getShareCount() : null);
         double viewCount = safeLong(postFeatures != null ? postFeatures.getViewCount() : null);
 
@@ -51,7 +47,8 @@ public class LightGbmFeatureVectorizer {
         vector.put("comment_count", commentCount);
         vector.put("share_count", shareCount);
         vector.put("view_count", viewCount);
-        vector.put("popularity", upvoteCount + downvoteCount + commentCount + shareCount + viewCount);
+        vector.put("popularity", safeDouble(postFeatures != null ? postFeatures.getPopularity() : null,
+                upvoteCount + commentCount + shareCount));
         return vector;
     }
 

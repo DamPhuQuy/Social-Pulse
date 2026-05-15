@@ -7,6 +7,7 @@ public final class LightGbmFeatureSchema {
 
     public static final double DEFAULT_NUMERIC_VALUE = 0.0;
     public static final double DEFAULT_UPVOTE_RATIO = 0.5;
+    // Legacy compatibility slot retained because the bundled v1 artifact still contains behavior columns.
     public static final double DEFAULT_LAST_INTERACTION_HOURS = 999.0;
 
     public static final List<String> FEATURE_ORDER = List.of(

@@ -1,4 +1,3 @@
--- Create permissions table
 CREATE TABLE permissions (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
@@ -7,7 +6,6 @@ CREATE TABLE permissions (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create roles table
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
@@ -16,7 +14,6 @@ CREATE TABLE roles (
     updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
--- Create role_permissions junction table
 CREATE TABLE role_permissions (
     role_id BIGINT NOT NULL,
     permission_id BIGINT NOT NULL,
@@ -25,7 +22,6 @@ CREATE TABLE role_permissions (
     FOREIGN KEY (permission_id) REFERENCES permissions(id) ON DELETE CASCADE
 );
 
--- Create user_roles junction table
 CREATE TABLE user_roles (
     user_id BIGINT NOT NULL,
     role_id BIGINT NOT NULL,
@@ -34,7 +30,6 @@ CREATE TABLE user_roles (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
--- Insert permissions with scope-based naming
 INSERT INTO permissions (name, description) VALUES
     ('post:read', 'Read posts'),
     ('post:create', 'Create posts'),
@@ -49,23 +44,28 @@ INSERT INTO permissions (name, description) VALUES
     ('user:update', 'Update own profile'),
     ('user:delete', 'Delete own account'),
     ('user:manage', 'Manage all users'),
-    ('user:moderate', 'Moderate users');
+    ('user:moderate', 'Moderate users')
+ON CONFLICT (name) DO UPDATE
+SET description = EXCLUDED.description;
 
--- Insert roles
 INSERT INTO roles (name, description) VALUES
     ('GUEST', 'Guest user with read-only access'),
     ('USER', 'Regular authenticated user'),
-    ('ADMIN', 'Administrator with full access');
+    ('ADMIN', 'Administrator with full access')
+ON CONFLICT (name) DO UPDATE
+SET description = EXCLUDED.description;
 
--- Assign permissions to GUEST role
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'GUEST' AND p.name IN ('post:read');
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.name = 'post:read'
+WHERE r.name = 'GUEST'
+ON CONFLICT DO NOTHING;
 
--- Assign permissions to USER role
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'USER' AND p.name IN (
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.name IN (
     'post:read',
     'post:create',
     'post:update',
@@ -76,12 +76,14 @@ WHERE r.name = 'USER' AND p.name IN (
     'user:read',
     'user:update',
     'user:delete'
-);
+)
+WHERE r.name = 'USER'
+ON CONFLICT DO NOTHING;
 
--- Assign permissions to ADMIN role
 INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r, permissions p
-WHERE r.name = 'ADMIN' AND p.name IN (
+SELECT r.id, p.id
+FROM roles r
+JOIN permissions p ON p.name IN (
     'post:read',
     'post:create',
     'post:update',
@@ -96,15 +98,24 @@ WHERE r.name = 'ADMIN' AND p.name IN (
     'user:delete',
     'user:manage',
     'user:moderate'
-);
+)
+WHERE r.name = 'ADMIN'
+ON CONFLICT DO NOTHING;
 
--- Migrate existing users to have USER role by default
 INSERT INTO user_roles (user_id, role_id)
-SELECT u.id, r.id FROM users u, roles r
-WHERE r.name = 'USER' AND NOT EXISTS (
-    SELECT 1 FROM user_roles ur WHERE ur.user_id = u.id
-);
+SELECT u.id, r.id
+FROM users u
+JOIN roles r
+    ON r.name = COALESCE(NULLIF(u.role, ''), 'USER')
+ON CONFLICT DO NOTHING;
 
--- Drop the old role column from users table (if it exists)
--- Note: Uncomment this after verifying the migration works
--- ALTER TABLE users DROP COLUMN IF EXISTS role;
+INSERT INTO user_roles (user_id, role_id)
+SELECT u.id, r.id
+FROM users u
+JOIN roles r ON r.name = 'USER'
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM user_roles ur
+    WHERE ur.user_id = u.id
+)
+ON CONFLICT DO NOTHING;
