@@ -27,5 +27,11 @@ public interface JpaFollowRepository extends JpaRepository<FollowEntity, Long> {
     List<Long> findFollowingIdsByFollowerIdAndFollowingIdIn(
             @Param("followerId") Long followerId,
             @Param("followingIds") Set<Long> followingIds);
+
+    @Query("SELECT f FROM FollowEntity f WHERE f.following.id = :userId ORDER BY f.createdAt DESC")
+    List<FollowEntity> findFollowersByFollowingId(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT f FROM FollowEntity f WHERE f.follower.id = :userId ORDER BY f.createdAt DESC")
+    List<FollowEntity> findFollowingByFollowerId(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
 }
 

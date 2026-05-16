@@ -1,8 +1,13 @@
 package com.socialpulse.app.follow.adapter.persistence;
 
 import java.util.HashSet;
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
+import java.util.stream.Collectors;
+
+import org.springframework.data.domain.PageRequest;
+import org.springframework.data.domain.Pageable;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
@@ -73,6 +78,24 @@ public class FollowRepositoryAdapter implements FollowRepository {
         }
         return new HashSet<>(jpaFollowRepository.findFollowingIdsByFollowerIdAndFollowingIdIn(
                 followerId, candidateFolloweeIds));
+    }
+
+    @Override
+    public List<Follow> findFollowersByUserId(Long userId, int offset, int limit) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return jpaFollowRepository.findFollowersByFollowingId(userId, pageable)
+                .stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<Follow> findFollowingByUserId(Long userId, int offset, int limit) {
+        Pageable pageable = PageRequest.of(offset / limit, limit);
+        return jpaFollowRepository.findFollowingByFollowerId(userId, pageable)
+                .stream()
+                .map(mapper::toDomain)
+                .collect(Collectors.toList());
     }
 }
 

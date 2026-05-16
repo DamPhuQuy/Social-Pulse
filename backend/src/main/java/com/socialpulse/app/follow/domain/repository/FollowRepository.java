@@ -1,5 +1,6 @@
 package com.socialpulse.app.follow.domain.repository;
 
+import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
@@ -19,5 +20,9 @@ public interface FollowRepository {
     long countByFollowingId(Long followingId);
 
     Set<Long> findFollowedUserIds(Long followerId, Set<Long> candidateFolloweeIds);
+
+    List<Follow> findFollowersByUserId(Long userId, int offset, int limit);
+
+    List<Follow> findFollowingByUserId(Long userId, int offset, int limit);
 }
 
