@@ -88,13 +88,16 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
         double popularity = up + (post.getCmtCount() != null ? post.getCmtCount() : 0L)
                 + (post.getShareCount() != null ? post.getShareCount() : 0L);
 
+        long netScore = up - down;
+        double hotScore = redditStyleHotScore(netScore, postAgeHours);
+
         return PostFeatures.builder()
                 .postId(post.getId())
                 .contentLength(post.getContent() != null ? post.getContent().length() : 0)
                 .hasMultimedia(post.getImageUrl() != null && !post.getImageUrl().isBlank())
                 .isSharePost(post.isSharedPost())
                 .postAgeHours(postAgeHours)
-                .hotScore(post.getHotScore())
+                .hotScore(hotScore)
                 .upvoteRatio(upvoteRatio)
                 .upvoteCount(post.getUpvoteCount())
                 .downvoteCount(post.getDownvoteCount())
@@ -152,5 +155,19 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
         } catch (Exception e) {
             log.warn("Failed to cache author features for authorId={}", authorId, e);
         }
+    }
+
+    /**
+     * Computes a hot score aligned with the Reddit formula used during training:
+     * sign(score) * log10(max(|score|, 1)) + age_component
+     *
+     * <p>The age component uses post_age_hours normalized to the same scale as
+     * Reddit's seconds/45000 divisor (≈ 12.5 hours per unit).</p>
+     */
+    private double redditStyleHotScore(long netScore, double postAgeHours) {
+        double order = Math.log10(Math.max(Math.abs(netScore), 1));
+        double sign = netScore > 0 ? 1.0 : netScore < 0 ? -1.0 : 0.0;
+        double ageComponent = postAgeHours / 12.5;
+        return sign * order + ageComponent;
     }
 }

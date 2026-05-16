@@ -44,7 +44,7 @@ final class PushshiftFeatureEngineering {
                             record.isSharePost() ? 1.0 : 0.0,
                             Math.max(referenceUtc - record.createdUtc(), 0.0) / SECONDS_PER_HOUR,
                             record.hotScore(),
-                            LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO,
+                            record.upvoteRatio(),
                             authorSeniority,
                             aggregate.postCount(),
                             aggregate.averagePopularity(),

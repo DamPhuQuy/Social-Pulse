@@ -13,6 +13,7 @@ import java.util.Random;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftDatasetScanner {
     private static final double HOT_SCORE_TIME_DIVISOR = 45000.0;
@@ -132,6 +133,11 @@ final class PushshiftDatasetScanner {
             return null;
         }
 
+        Double rawUpvoteRatio = TrainingJsonSupport.optionalDoubleValue(payload.get("upvote_ratio"));
+        double upvoteRatio = (rawUpvoteRatio != null && rawUpvoteRatio >= 0.0 && rawUpvoteRatio <= 1.0)
+                ? rawUpvoteRatio
+                : LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO;
+
         return new SubmissionRecord(
                 postId,
                 author,
@@ -145,7 +151,8 @@ final class PushshiftDatasetScanner {
                 numCrossposts,
                 detectMultimedia(payload),
                 detectSharePost(payload),
-                redditHotScore(score, createdUtc));
+                redditHotScore(score, createdUtc),
+                upvoteRatio);
     }
 
     static double popularity(int score, int numComments, int numCrossposts) {

@@ -2,7 +2,7 @@
   "artifact_version" : "1",
   "feature_schema_version" : "v1",
   "training_dataset" : "pushshift_reddit_apr2019",
-  "trained_at" : "2026-05-15T08:55:12.180853697Z",
+  "trained_at" : "2026-05-16T12:19:48.106379988Z",
   "label_strategy" : "log_popularity_proxy",
   "training_summary" : {
     "scan_stats" : {
