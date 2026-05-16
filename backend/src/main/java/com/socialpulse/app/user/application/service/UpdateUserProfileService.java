@@ -4,7 +4,6 @@ import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
-import com.socialpulse.app.user.application.dto.mapper.UserMapper;
 import com.socialpulse.app.user.application.dto.request.UserProfileMutationRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
@@ -16,14 +15,14 @@ public class UpdateUserProfileService implements UpdateUserProfileUseCase {
 
     private final UserRepository userRepository;
     private final UserProfileRepository userProfileRepository;
-    private final UserMapper userMapper;
+    private final UserProfileResponseAssembler userProfileResponseAssembler;
 
     public UpdateUserProfileService(UserRepository userRepository,
                                     UserProfileRepository userProfileRepository,
-                                    UserMapper userMapper) {
+                                    UserProfileResponseAssembler userProfileResponseAssembler) {
         this.userRepository = userRepository;
         this.userProfileRepository = userProfileRepository;
-        this.userMapper = userMapper;
+        this.userProfileResponseAssembler = userProfileResponseAssembler;
     }
 
     @Override
@@ -46,7 +45,7 @@ public class UpdateUserProfileService implements UpdateUserProfileUseCase {
                 .updatedAt(existingProfile.getUpdatedAt())
                 .build());
 
-        return userMapper.toUserViewProfileResponse(savedProfile);
+        return userProfileResponseAssembler.assemble(user, savedProfile, userId);
     }
 
     private String resolveDisplayName(String requestedDisplayName, String currentDisplayName, String fallbackUsername) {

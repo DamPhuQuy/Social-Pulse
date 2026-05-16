@@ -11,6 +11,7 @@ import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.infrastructure.persistence.entity.PostEntity;
 
 @Repository
@@ -18,6 +19,10 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
     // get posts by user id
     Page<PostEntity> findByUserId(Long userId, Pageable pageable);
+
+    Page<PostEntity> findByUserIdAndDeletedAtIsNull(Long userId, Pageable pageable);
+
+    Page<PostEntity> findByUserIdAndPrivacyAndDeletedAtIsNull(Long userId, Privacy privacy, Pageable pageable);
 
     List<PostEntity> findAllByIdIn(Set<Long> ids);
 

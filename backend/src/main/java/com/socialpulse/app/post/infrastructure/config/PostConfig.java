@@ -10,11 +10,13 @@ import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.service.CreatePostService;
 import com.socialpulse.app.post.application.service.DeletePostService;
 import com.socialpulse.app.post.application.service.EditPostService;
+import com.socialpulse.app.post.application.service.GetUserPostsService;
 import com.socialpulse.app.post.application.service.ReactPostService;
 import com.socialpulse.app.post.application.service.ViewPostService;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
 import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.EditPostUseCase;
+import com.socialpulse.app.post.application.usecase.GetUserPostsUseCase;
 import com.socialpulse.app.post.application.usecase.ReactPostUseCase;
 import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
 import com.socialpulse.app.post.domain.repository.PostReactionsRepository;
@@ -55,8 +57,10 @@ public class PostConfig {
 
     @Bean
     public ViewPostUseCase viewPostUseCase(PostRepository postRepository,
+                                           PostReactionsRepository postReactionsRepository,
+                                           UserRepository userRepository,
                                            PostMapper postMapper) {
-        return new ViewPostService(postRepository, postMapper);
+        return new ViewPostService(postRepository, postReactionsRepository, userRepository, postMapper);
     }
 
     @Bean
@@ -77,7 +81,10 @@ public class PostConfig {
         return new ReactPostService(postRepository, postReactionsRepository, userRepository,
                 postMapper);
     }
+
+    @Bean
+    public GetUserPostsUseCase getUserPostsUseCase(PostRepository postRepository, UserRepository userRepository) {
+        return new GetUserPostsService(postRepository, userRepository);
+    }
 }
-
-
 

@@ -61,7 +61,7 @@ public class UserController {
                 .targetUserId(currentUser.getId())
                 .build();
 
-        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfile(request)).build());
+        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfile(request, currentUser.getId())).build());
     }
 
     @PostMapping("/profile")
@@ -110,8 +110,9 @@ public class UserController {
                     @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User profile not found")
             }
     )
-    public ResponseEntity<ApiResponse<UserViewProfileResponse>> getOtherProfile(@PathVariable String username) {
-        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username)).build());
+    public ResponseEntity<ApiResponse<UserViewProfileResponse>> getOtherProfile(
+            @PathVariable String username,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
     }
 }
-

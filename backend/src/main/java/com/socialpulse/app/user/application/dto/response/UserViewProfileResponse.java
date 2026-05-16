@@ -14,9 +14,14 @@ import lombok.NoArgsConstructor;
 @Builder
 public class UserViewProfileResponse {
     private Long userId;
+    private String username;
     private String displayName;
     private String bio;
     private String avatarUrl;
     private LocalDate dob;
     private UserGender gender;
+    private long postCount;
+    private long followers;
+    private long following;
+    private boolean isFollowing;
 }

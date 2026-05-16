@@ -19,10 +19,13 @@ import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
 import com.socialpulse.app.user.application.service.DeleteUserProfileService;
+import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.GetUserProfileService;
+import com.socialpulse.app.user.application.service.UserProfileResponseAssembler;
 import com.socialpulse.app.user.application.service.UpdateUserProfileService;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
@@ -57,10 +60,18 @@ public class UserConfig {
     // use cases --------------------------------------
 
     @Bean
+    public UserProfileResponseAssembler userProfileResponseAssembler(
+            PostRepository postRepository,
+            FollowRepository followRepository) {
+        return new UserProfileResponseAssembler(postRepository, followRepository);
+    }
+
+    @Bean
     public GetUserProfileUseCase getUserProfileUseCase(
+            UserRepository userRepository,
             UserProfileRepository userProfileRepositoryPort,
-            UserMapper userMapper) {
-        return new GetUserProfileService(userProfileRepositoryPort, userMapper);
+            UserProfileResponseAssembler userProfileResponseAssembler) {
+        return new GetUserProfileService(userRepository, userProfileRepositoryPort, userProfileResponseAssembler);
     }
 
     @Bean
@@ -78,16 +89,16 @@ public class UserConfig {
     public CreateUserProfileUseCase createUserProfileUseCase(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
-            UserMapper userMapper) {
-        return new CreateUserProfileService(userRepository, userProfileRepository, userMapper);
+            UserProfileResponseAssembler userProfileResponseAssembler) {
+        return new CreateUserProfileService(userRepository, userProfileRepository, userProfileResponseAssembler);
     }
 
     @Bean
     public UpdateUserProfileUseCase updateUserProfileUseCase(
             UserRepository userRepository,
             UserProfileRepository userProfileRepository,
-            UserMapper userMapper) {
-        return new UpdateUserProfileService(userRepository, userProfileRepository, userMapper);
+            UserProfileResponseAssembler userProfileResponseAssembler) {
+        return new UpdateUserProfileService(userRepository, userProfileRepository, userProfileResponseAssembler);
     }
 
     @Bean
@@ -95,4 +106,3 @@ public class UserConfig {
         return new DeleteUserProfileService(userProfileRepository);
     }
 }
-

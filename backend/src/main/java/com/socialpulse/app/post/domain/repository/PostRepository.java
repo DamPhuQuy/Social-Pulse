@@ -9,6 +9,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 
 public interface PostRepository {
@@ -19,6 +20,10 @@ public interface PostRepository {
     Post save(Post post);
 
     Page<Post> findByUserId(Long userId, Pageable pageable);
+
+    Page<Post> findActiveByUserId(Long userId, Pageable pageable);
+
+    Page<Post> findActiveByUserIdAndPrivacy(Long userId, Privacy privacy, Pageable pageable);
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 
@@ -32,4 +37,3 @@ public interface PostRepository {
 
     Map<Long, Double> averagePopularityByUserIds(Set<Long> userIds);
 }
-

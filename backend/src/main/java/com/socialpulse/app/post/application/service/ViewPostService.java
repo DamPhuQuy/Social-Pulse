@@ -2,21 +2,35 @@ package com.socialpulse.app.post.application.service;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
+import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.application.usecase.ViewPostUseCase;
+import com.socialpulse.app.post.domain.model.PostReactions;
+import com.socialpulse.app.post.domain.repository.PostReactionsRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.model.User;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 
 public class ViewPostService implements ViewPostUseCase {
 
     private final PostRepository postRepositoryPort;
+    private final PostReactionsRepository postReactionsRepository;
+    private final UserRepository userRepository;
     private final PostMapper postMapper;
 
-    public ViewPostService(PostRepository postRepositoryPort, PostMapper postMapper) {
+    public ViewPostService(
+            PostRepository postRepositoryPort,
+            PostReactionsRepository postReactionsRepository,
+            UserRepository userRepository,
+            PostMapper postMapper) {
         this.postRepositoryPort = postRepositoryPort;
+        this.postReactionsRepository = postReactionsRepository;
+        this.userRepository = userRepository;
         this.postMapper = postMapper;
     }
 
@@ -33,8 +47,24 @@ public class ViewPostService implements ViewPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
-        return postMapper.toViewPostResponse(post);
+        User author = userRepository.findById(post.getUserId())
+                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+        Integer myVote = postReactionsRepository.findByPostIdAndUserId(postId, userId)
+                .map(PostReactions::getReactionType)
+                .map(this::toVote)
+                .orElse(0);
+
+        return postMapper.toViewPostResponse(post, author, myVote);
+    }
+
+    private int toVote(ReactionType reactionType) {
+        if (reactionType == ReactionType.UPVOTE) {
+            return 1;
+        }
+        if (reactionType == ReactionType.DOWNVOTE) {
+            return -1;
+        }
+        return 0;
     }
 }
-
 

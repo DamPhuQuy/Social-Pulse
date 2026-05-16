@@ -10,6 +10,7 @@ import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
@@ -48,6 +49,18 @@ public class PostRepositoryAdapter implements PostRepository {
     @Override
     public Page<Post> findByUserId(Long userId, Pageable pageable) {
         return jpaPostRepository.findByUserId(userId, pageable).map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Page<Post> findActiveByUserId(Long userId, Pageable pageable) {
+        return jpaPostRepository.findByUserIdAndDeletedAtIsNull(userId, pageable)
+                .map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Page<Post> findActiveByUserIdAndPrivacy(Long userId, Privacy privacy, Pageable pageable) {
+        return jpaPostRepository.findByUserIdAndPrivacyAndDeletedAtIsNull(userId, privacy, pageable)
+                .map(postPersistenceMapper::toDomain);
     }
 
     @Override
@@ -94,5 +107,4 @@ public class PostRepositoryAdapter implements PostRepository {
                 ));
     }
 }
-
 
