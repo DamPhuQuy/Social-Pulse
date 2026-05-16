@@ -164,8 +164,11 @@ Chi tiet:
    - `numCrossposts`
    - `hasMultimedia`
    - `isSharePost`
-   - `hotScore`
+   - `hotScore` (Reddit formula: sign * log10(|score|) + seconds/45000)
+   - `upvoteRatio` (extracted from Reddit `upvote_ratio` field, validated 0.0-1.0)
 4. `PushshiftFeatureEngineering` bien record thanh vector theo `LightGbmFeatureSchema.FEATURE_ORDER`.
+   - `upvote_ratio` dung gia tri that tu Reddit, khong hardcode
+   - `hot_score` dung Reddit formula
 5. `GradientBoostedTreeTrainer` train mot model regression tren label `log1p(popularity)`.
 6. `PushshiftTrainingPipeline` wrap artifact:
    - `artifact_version`
@@ -309,23 +312,26 @@ Chu chua dung nghia "train bang LightGBM framework that".
 
 ## 8. Chat luong feature va label hien tai
 
-Offline training hien tai van mang tinh proxy:
+Offline training hien tai van mang tinh proxy nhung da duoc cai thien:
 
-- `upvote_ratio` default cung `0.5`
-- interaction features phan lon la placeholder
+- `upvote_ratio` duoc extract tu Reddit data that (field `upvote_ratio`, validated 0.0-1.0)
+- `hot_score` dung Reddit formula: `sign(score) * log10(|score|) + seconds/45000`
+- interaction features phan lon la placeholder (chua co behavior tracking)
 - `hours_since_last_interaction` default `999.0`
 - label dung `log1p(popularity)` thay vi user engagement label that
 
-Online extraction cung chua day du behavior signal:
+Online extraction da duoc align voi training:
 
-- `engagementRate` dang hardcode `0.0`
-- `interactionCount7d` va `interactionCount30d` dang `0`
-- affinity chu yeu dua tren follow relation
+- `hot_score` dung cung formula Reddit-style: `sign(netScore) * log10(max(|netScore|, 1)) + postAgeHours / 12.5`
+- `upvote_ratio` tinh tu upvotes / (upvotes + downvotes)
+- `interactionCount7d` va `interactionCount30d` dang `0` (chua implement behavior)
+- affinity chua implement
 
 He qua:
 
-- pipeline da chay duoc end-to-end
-- nhung model hien tai nghieng ve "content popularity proxy" hon la "personalized feed ranking"
+- pipeline da chay duoc end-to-end voi feature alignment dung
+- model hien tai nghieng ve "content popularity proxy" hon la "personalized feed ranking"
+- khi implement behavior tracking, chi can fill cac slot 9-12 va retrain
 
 ## 9. Diem manh cua thiet ke hien tai
 

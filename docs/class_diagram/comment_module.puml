@@ -1,0 +1,39 @@
+@startuml Comment Module
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title Comment Module - Domain Model
+
+enum ReactionType {
+    UPVOTE
+    DOWNVOTE
+}
+
+class Comment {
+    - id: Long
+    - postId: Long
+    - userId: Long
+    - parentCommentId: Long
+    - content: String
+    - createdAt: LocalDateTime
+    - upvoteCount: Long
+    - downvoteCount: Long
+    - deleted: boolean
+    - edited: boolean
+}
+
+class CommentReaction {
+    - id: Long
+    - commentId: Long
+    - userId: Long
+    - reactionType: ReactionType
+    - createdAt: LocalDateTime
+}
+
+Comment "1" -- "*" CommentReaction
+Comment "1" -- "*" Comment : replies
+CommentReaction ..> ReactionType
+
+@enduml
