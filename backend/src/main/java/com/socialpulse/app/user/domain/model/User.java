@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.socialpulse.app.topic.domain.model.Topic;
+
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 
@@ -25,6 +27,8 @@ public class User {
 	private UserStatus status;
 	@Builder.Default
 	private Set<Role> roles = new HashSet<>();
+	@Builder.Default
+	private Set<Topic> topics = new HashSet<>();
 	private VerificationStatus verification;
 	private boolean isLocked;
 	private int failedLoginAttempts;
@@ -82,5 +86,16 @@ public class User {
 		}
 
 		this.passwordHash = newPasswordHash;
+	}
+
+	public void updateTopics(Set<Topic> newTopics) {
+		if (this.topics == null) {
+			this.topics = new HashSet<>();
+		} else {
+			this.topics.clear();
+		}
+		if (newTopics != null) {
+			this.topics.addAll(newTopics);
+		}
 	}
 }

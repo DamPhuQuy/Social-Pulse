@@ -58,6 +58,9 @@ public class PostEntity {
     @Column(name = "parent_post_id")
     private Long parentPostId;
 
+    @Column(name = "topic_id")
+    private Long topicId;
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     @Builder.Default

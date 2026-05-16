@@ -8,11 +8,16 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.RequestBody;
+
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.application.dto.request.UpdateUserTopicsRequest;
 import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -23,9 +28,11 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 public class UserController {
 
     private final GetUserProfileUseCase getUserProfileUseCase;
+    private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
 
-    public UserController(GetUserProfileUseCase getUserProfileUseCase) {
+    public UserController(GetUserProfileUseCase getUserProfileUseCase, UpdateUserTopicsUseCase updateUserTopicsUseCase) {
         this.getUserProfileUseCase = getUserProfileUseCase;
+        this.updateUserTopicsUseCase = updateUserTopicsUseCase;
     }
 
     @GetMapping("/profile")
@@ -59,6 +66,22 @@ public class UserController {
     )
     public ResponseEntity<ApiResponse<UserViewProfileResponse>> getOtherProfile(@PathVariable String username) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username)).build());
+    }
+
+    @PutMapping("/me/topics")
+    @Operation(
+            summary = "Update user topics",
+            description = "Update the topics that the current user is interested in",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Topics updated successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> updateTopics(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody UpdateUserTopicsRequest request) {
+        updateUserTopicsUseCase.updateTopics(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.<Void>builder().message("Topics updated successfully").build());
     }
 }
 

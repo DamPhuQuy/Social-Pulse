@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.socialpulse.app.topic.infrastructure.persistence.entity.TopicEntity;
+
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 
@@ -64,6 +66,15 @@ public class UserEntity {
     @Builder.Default
     private Set<RoleEntity> roles = new HashSet<>();
 
+    @ManyToMany(fetch = FetchType.LAZY)
+    @JoinTable(
+            name = "user_topics",
+            joinColumns = @JoinColumn(name = "user_id"),
+            inverseJoinColumns = @JoinColumn(name = "topic_id")
+    )
+    @Builder.Default
+    private Set<TopicEntity> topics = new HashSet<>();
+
     @Enumerated(EnumType.STRING)
     @Column(nullable = false)
     private VerificationStatus verification;
@@ -88,5 +99,12 @@ public class UserEntity {
     @PreUpdate
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
+    }
+
+    public void updateTopics(Set<TopicEntity> newTopics) {
+        this.topics.clear();
+        if (newTopics != null) {
+            this.topics.addAll(newTopics);
+        }
     }
 }

@@ -18,6 +18,10 @@ import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.GetUserProfileService;
+import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
+import com.socialpulse.app.user.application.service.UpdateUserTopicsService;
+import com.socialpulse.app.topic.infrastructure.persistence.repository.TopicRepository;
+import com.socialpulse.app.topic.infrastructure.persistence.mapper.TopicPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
@@ -65,6 +69,14 @@ public class UserConfig {
             UserRoleService userRoleService
     ) {
         return new CreateUserService(userRepository, appPasswordEncoder, userMapper, userRoleService);
+    }
+
+    @Bean
+    public UpdateUserTopicsUseCase updateUserTopicsUseCase(
+            UserRepository userRepository,
+            TopicRepository topicRepository,
+            TopicPersistenceMapper topicMapper) {
+        return new UpdateUserTopicsService(userRepository, topicRepository, topicMapper);
     }
 }
 

@@ -29,7 +29,7 @@ public class EditPostService implements EditPostUseCase {
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
 
-        post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy());
+        post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy(), request.getTopicId());
 
         Post updatedPost = postRepository.save(post);
 

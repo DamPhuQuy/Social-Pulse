@@ -24,6 +24,7 @@ public interface UserMapper {
     @Mapping(target = "lastLoginAt", ignore = true)
     @Mapping(target = "createdAt", ignore = true)
     @Mapping(target = "updatedAt", ignore = true)
+    @Mapping(target = "topics", ignore = true)
     User toUser(UserCreationRequest request, String normalizedEmail, String encodedPassword);
 
     @Mapping(target = "message", source = "message")

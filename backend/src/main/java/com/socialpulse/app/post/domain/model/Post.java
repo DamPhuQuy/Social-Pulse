@@ -21,6 +21,7 @@ public class Post {
 	private String imageUrl;
 	private String imagePublicId;
 	private Long parentPostId;
+	private Long topicId;
 	private PostType type;
 	private Privacy privacy;
 	@Builder.Default
@@ -99,11 +100,12 @@ public class Post {
 		return this.privacy == Privacy.PRIVATE;
 	}
 
-	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy) {
+	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy, Long topicId) {
 		this.content = content;
 		this.imageUrl = imageUrl;
 		this.imagePublicId = imagePublicId;
 		this.privacy = privacy;
+		this.topicId = topicId;
 	}
 }
 
