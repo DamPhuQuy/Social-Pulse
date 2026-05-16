@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -36,4 +37,12 @@ public interface PostRepository {
     Map<Long, Long> countByUserIds(Set<Long> userIds);
 
     Map<Long, Double> averagePopularityByUserIds(Set<Long> userIds);
+
+    Page<Post> searchPublicActiveByContent(String query, Pageable pageable);
+
+    Page<Post> findPublicActiveByHashtag(String hashtag, Pageable pageable);
+
+    Page<Post> findPublicActiveByMention(String mention, Pageable pageable);
+
+    List<Post> findRecentPublicActiveSince(LocalDateTime since);
 }

@@ -1,6 +1,5 @@
 package com.socialpulse.app.comment.application.service;
 
-import com.socialpulse.app.comment.application.dto.mapper.CommentMapper;
 import com.socialpulse.app.comment.application.dto.request.CommentUpdateRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.application.usecase.UpdateCommentUseCase;
@@ -17,14 +16,14 @@ public class UpdateCommentService implements UpdateCommentUseCase {
 
     private final CommentRepository commentRepository;
     private final UserRepository userRepository;
-    private final CommentMapper commentMapper;
+    private final CommentResponseAssembler commentResponseAssembler;
 
     public UpdateCommentService(CommentRepository commentRepository,
                                 UserRepository userRepository,
-                                CommentMapper commentMapper) {
+                                CommentResponseAssembler commentResponseAssembler) {
         this.commentRepository = commentRepository;
         this.userRepository = userRepository;
-        this.commentMapper = commentMapper;
+        this.commentResponseAssembler = commentResponseAssembler;
     }
 
     @Override
@@ -55,6 +54,6 @@ public class UpdateCommentService implements UpdateCommentUseCase {
         User user = userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
-        return commentMapper.toCommentCreationResponse(updatedComment, user);
+        return commentResponseAssembler.toCommentCreationResponse(updatedComment, user);
     }
 }

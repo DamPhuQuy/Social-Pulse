@@ -1,7 +1,9 @@
 package com.socialpulse.app.comment.adapter.persistence;
 
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.Set;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
@@ -43,6 +45,24 @@ public class CommentRepositoryAdapter implements CommentRepository {
 				.collect(Collectors.toList());
 	}
 
+	@Override
+	public List<Comment> findRepliesByParentCommentId(Long postId, Long parentCommentId, long lastId, int limit) {
+		return jpaCommentRepository.findRepliesByParentCommentId(postId, parentCommentId, lastId, PageRequest.of(0, limit))
+				.stream()
+				.map(commentPersistenceMapper::toDomain)
+				.collect(Collectors.toList());
+	}
+
+	@Override
+	public Map<Long, Long> countRepliesByParentCommentIds(Set<Long> parentCommentIds) {
+		if (parentCommentIds == null || parentCommentIds.isEmpty()) {
+			return Map.of();
+		}
+		return jpaCommentRepository.countRepliesByParentCommentIds(parentCommentIds).stream()
+				.collect(Collectors.toMap(
+						row -> (Long) row[0],
+						row -> (Long) row[1]
+				));
+	}
+
 }
-
-

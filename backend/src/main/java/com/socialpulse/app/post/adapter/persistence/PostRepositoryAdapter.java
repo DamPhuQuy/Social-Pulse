@@ -4,6 +4,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.time.LocalDateTime;
 import java.util.stream.Collectors;
 
 import org.springframework.data.domain.Page;
@@ -106,5 +107,29 @@ public class PostRepositoryAdapter implements PostRepository {
                         row -> (Double) row[1]
                 ));
     }
-}
 
+    @Override
+    public Page<Post> searchPublicActiveByContent(String query, Pageable pageable) {
+        return jpaPostRepository.searchPublicActiveByContent(query, pageable)
+                .map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Page<Post> findPublicActiveByHashtag(String hashtag, Pageable pageable) {
+        return jpaPostRepository.findPublicActiveByHashtag(hashtag, pageable)
+                .map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Page<Post> findPublicActiveByMention(String mention, Pageable pageable) {
+        return jpaPostRepository.findPublicActiveByMention(mention, pageable)
+                .map(postPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public List<Post> findRecentPublicActiveSince(LocalDateTime since) {
+        return jpaPostRepository.findRecentPublicActiveSince(since).stream()
+                .map(postPersistenceMapper::toDomain)
+                .toList();
+    }
+}

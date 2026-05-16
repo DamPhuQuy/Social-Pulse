@@ -6,6 +6,7 @@ import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.common.utils.ReactionType;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
@@ -26,15 +27,18 @@ public class ReactPostService implements ReactPostUseCase {
     private final PostReactionsRepository postReactionsRepository;
     private final UserRepository userRepository;
     private final PostMapper postMapper;
+    private final NotificationCommandService notificationCommandService;
 
     public ReactPostService(PostRepository postRepository,
                             PostReactionsRepository postReactionsRepository,
                             UserRepository userRepository,
-                            PostMapper postMapper) {
+                            PostMapper postMapper,
+                            NotificationCommandService notificationCommandService) {
         this.postRepository = postRepository;
         this.postReactionsRepository = postReactionsRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
+        this.notificationCommandService = notificationCommandService;
     }
 
     @Override
@@ -59,6 +63,7 @@ public class ReactPostService implements ReactPostUseCase {
             PostReactions savedReaction = postReactionsRepository.save(newReaction);
             incrementReactionCount(post, targetReaction);
             postRepository.save(post);
+            notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
 
             log.debug("New reaction saved for user {} on post {}", currentUser.getId(), post.getId());
             return postMapper.toPostReactionResponse(savedReaction);
@@ -78,6 +83,7 @@ public class ReactPostService implements ReactPostUseCase {
 
         PostReactions updatedReaction = postReactionsRepository.save(currentReaction);
         postRepository.save(post);
+        notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
 
         log.debug("Reaction updated for user {} on post {} to {}", currentUser.getId(), post.getId(), targetReaction);
         return postMapper.toPostReactionResponse(updatedReaction);
@@ -106,5 +112,4 @@ public class ReactPostService implements ReactPostUseCase {
     }
 
 }
-
 

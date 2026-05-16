@@ -4,6 +4,9 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.socialpulse.app.user.domain.model.User;
 
 public interface UserRepository {
@@ -21,6 +24,7 @@ public interface UserRepository {
 
     java.util.List<User> findAllById(java.util.List<Long> ids);
     List<User> findByIds(Set<Long> ids);
-}
 
+    Page<User> searchByQuery(String query, Pageable pageable);
+}
 

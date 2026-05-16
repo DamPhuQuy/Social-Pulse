@@ -47,14 +47,17 @@ public class ViewPostService implements ViewPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
-        User author = userRepository.findById(post.getUserId())
+        post.incrementViewCount();
+        Post viewedPost = postRepositoryPort.save(post);
+
+        User author = userRepository.findById(viewedPost.getUserId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
         Integer myVote = postReactionsRepository.findByPostIdAndUserId(postId, userId)
                 .map(PostReactions::getReactionType)
                 .map(this::toVote)
                 .orElse(0);
 
-        return postMapper.toViewPostResponse(post, author, myVote);
+        return postMapper.toViewPostResponse(viewedPost, author, myVote);
     }
 
     private int toVote(ReactionType reactionType) {
@@ -67,4 +70,3 @@ public class ViewPostService implements ViewPostUseCase {
         return 0;
     }
 }
-

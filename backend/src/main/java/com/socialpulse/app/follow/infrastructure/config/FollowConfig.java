@@ -21,6 +21,7 @@ import com.socialpulse.app.follow.application.usecase.UnfollowUserUseCase;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.follow.infrastructure.persistence.mapper.FollowPersistenceMapper;
 import com.socialpulse.app.follow.infrastructure.persistence.repository.JpaFollowRepository;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
@@ -38,8 +39,9 @@ public class FollowConfig {
     @Bean
     public FollowUserUseCase followUserUseCase(FollowRepository followRepository,
                                                UserRepository userRepository,
-                                               FollowMapper followMapper) {
-        return new FollowUserService(followRepository, userRepository, followMapper);
+                                               FollowMapper followMapper,
+                                               NotificationCommandService notificationCommandService) {
+        return new FollowUserService(followRepository, userRepository, followMapper, notificationCommandService);
     }
 
     @Bean

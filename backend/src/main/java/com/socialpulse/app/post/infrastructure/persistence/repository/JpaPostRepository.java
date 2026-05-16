@@ -2,6 +2,7 @@ package com.socialpulse.app.post.infrastructure.persistence.repository;
 
 import java.util.List;
 import java.util.Set;
+import java.time.LocalDateTime;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
@@ -44,4 +45,48 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
             GROUP BY p.user.id
             """)
     List<Object[]> averagePopularityByUserIds(@Param("userIds") Set<Long> userIds);
+
+    @Query("""
+            SELECT p
+            FROM PostEntity p
+            WHERE p.deletedAt IS NULL
+              AND p.privacy = com.socialpulse.app.post.domain.enums.Privacy.PUBLIC
+              AND p.toxic = false
+              AND LOWER(COALESCE(p.content, '')) LIKE LOWER(CONCAT('%', :query, '%'))
+            ORDER BY p.createdAt DESC
+            """)
+    Page<PostEntity> searchPublicActiveByContent(@Param("query") String query, Pageable pageable);
+
+    @Query("""
+            SELECT p
+            FROM PostEntity p
+            WHERE p.deletedAt IS NULL
+              AND p.privacy = com.socialpulse.app.post.domain.enums.Privacy.PUBLIC
+              AND p.toxic = false
+              AND LOWER(COALESCE(p.content, '')) LIKE LOWER(CONCAT('%', :hashtag, '%'))
+            ORDER BY p.createdAt DESC
+            """)
+    Page<PostEntity> findPublicActiveByHashtag(@Param("hashtag") String hashtag, Pageable pageable);
+
+    @Query("""
+            SELECT p
+            FROM PostEntity p
+            WHERE p.deletedAt IS NULL
+              AND p.privacy = com.socialpulse.app.post.domain.enums.Privacy.PUBLIC
+              AND p.toxic = false
+              AND LOWER(COALESCE(p.content, '')) LIKE LOWER(CONCAT('%', :mention, '%'))
+            ORDER BY p.createdAt DESC
+            """)
+    Page<PostEntity> findPublicActiveByMention(@Param("mention") String mention, Pageable pageable);
+
+    @Query("""
+            SELECT p
+            FROM PostEntity p
+            WHERE p.deletedAt IS NULL
+              AND p.privacy = com.socialpulse.app.post.domain.enums.Privacy.PUBLIC
+              AND p.toxic = false
+              AND p.createdAt >= :since
+            ORDER BY p.createdAt DESC
+            """)
+    List<PostEntity> findRecentPublicActiveSince(@Param("since") LocalDateTime since);
 }

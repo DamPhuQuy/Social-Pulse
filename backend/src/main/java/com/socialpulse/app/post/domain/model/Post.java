@@ -75,6 +75,18 @@ public class Post {
 		this.shareCount = Math.max(0L, safeCount(this.shareCount) - 1L);
 	}
 
+	public void incrementCommentCount() {
+		this.cmtCount = safeCount(this.cmtCount) + 1L;
+	}
+
+	public void decrementCommentCount() {
+		this.cmtCount = Math.max(0L, safeCount(this.cmtCount) - 1L);
+	}
+
+	public void incrementViewCount() {
+		this.viewCount = safeCount(this.viewCount) + 1L;
+	}
+
 	private void updateHotScore() {
 		this.hotScore = (double) (safeCount(this.upvoteCount) - safeCount(this.downvoteCount));
 	}
@@ -106,5 +118,4 @@ public class Post {
 		this.privacy = privacy;
 	}
 }
-
 

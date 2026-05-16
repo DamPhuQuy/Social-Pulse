@@ -12,11 +12,15 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
+import com.socialpulse.app.comment.application.dto.request.CommentReactionRequest;
 import com.socialpulse.app.comment.application.dto.request.CommentUpdateRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
+import com.socialpulse.app.comment.application.dto.response.CommentReactionResponse;
 import com.socialpulse.app.comment.application.usecase.CreateCommentUseCase;
 import com.socialpulse.app.comment.application.usecase.DeleteCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.GetCommentRepliesUseCase;
 import com.socialpulse.app.comment.application.usecase.UpdateCommentUseCase;
+import com.socialpulse.app.comment.application.usecase.ReactCommentUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
@@ -38,15 +42,21 @@ public class CommentController {
     private final UpdateCommentUseCase updateCommentUseCase;
     private final DeleteCommentUseCase deleteCommentUseCase;
     private final GetTopLevelCommentsUseCase getTopLevelCommentsUseCase;
+    private final GetCommentRepliesUseCase getCommentRepliesUseCase;
+    private final ReactCommentUseCase reactCommentUseCase;
 
     public CommentController(CreateCommentUseCase createCommentUseCase,
                            UpdateCommentUseCase updateCommentUseCase,
                            DeleteCommentUseCase deleteCommentUseCase,
-                           GetTopLevelCommentsUseCase getTopLevelCommentsUseCase) {
+                           GetTopLevelCommentsUseCase getTopLevelCommentsUseCase,
+                           GetCommentRepliesUseCase getCommentRepliesUseCase,
+                           ReactCommentUseCase reactCommentUseCase) {
         this.createCommentUseCase = createCommentUseCase;
         this.updateCommentUseCase = updateCommentUseCase;
         this.deleteCommentUseCase = deleteCommentUseCase;
         this.getTopLevelCommentsUseCase = getTopLevelCommentsUseCase;
+        this.getCommentRepliesUseCase = getCommentRepliesUseCase;
+        this.reactCommentUseCase = reactCommentUseCase;
     }
 
     @PostMapping
@@ -105,6 +115,42 @@ public class CommentController {
                 .code(200)
                 .message("Comments fetched successfully.")
                 .data(responses)
+                .build());
+    }
+
+    @GetMapping("/{commentId}/replies")
+    @PreAuthorize("hasAuthority('comment:read')")
+    @Operation(summary = "Get comment replies", description = "Get direct replies for a comment with offset and limit")
+    public ResponseEntity<ApiResponse<List<CommentResponse>>> getCommentReplies(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestParam(defaultValue = "0") Long lastId,
+            @RequestParam(defaultValue = "10") int limit) {
+
+        List<CommentResponse> responses = getCommentRepliesUseCase.getReplies(postId, commentId, lastId, limit);
+
+        return ResponseEntity.ok(ApiResponse.<List<CommentResponse>>builder()
+                .code(200)
+                .message("Replies fetched successfully.")
+                .data(responses)
+                .build());
+    }
+
+    @PostMapping("/{commentId}/react")
+    @PreAuthorize("hasAuthority('comment:react')")
+    @Operation(summary = "React to comment", description = "Create, update, or remove a reaction on a comment")
+    public ResponseEntity<ApiResponse<CommentReactionResponse>> reactComment(
+            @PathVariable Long postId,
+            @PathVariable Long commentId,
+            @RequestBody @Valid CommentReactionRequest request,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+
+        CommentReactionResponse response = reactCommentUseCase.react(postId, commentId, request, currentUser);
+
+        return ResponseEntity.ok(ApiResponse.<CommentReactionResponse>builder()
+                .code(200)
+                .message("Comment reaction updated successfully.")
+                .data(response)
                 .build());
     }
 

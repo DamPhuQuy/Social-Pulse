@@ -11,6 +11,7 @@ import com.socialpulse.app.post.application.service.CreatePostService;
 import com.socialpulse.app.post.application.service.DeletePostService;
 import com.socialpulse.app.post.application.service.EditPostService;
 import com.socialpulse.app.post.application.service.GetUserPostsService;
+import com.socialpulse.app.post.application.service.PostSummaryAssembler;
 import com.socialpulse.app.post.application.service.ReactPostService;
 import com.socialpulse.app.post.application.service.ViewPostService;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
@@ -24,6 +25,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostReactionRepository;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
@@ -77,14 +79,17 @@ public class PostConfig {
     public ReactPostUseCase reactPostUseCase(PostRepository postRepository,
                                              PostReactionsRepository postReactionsRepository,
                                              UserRepository userRepository,
-                                             PostMapper postMapper) {
+                                             PostMapper postMapper,
+                                             NotificationCommandService notificationCommandService) {
         return new ReactPostService(postRepository, postReactionsRepository, userRepository,
-                postMapper);
+                postMapper, notificationCommandService);
     }
 
     @Bean
-    public GetUserPostsUseCase getUserPostsUseCase(PostRepository postRepository, UserRepository userRepository) {
-        return new GetUserPostsService(postRepository, userRepository);
+    public GetUserPostsUseCase getUserPostsUseCase(
+            PostRepository postRepository,
+            UserRepository userRepository,
+            PostSummaryAssembler postSummaryAssembler) {
+        return new GetUserPostsService(postRepository, userRepository, postSummaryAssembler);
     }
 }
-
