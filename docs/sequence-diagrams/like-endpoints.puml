@@ -1,0 +1,325 @@
+@startuml
+title POST /api/posts/{postId}/like - Like Post
+
+actor Client
+participant AuthFilter
+participant LikeController
+participant LikePostService
+participant PostRepository
+participant LikeRepository
+database Database
+
+Client -> AuthFilter: POST /api/posts/{postId}/like
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> LikeController: forward request with currentUserId
+activate LikeController
+
+LikeController -> LikePostService: likePost(postId, currentUserId)
+activate LikePostService
+
+LikePostService -> PostRepository: findById(postId)
+PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+Database --> PostRepository: post row
+PostRepository --> LikePostService: Optional<Post>
+
+alt Post not found
+    LikePostService --> LikeController: PostNotFoundException
+    LikeController --> Client: 404 Not Found
+else Post found
+    LikePostService -> LikePostService: check post visibility\nand access permission
+
+    alt No access to post
+        LikePostService --> LikeController: ForbiddenException
+        LikeController --> Client: 403 Forbidden
+    else Has access
+        LikePostService -> LikeRepository: existsByPostIdAndUserId(postId, currentUserId)
+        LikeRepository -> Database: SELECT COUNT(*) FROM likes\nWHERE post_id = ? AND user_id = ?
+        Database --> LikeRepository: count
+        LikeRepository --> LikePostService: boolean
+
+        alt Already liked
+            LikePostService --> LikeController: AlreadyLikedException
+            LikeController --> Client: 409 Conflict
+        else Not liked yet
+            LikePostService -> LikePostService: begin transaction
+
+            LikePostService -> LikePostService: create Like entity
+
+            LikePostService -> LikeRepository: save(like)
+            LikeRepository -> Database: INSERT INTO likes
+            Database --> LikeRepository: saved like
+            LikeRepository --> LikePostService: Like
+
+            LikePostService -> PostRepository: incrementLikeCount(postId)
+            PostRepository -> Database: UPDATE posts SET like_count = like_count + 1\nWHERE id = ?
+            Database --> PostRepository: void
+
+            LikePostService -> LikePostService: commit transaction
+
+            LikePostService --> LikeController: LikeResponse
+            deactivate LikePostService
+
+            LikeController --> Client: 201 Created(response)
+            deactivate LikeController
+        end
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title DELETE /api/posts/{postId}/like - Unlike Post
+
+actor Client
+participant AuthFilter
+participant LikeController
+participant UnlikePostService
+participant PostRepository
+participant LikeRepository
+database Database
+
+Client -> AuthFilter: DELETE /api/posts/{postId}/like
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> LikeController: forward request with currentUserId
+activate LikeController
+
+LikeController -> UnlikePostService: unlikePost(postId, currentUserId)
+activate UnlikePostService
+
+UnlikePostService -> PostRepository: findById(postId)
+PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+Database --> PostRepository: post row
+PostRepository --> UnlikePostService: Optional<Post>
+
+alt Post not found
+    UnlikePostService --> LikeController: PostNotFoundException
+    LikeController --> Client: 404 Not Found
+else Post found
+    UnlikePostService -> LikeRepository: findByPostIdAndUserId(postId, currentUserId)
+    LikeRepository -> Database: SELECT * FROM likes\nWHERE post_id = ? AND user_id = ?
+    Database --> LikeRepository: like row
+    LikeRepository --> UnlikePostService: Optional<Like>
+
+    alt Like not found
+        UnlikePostService --> LikeController: LikeNotFoundException
+        LikeController --> Client: 404 Not Found
+    else Like found
+        UnlikePostService -> UnlikePostService: begin transaction
+
+        UnlikePostService -> LikeRepository: delete(like)
+        LikeRepository -> Database: DELETE FROM likes WHERE id = ?
+        Database --> LikeRepository: void
+
+        UnlikePostService -> PostRepository: decrementLikeCount(postId)
+        PostRepository -> Database: UPDATE posts SET like_count = like_count - 1\nWHERE id = ?
+        Database --> PostRepository: void
+
+        UnlikePostService -> UnlikePostService: commit transaction
+
+        UnlikePostService --> LikeController: void
+        deactivate UnlikePostService
+
+        LikeController --> Client: 204 No Content
+        deactivate LikeController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title POST /api/comments/{commentId}/like - Like Comment
+
+actor Client
+participant AuthFilter
+participant LikeController
+participant LikeCommentService
+participant CommentRepository
+participant LikeRepository
+database Database
+
+Client -> AuthFilter: POST /api/comments/{commentId}/like
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> LikeController: forward request with currentUserId
+activate LikeController
+
+LikeController -> LikeCommentService: likeComment(commentId, currentUserId)
+activate LikeCommentService
+
+LikeCommentService -> CommentRepository: findById(commentId)
+CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+Database --> CommentRepository: comment row
+CommentRepository --> LikeCommentService: Optional<Comment>
+
+alt Comment not found
+    LikeCommentService --> LikeController: CommentNotFoundException
+    LikeController --> Client: 404 Not Found
+else Comment found
+    LikeCommentService -> LikeRepository: existsByCommentIdAndUserId(commentId, currentUserId)
+    LikeRepository -> Database: SELECT COUNT(*) FROM likes\nWHERE comment_id = ? AND user_id = ?
+    Database --> LikeRepository: count
+    LikeRepository --> LikeCommentService: boolean
+
+    alt Already liked
+        LikeCommentService --> LikeController: AlreadyLikedException
+        LikeController --> Client: 409 Conflict
+    else Not liked yet
+        LikeCommentService -> LikeCommentService: begin transaction
+
+        LikeCommentService -> LikeCommentService: create Like entity
+
+        LikeCommentService -> LikeRepository: save(like)
+        LikeRepository -> Database: INSERT INTO likes
+        Database --> LikeRepository: saved like
+        LikeRepository --> LikeCommentService: Like
+
+        LikeCommentService -> CommentRepository: incrementLikeCount(commentId)
+        CommentRepository -> Database: UPDATE comments SET like_count = like_count + 1\nWHERE id = ?
+        Database --> CommentRepository: void
+
+        LikeCommentService -> LikeCommentService: commit transaction
+
+        LikeCommentService --> LikeController: LikeResponse
+        deactivate LikeCommentService
+
+        LikeController --> Client: 201 Created(response)
+        deactivate LikeController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title DELETE /api/comments/{commentId}/like - Unlike Comment
+
+actor Client
+participant AuthFilter
+participant LikeController
+participant UnlikeCommentService
+participant CommentRepository
+participant LikeRepository
+database Database
+
+Client -> AuthFilter: DELETE /api/comments/{commentId}/like
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> LikeController: forward request with currentUserId
+activate LikeController
+
+LikeController -> UnlikeCommentService: unlikeComment(commentId, currentUserId)
+activate UnlikeCommentService
+
+UnlikeCommentService -> CommentRepository: findById(commentId)
+CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+Database --> CommentRepository: comment row
+CommentRepository --> UnlikeCommentService: Optional<Comment>
+
+alt Comment not found
+    UnlikeCommentService --> LikeController: CommentNotFoundException
+    LikeController --> Client: 404 Not Found
+else Comment found
+    UnlikeCommentService -> LikeRepository: findByCommentIdAndUserId(commentId, currentUserId)
+    LikeRepository -> Database: SELECT * FROM likes\nWHERE comment_id = ? AND user_id = ?
+    Database --> LikeRepository: like row
+    LikeRepository --> UnlikeCommentService: Optional<Like>
+
+    alt Like not found
+        UnlikeCommentService --> LikeController: LikeNotFoundException
+        LikeController --> Client: 404 Not Found
+    else Like found
+        UnlikeCommentService -> UnlikeCommentService: begin transaction
+
+        UnlikeCommentService -> LikeRepository: delete(like)
+        LikeRepository -> Database: DELETE FROM likes WHERE id = ?
+        Database --> LikeRepository: void
+
+        UnlikeCommentService -> CommentRepository: decrementLikeCount(commentId)
+        CommentRepository -> Database: UPDATE comments SET like_count = like_count - 1\nWHERE id = ?
+        Database --> CommentRepository: void
+
+        UnlikeCommentService -> UnlikeCommentService: commit transaction
+
+        UnlikeCommentService --> LikeController: void
+        deactivate UnlikeCommentService
+
+        LikeController --> Client: 204 No Content
+        deactivate LikeController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/posts/{postId}/likes - Get Post Likes
+
+actor Client
+participant AuthFilter
+participant LikeController
+participant GetPostLikesService
+participant PostRepository
+participant LikeRepository
+participant UserRepository
+participant UserMapper
+database Database
+
+Client -> AuthFilter: GET /api/posts/{postId}/likes?page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> LikeController: forward request with currentUserId (if authenticated)
+activate LikeController
+
+LikeController -> GetPostLikesService: getPostLikes(postId, pageable)
+activate GetPostLikesService
+
+GetPostLikesService -> PostRepository: findById(postId)
+PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+Database --> PostRepository: post row
+PostRepository --> GetPostLikesService: Optional<Post>
+
+alt Post not found
+    GetPostLikesService --> LikeController: PostNotFoundException
+    LikeController --> Client: 404 Not Found
+else Post found
+    GetPostLikesService -> GetPostLikesService: check post visibility\nand access permission
+
+    alt No access to post
+        GetPostLikesService --> LikeController: ForbiddenException
+        LikeController --> Client: 403 Forbidden
+    else Has access
+        GetPostLikesService -> LikeRepository: findByPostId(postId, pageable)
+        LikeRepository -> Database: SELECT * FROM likes\nWHERE post_id = ?\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+        Database --> LikeRepository: like rows
+        LikeRepository --> GetPostLikesService: Page<Like>
+
+        loop for each like
+            GetPostLikesService -> UserRepository: findById(like.userId)
+            UserRepository -> Database: SELECT * FROM users WHERE id = ?
+            Database --> UserRepository: user row
+            UserRepository --> GetPostLikesService: Optional<User>
+
+            GetPostLikesService -> UserMapper: toUserSummaryResponse(user)
+            UserMapper --> GetPostLikesService: UserSummaryResponse
+        end
+
+        GetPostLikesService --> LikeController: Page<UserSummaryResponse>
+        deactivate GetPostLikesService
+
+        LikeController --> Client: 200 OK(response)
+        deactivate LikeController
+    end
+end
+
+@enduml

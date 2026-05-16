@@ -1,0 +1,202 @@
+@startuml
+title POST /api/auth/register - User Registration
+
+actor Client
+participant AuthController
+participant RegisterUserService
+participant UserRepository
+participant PasswordEncoder
+database Database
+
+Client -> AuthController: POST /api/auth/register(RegisterRequest)
+activate AuthController
+
+AuthController -> RegisterUserService: register(request)
+activate RegisterUserService
+
+RegisterUserService -> RegisterUserService: validate request\n(email, username, password)
+
+RegisterUserService -> UserRepository: existsByEmail(email)
+UserRepository -> Database: SELECT COUNT(*) WHERE email = ?
+Database --> UserRepository: count
+UserRepository --> RegisterUserService: boolean
+
+alt Email already exists
+    RegisterUserService --> AuthController: EmailAlreadyExistsException
+    AuthController --> Client: 409 Conflict
+else Email available
+    RegisterUserService -> UserRepository: existsByUsername(username)
+    UserRepository -> Database: SELECT COUNT(*) WHERE username = ?
+    Database --> UserRepository: count
+    UserRepository --> RegisterUserService: boolean
+
+    alt Username already exists
+        RegisterUserService --> AuthController: UsernameAlreadyExistsException
+        AuthController --> Client: 409 Conflict
+    else Username available
+        RegisterUserService -> PasswordEncoder: encode(password)
+        PasswordEncoder --> RegisterUserService: encodedPassword
+
+        RegisterUserService -> RegisterUserService: create User entity\n(ROLE_USER, ACTIVE)
+
+        RegisterUserService -> UserRepository: save(user)
+        UserRepository -> Database: INSERT INTO users
+        Database --> UserRepository: saved user
+        UserRepository --> RegisterUserService: User
+
+        RegisterUserService --> AuthController: RegisterResponse
+        deactivate RegisterUserService
+
+        AuthController --> Client: 201 Created(response)
+        deactivate AuthController
+    end
+end
+
+@enduml
+
+@startuml
+title POST /api/auth/login - User Login
+
+actor Client
+participant AuthController
+participant LoginService
+participant UserRepository
+participant PasswordEncoder
+participant JwtTokenProvider
+database Database
+
+Client -> AuthController: POST /api/auth/login(LoginRequest)
+activate AuthController
+
+AuthController -> LoginService: login(request)
+activate LoginService
+
+LoginService -> UserRepository: findByUsernameOrEmail(identifier)
+UserRepository -> Database: SELECT * FROM users\nWHERE username = ? OR email = ?
+Database --> UserRepository: user row
+UserRepository --> LoginService: Optional<User>
+
+alt User not found
+    LoginService --> AuthController: InvalidCredentialsException
+    AuthController --> Client: 401 Unauthorized
+else User found
+    LoginService -> LoginService: check user status
+
+    alt User not active
+        LoginService --> AuthController: AccountDisabledException
+        AuthController --> Client: 403 Forbidden
+    else User active
+        LoginService -> PasswordEncoder: matches(rawPassword, encodedPassword)
+        PasswordEncoder --> LoginService: boolean
+
+        alt Password mismatch
+            LoginService --> AuthController: InvalidCredentialsException
+            AuthController --> Client: 401 Unauthorized
+        else Password correct
+            LoginService -> JwtTokenProvider: generateAccessToken(userId, roles)
+            JwtTokenProvider --> LoginService: accessToken
+
+            LoginService -> JwtTokenProvider: generateRefreshToken(userId)
+            JwtTokenProvider --> LoginService: refreshToken
+
+            LoginService --> AuthController: LoginResponse(tokens, user)
+            deactivate LoginService
+
+            AuthController --> Client: 200 OK(response)
+            deactivate AuthController
+        end
+    end
+end
+
+@enduml
+
+@startuml
+title POST /api/auth/refresh - Refresh Access Token
+
+actor Client
+participant AuthController
+participant RefreshTokenService
+participant JwtTokenProvider
+participant UserRepository
+database Database
+
+Client -> AuthController: POST /api/auth/refresh(RefreshTokenRequest)
+activate AuthController
+
+AuthController -> RefreshTokenService: refresh(refreshToken)
+activate RefreshTokenService
+
+RefreshTokenService -> JwtTokenProvider: validateToken(refreshToken)
+JwtTokenProvider --> RefreshTokenService: boolean
+
+alt Invalid token
+    RefreshTokenService --> AuthController: InvalidTokenException
+    AuthController --> Client: 401 Unauthorized
+else Valid token
+    RefreshTokenService -> JwtTokenProvider: getUserIdFromToken(refreshToken)
+    JwtTokenProvider --> RefreshTokenService: userId
+
+    RefreshTokenService -> UserRepository: findById(userId)
+    UserRepository -> Database: SELECT * FROM users WHERE id = ?
+    Database --> UserRepository: user row
+    UserRepository --> RefreshTokenService: Optional<User>
+
+    alt User not found
+        RefreshTokenService --> AuthController: UserNotFoundException
+        AuthController --> Client: 404 Not Found
+    else User found
+        RefreshTokenService -> RefreshTokenService: check user status
+
+        alt User not active
+            RefreshTokenService --> AuthController: AccountDisabledException
+            AuthController --> Client: 403 Forbidden
+        else User active
+            RefreshTokenService -> JwtTokenProvider: generateAccessToken(userId, roles)
+            JwtTokenProvider --> RefreshTokenService: newAccessToken
+
+            RefreshTokenService --> AuthController: RefreshTokenResponse(accessToken)
+            deactivate RefreshTokenService
+
+            AuthController --> Client: 200 OK(response)
+            deactivate AuthController
+        end
+    end
+end
+
+@enduml
+
+@startuml
+title POST /api/auth/logout - User Logout
+
+actor Client
+participant AuthFilter
+participant AuthController
+participant LogoutService
+participant TokenBlacklistRepository
+database Database
+
+Client -> AuthFilter: POST /api/auth/logout
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> AuthController: forward request with currentUserId
+activate AuthController
+
+AuthController -> LogoutService: logout(currentUserId, accessToken)
+activate LogoutService
+
+LogoutService -> LogoutService: extract token expiration
+LogoutService -> TokenBlacklistRepository: save(BlacklistedToken)
+TokenBlacklistRepository -> Database: INSERT INTO token_blacklist
+Database --> TokenBlacklistRepository: saved
+TokenBlacklistRepository --> LogoutService: void
+
+LogoutService --> AuthController: void
+deactivate LogoutService
+
+AuthController --> Client: 204 No Content
+deactivate AuthController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
