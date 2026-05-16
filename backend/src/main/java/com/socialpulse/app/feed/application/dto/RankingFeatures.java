@@ -12,8 +12,5 @@ import lombok.NoArgsConstructor;
 public class RankingFeatures {
     private Long postId;
     private PostFeatures postFeatures;
-    private UserFeatures authorFeatures;
-    private UserFeatures viewerFeatures;
-    private InteractionFeatures interactionFeatures;
+    private AuthorFeatures authorFeatures;
 }
-

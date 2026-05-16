@@ -4,6 +4,8 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
@@ -28,10 +30,15 @@ public interface JpaFollowRepository extends JpaRepository<FollowEntity, Long> {
             @Param("followerId") Long followerId,
             @Param("followingIds") Set<Long> followingIds);
 
-    @Query("SELECT f FROM FollowEntity f WHERE f.following.id = :userId ORDER BY f.createdAt DESC")
-    List<FollowEntity> findFollowersByFollowingId(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    @Query(
+            value = "SELECT f.follower.id FROM FollowEntity f WHERE f.following.id = :followingId ORDER BY f.createdAt DESC",
+            countQuery = "SELECT COUNT(f) FROM FollowEntity f WHERE f.following.id = :followingId"
+    )
+    Page<Long> findFollowerIdsByFollowingId(@Param("followingId") Long followingId, Pageable pageable);
 
-    @Query("SELECT f FROM FollowEntity f WHERE f.follower.id = :userId ORDER BY f.createdAt DESC")
-    List<FollowEntity> findFollowingByFollowerId(@Param("userId") Long userId, org.springframework.data.domain.Pageable pageable);
+    @Query(
+            value = "SELECT f.following.id FROM FollowEntity f WHERE f.follower.id = :followerId ORDER BY f.createdAt DESC",
+            countQuery = "SELECT COUNT(f) FROM FollowEntity f WHERE f.follower.id = :followerId"
+    )
+    Page<Long> findFollowingIdsByFollowerId(@Param("followerId") Long followerId, Pageable pageable);
 }
-

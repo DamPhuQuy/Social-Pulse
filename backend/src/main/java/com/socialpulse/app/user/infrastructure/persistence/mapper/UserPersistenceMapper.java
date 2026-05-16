@@ -8,6 +8,7 @@ import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.model.UserProfile;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserProfileEntity;
+import org.mapstruct.Named;
 
 @Mapper(componentModel = "spring", uses = RolePersistenceMapper.class)
 public interface UserPersistenceMapper {
@@ -22,8 +23,7 @@ public interface UserPersistenceMapper {
     @Mapping(target = "profile", ignore = true)
     UserEntity toEntity(User user);
 
-    @Mapping(target = "user", ignore = true)
-    @Mapping(target = "displayName", ignore = true)
+    @Mapping(target = "user", source = "id", qualifiedByName = "userIdToUserEntity")
     UserProfileEntity toEntity(UserProfile userProfile);
 
     default String resolveDisplayName(UserProfileEntity entity) {
@@ -40,5 +40,14 @@ public interface UserPersistenceMapper {
         }
 
         return null;
+    }
+
+    @Named("userIdToUserEntity")
+    default UserEntity userIdToUserEntity(Long userId) {
+        if (userId == null) {
+            return null;
+        }
+
+        return UserEntity.builder().id(userId).build();
     }
 }

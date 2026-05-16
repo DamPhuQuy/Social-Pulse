@@ -5,6 +5,7 @@ import org.mapstruct.Mapping;
 
 import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserCreationResponse;
+import com.socialpulse.app.user.application.dto.response.UserSummary;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.model.UserProfile;
@@ -38,4 +39,7 @@ public interface UserMapper {
     @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
     @Mapping(target = "dob", source = "profile.dob")
     UserViewProfileResponse toUserViewProfileResponse(User user);
+
+    @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
+    UserSummary toUserSummary(User user);
 }

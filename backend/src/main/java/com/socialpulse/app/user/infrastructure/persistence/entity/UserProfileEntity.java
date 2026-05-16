@@ -17,7 +17,6 @@ import jakarta.persistence.OneToOne;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
-import jakarta.persistence.Transient;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -40,7 +39,7 @@ public class UserProfileEntity {
     @JoinColumn(name = "user_id", unique = true)
     private UserEntity user;
 
-    @Transient
+    @Column(name = "display_name", length = 100)
     private String displayName;
 
     @Column(columnDefinition = "TEXT")

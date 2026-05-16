@@ -4,23 +4,29 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.dto.response.ApiResponse;
+import com.socialpulse.app.follow.application.dto.response.FollowCountsResponse;
 import com.socialpulse.app.follow.application.dto.response.FollowResponse;
-import com.socialpulse.app.follow.application.dto.response.FollowersListResponse;
-import com.socialpulse.app.follow.application.dto.response.FollowingListResponse;
+import com.socialpulse.app.follow.application.dto.response.FollowStatusResponse;
 import com.socialpulse.app.follow.application.usecase.FollowUserUseCase;
+import com.socialpulse.app.follow.application.usecase.GetFollowCountsUseCase;
 import com.socialpulse.app.follow.application.usecase.GetFollowersUseCase;
+import com.socialpulse.app.follow.application.usecase.GetFollowStatusUseCase;
 import com.socialpulse.app.follow.application.usecase.GetFollowingUseCase;
 import com.socialpulse.app.follow.application.usecase.UnfollowUserUseCase;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.application.dto.response.UserSummary;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -34,19 +40,35 @@ public class FollowController {
     private final UnfollowUserUseCase unfollowUserUseCase;
     private final GetFollowersUseCase getFollowersUseCase;
     private final GetFollowingUseCase getFollowingUseCase;
+<<<<<<< HEAD
+=======
+    private final GetFollowStatusUseCase getFollowStatusUseCase;
+    private final GetFollowCountsUseCase getFollowCountsUseCase;
+>>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
 
     public FollowController(FollowUserUseCase followUserUseCase,
                            UnfollowUserUseCase unfollowUserUseCase,
                            GetFollowersUseCase getFollowersUseCase,
+<<<<<<< HEAD
                            GetFollowingUseCase getFollowingUseCase) {
+=======
+                           GetFollowingUseCase getFollowingUseCase,
+                           GetFollowStatusUseCase getFollowStatusUseCase,
+                           GetFollowCountsUseCase getFollowCountsUseCase) {
+>>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
         this.followUserUseCase = followUserUseCase;
         this.unfollowUserUseCase = unfollowUserUseCase;
         this.getFollowersUseCase = getFollowersUseCase;
         this.getFollowingUseCase = getFollowingUseCase;
+<<<<<<< HEAD
+=======
+        this.getFollowStatusUseCase = getFollowStatusUseCase;
+        this.getFollowCountsUseCase = getFollowCountsUseCase;
+>>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
     }
 
     @PostMapping("/{userId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('follow:create')")
     @Operation(
         summary = "Follow a user",
         description = "Follow another user by their ID",
@@ -77,7 +99,7 @@ public class FollowController {
     }
 
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('follow:delete')")
     @Operation(
         summary = "Unfollow a user",
         description = "Unfollow a user by their ID",
@@ -102,6 +124,7 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/followers")
+<<<<<<< HEAD
     @PreAuthorize("hasRole('USER')")
     @Operation(
         summary = "Get user's followers",
@@ -126,10 +149,21 @@ public class FollowController {
         return ResponseEntity.ok(ApiResponse.<FollowersListResponse>builder()
                 .data(response)
                 .message("Successfully retrieved followers")
+=======
+    @PreAuthorize("hasAuthority('follow:read')")
+    @Operation(summary = "Get followers", description = "Get paginated followers of a user")
+    public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowers(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.<PageResponse<UserSummary>>builder()
+                .data(getFollowersUseCase.getFollowers(userId, page, size))
+>>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
                 .build());
     }
 
     @GetMapping("/{userId}/following")
+<<<<<<< HEAD
     @PreAuthorize("hasRole('USER')")
     @Operation(
         summary = "Get user's following",
@@ -154,6 +188,36 @@ public class FollowController {
         return ResponseEntity.ok(ApiResponse.<FollowingListResponse>builder()
                 .data(response)
                 .message("Successfully retrieved following")
+=======
+    @PreAuthorize("hasAuthority('follow:read')")
+    @Operation(summary = "Get following", description = "Get paginated users a user is following")
+    public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowing(
+            @PathVariable Long userId,
+            @RequestParam(defaultValue = "0") int page,
+            @RequestParam(defaultValue = "20") int size) {
+        return ResponseEntity.ok(ApiResponse.<PageResponse<UserSummary>>builder()
+                .data(getFollowingUseCase.getFollowing(userId, page, size))
+                .build());
+    }
+
+    @GetMapping("/{userId}/status")
+    @PreAuthorize("hasAuthority('follow:read')")
+    @Operation(summary = "Get follow status", description = "Get whether current user follows the target user")
+    public ResponseEntity<ApiResponse<FollowStatusResponse>> getFollowStatus(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        return ResponseEntity.ok(ApiResponse.<FollowStatusResponse>builder()
+                .data(getFollowStatusUseCase.getFollowStatus(userId, currentUser.getId()))
+                .build());
+    }
+
+    @GetMapping("/{userId}/counts")
+    @PreAuthorize("hasAuthority('follow:read')")
+    @Operation(summary = "Get follow counts", description = "Get follower and following counts of a user")
+    public ResponseEntity<ApiResponse<FollowCountsResponse>> getFollowCounts(@PathVariable Long userId) {
+        return ResponseEntity.ok(ApiResponse.<FollowCountsResponse>builder()
+                .data(getFollowCountsUseCase.getFollowCounts(userId))
+>>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
                 .build());
     }
 }

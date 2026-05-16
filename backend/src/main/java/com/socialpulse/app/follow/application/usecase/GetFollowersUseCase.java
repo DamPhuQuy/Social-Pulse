@@ -1,7 +1,8 @@
 package com.socialpulse.app.follow.application.usecase;
 
-import com.socialpulse.app.follow.application.dto.response.FollowersListResponse;
+import com.socialpulse.app.common.dto.response.PageResponse;
+import com.socialpulse.app.user.application.dto.response.UserSummary;
 
 public interface GetFollowersUseCase {
-    FollowersListResponse getFollowers(Long userId, Long currentUserId, int page, int size);
+    PageResponse<UserSummary> getFollowers(Long userId, int page, int size);
 }

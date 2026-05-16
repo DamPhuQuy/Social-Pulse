@@ -1,0 +1,247 @@
+@startuml
+title GET /api/search - Global Search
+
+actor Client
+participant AuthFilter
+participant SearchController
+participant GlobalSearchService
+participant UserRepository
+participant PostRepository
+participant SearchIndexService
+participant UserMapper
+participant PostMapper
+database Database
+
+Client -> AuthFilter: GET /api/search?query={query}&type={type}&page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> SearchController: forward request with currentUserId (if authenticated)
+activate SearchController
+
+SearchController -> GlobalSearchService: search(query, type, pageable, currentUserId)
+activate GlobalSearchService
+
+GlobalSearchService -> GlobalSearchService: validate query\n(min length, sanitize)
+
+alt type == ALL or type == USERS
+    GlobalSearchService -> UserRepository: searchUsers(query, pageable)
+    UserRepository -> Database: SELECT * FROM users\nWHERE (username LIKE ? OR display_name LIKE ?)\nAND status = 'ACTIVE'\nLIMIT ? OFFSET ?
+    Database --> UserRepository: user rows
+    UserRepository --> GlobalSearchService: Page<User>
+
+    loop for each user
+        opt currentUserId provided
+            GlobalSearchService -> GlobalSearchService: check if following
+        end
+
+        GlobalSearchService -> UserMapper: toUserSearchResponse(user, isFollowing)
+        UserMapper --> GlobalSearchService: UserSearchResponse
+    end
+end
+
+alt type == ALL or type == POSTS
+    GlobalSearchService -> SearchIndexService: searchPosts(query, currentUserId, pageable)
+    activate SearchIndexService
+
+    SearchIndexService -> PostRepository: fullTextSearch(query, pageable)
+    PostRepository -> Database: SELECT * FROM posts\nWHERE MATCH(content) AGAINST(? IN NATURAL LANGUAGE MODE)\nAND is_hidden = false\nLIMIT ? OFFSET ?
+    Database --> PostRepository: post rows
+    PostRepository --> SearchIndexService: Page<Post>
+
+    SearchIndexService -> SearchIndexService: filter by visibility\nand access permission
+
+    loop for each post
+        SearchIndexService -> UserRepository: findById(post.authorId)
+        UserRepository -> Database: SELECT * FROM users WHERE id = ?
+        Database --> UserRepository: user row
+        UserRepository --> SearchIndexService: Optional<User>
+
+        opt currentUserId provided
+            SearchIndexService -> SearchIndexService: check if liked
+            SearchIndexService -> SearchIndexService: check if bookmarked
+        end
+
+        SearchIndexService -> PostMapper: toPostResponse(post, author, isLiked, isBookmarked)
+        PostMapper --> SearchIndexService: PostResponse
+    end
+
+    SearchIndexService --> GlobalSearchService: Page<PostResponse>
+    deactivate SearchIndexService
+end
+
+GlobalSearchService -> GlobalSearchService: aggregate results by type
+
+GlobalSearchService --> SearchController: SearchResponse(users, posts)
+deactivate GlobalSearchService
+
+SearchController --> Client: 200 OK(response)
+deactivate SearchController
+
+@enduml
+
+@startuml
+title GET /api/trending/posts - Get Trending Posts
+
+actor Client
+participant AuthFilter
+participant TrendingController
+participant GetTrendingPostsService
+participant PostRepository
+participant UserRepository
+participant CacheService
+participant PostMapper
+database Database
+
+Client -> AuthFilter: GET /api/trending/posts?timeRange={timeRange}&page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> TrendingController: forward request with currentUserId (if authenticated)
+activate TrendingController
+
+TrendingController -> GetTrendingPostsService: getTrendingPosts(timeRange, pageable, currentUserId)
+activate GetTrendingPostsService
+
+GetTrendingPostsService -> CacheService: get(trendingPostsKey)
+CacheService --> GetTrendingPostsService: Optional<Page<Post>>
+
+alt Cache hit
+    GetTrendingPostsService -> GetTrendingPostsService: use cached results
+else Cache miss
+    GetTrendingPostsService -> GetTrendingPostsService: calculate time range\n(last 24h, 7d, 30d)
+
+    GetTrendingPostsService -> PostRepository: findTrendingPosts(startTime, endTime, pageable)
+    PostRepository -> Database: SELECT p.*, \n(p.like_count * 2 + p.comment_count * 3) as score\nFROM posts p\nWHERE p.created_at >= ? AND p.created_at <= ?\nAND p.visibility = 'PUBLIC'\nAND p.is_hidden = false\nORDER BY score DESC, p.created_at DESC\nLIMIT ? OFFSET ?
+    Database --> PostRepository: post rows
+    PostRepository --> GetTrendingPostsService: Page<Post>
+
+    GetTrendingPostsService -> CacheService: put(trendingPostsKey, posts, ttl=5min)
+    CacheService --> GetTrendingPostsService: void
+end
+
+loop for each post
+    GetTrendingPostsService -> UserRepository: findById(post.authorId)
+    UserRepository -> Database: SELECT * FROM users WHERE id = ?
+    Database --> UserRepository: user row
+    UserRepository --> GetTrendingPostsService: Optional<User>
+
+    opt currentUserId provided
+        GetTrendingPostsService -> GetTrendingPostsService: check if liked
+        GetTrendingPostsService -> GetTrendingPostsService: check if bookmarked
+    end
+
+    GetTrendingPostsService -> PostMapper: toPostResponse(post, author, isLiked, isBookmarked)
+    PostMapper --> GetTrendingPostsService: PostResponse
+end
+
+GetTrendingPostsService --> TrendingController: Page<PostResponse>
+deactivate GetTrendingPostsService
+
+TrendingController --> Client: 200 OK(response)
+deactivate TrendingController
+
+@enduml
+
+@startuml
+title GET /api/trending/hashtags - Get Trending Hashtags
+
+actor Client
+participant AuthFilter
+participant TrendingController
+participant GetTrendingHashtagsService
+participant HashtagRepository
+participant CacheService
+database Database
+
+Client -> AuthFilter: GET /api/trending/hashtags?limit={limit}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> TrendingController: forward request
+activate TrendingController
+
+TrendingController -> GetTrendingHashtagsService: getTrendingHashtags(limit)
+activate GetTrendingHashtagsService
+
+GetTrendingHashtagsService -> CacheService: get(trendingHashtagsKey)
+CacheService --> GetTrendingHashtagsService: Optional<List<Hashtag>>
+
+alt Cache hit
+    GetTrendingHashtagsService -> GetTrendingHashtagsService: use cached results
+else Cache miss
+    GetTrendingHashtagsService -> GetTrendingHashtagsService: calculate time range\n(last 24 hours)
+
+    GetTrendingHashtagsService -> HashtagRepository: findTrendingHashtags(startTime, limit)
+    HashtagRepository -> Database: SELECT h.tag, COUNT(ph.post_id) as usage_count\nFROM hashtags h\nINNER JOIN post_hashtags ph ON h.id = ph.hashtag_id\nINNER JOIN posts p ON ph.post_id = p.id\nWHERE p.created_at >= ?\nAND p.visibility = 'PUBLIC'\nAND p.is_hidden = false\nGROUP BY h.tag\nORDER BY usage_count DESC\nLIMIT ?
+    Database --> HashtagRepository: hashtag rows
+    HashtagRepository --> GetTrendingHashtagsService: List<TrendingHashtag>
+
+    GetTrendingHashtagsService -> CacheService: put(trendingHashtagsKey, hashtags, ttl=10min)
+    CacheService --> GetTrendingHashtagsService: void
+end
+
+GetTrendingHashtagsService --> TrendingController: List<TrendingHashtagResponse>
+deactivate GetTrendingHashtagsService
+
+TrendingController --> Client: 200 OK(response)
+deactivate TrendingController
+
+@enduml
+
+@startuml
+title GET /api/posts/hashtag/{hashtag} - Get Posts by Hashtag
+
+actor Client
+participant AuthFilter
+participant PostController
+participant GetPostsByHashtagService
+participant HashtagRepository
+participant PostRepository
+participant UserRepository
+participant PostMapper
+database Database
+
+Client -> AuthFilter: GET /api/posts/hashtag/{hashtag}?page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> PostController: forward request with currentUserId (if authenticated)
+activate PostController
+
+PostController -> GetPostsByHashtagService: getPostsByHashtag(hashtag, pageable, currentUserId)
+activate GetPostsByHashtagService
+
+GetPostsByHashtagService -> GetPostsByHashtagService: normalize hashtag\n(remove #, lowercase)
+
+GetPostsByHashtagService -> HashtagRepository: findByTag(hashtag)
+HashtagRepository -> Database: SELECT * FROM hashtags WHERE tag = ?
+Database --> HashtagRepository: hashtag row
+HashtagRepository --> GetPostsByHashtagService: Optional<Hashtag>
+
+alt Hashtag not found
+    GetPostsByHashtagService --> PostController: empty page
+    PostController --> Client: 200 OK(empty)
+else Hashtag found
+    GetPostsByHashtagService -> PostRepository: findByHashtagId(hashtagId, pageable)
+    PostRepository -> Database: SELECT p.* FROM posts p\nINNER JOIN post_hashtags ph ON p.id = ph.post_id\nWHERE ph.hashtag_id = ?\nAND p.is_hidden = false\nORDER BY p.created_at DESC\nLIMIT ? OFFSET ?
+    Database --> PostRepository: post rows
+    PostRepository --> GetPostsByHashtagService: Page<Post>
+
+    GetPostsByHashtagService -> GetPostsByHashtagService: filter by visibility\nand access permission
+
+    loop for each post
+        GetPostsByHashtagService -> UserRepository: findById(post.authorId)
+        UserRepository -> Database: SELECT * FROM users WHERE id = ?
+        Database --> UserRepository: user row
+        UserRepository --> GetPostsByHashtagService: Optional<User>
+
+        opt currentUserId provided
+            GetPostsByHashtagService -> GetPostsByHashtagService: check if liked
+            GetPostsByHashtagService -> GetPostsByHashtagService: check if bookmarked
+        end
+
+        GetPostsByHashtagService -> PostMapper: toPostResponse(post, author, isLiked, isBookmarked)
+        PostMapper --> GetPostsByHashtagService: PostResponse
+    end
+
+    GetPostsByHashtagService --> PostController: Page<PostResponse>
+    deactivate GetPostsByHashtagService
+
+    PostController --> Client: 200 OK(response)
+    deactivate PostController
+end
+
+@enduml

@@ -28,6 +28,13 @@ public class EditPostService implements EditPostUseCase {
         Post post = postRepository.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
+        boolean isAuthor = post.getUserId().equals(currentUser.getId());
+        boolean hasManagePermission = currentUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("post:manage"));
+
+        if (!isAuthor && !hasManagePermission) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+        }
 
         post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy());
 

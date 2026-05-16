@@ -13,23 +13,19 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 @Service
 public class GetFeedService implements GetFeedUseCase {
     private final RankFeedUseCase rankFeedUseCase;
+    private final FeedItemResponseAssembler feedItemResponseAssembler;
 
-    public GetFeedService(RankFeedUseCase rankFeedUseCase) {
+    public GetFeedService(
+            RankFeedUseCase rankFeedUseCase,
+            FeedItemResponseAssembler feedItemResponseAssembler) {
         this.rankFeedUseCase = rankFeedUseCase;
+        this.feedItemResponseAssembler = feedItemResponseAssembler;
     }
 
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
         Long userId = currentUser.getId();
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
-
-        return feedItems.stream()
-                .map(item -> FeedItemResponse.builder()
-                        .postId(item.getPostId())
-                        .aiScore(item.getAiScore())
-                        .source(item.getSource().name())
-                        .rankedAt(item.getRankedAt())
-                        .build())
-                .toList();
+        return feedItemResponseAssembler.assemble(feedItems, userId);
     }
 }

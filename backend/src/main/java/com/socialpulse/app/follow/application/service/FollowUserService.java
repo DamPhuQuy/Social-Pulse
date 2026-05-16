@@ -9,6 +9,7 @@ import com.socialpulse.app.follow.application.dto.response.FollowResponse;
 import com.socialpulse.app.follow.application.usecase.FollowUserUseCase;
 import com.socialpulse.app.follow.domain.model.Follow;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -17,13 +18,16 @@ public class FollowUserService implements FollowUserUseCase {
     private final FollowRepository followRepository;
     private final UserRepository userRepository;
     private final FollowMapper followMapper;
+    private final NotificationCommandService notificationCommandService;
 
     public FollowUserService(FollowRepository followRepository,
                              UserRepository userRepository,
-                             FollowMapper followMapper) {
+                             FollowMapper followMapper,
+                             NotificationCommandService notificationCommandService) {
         this.followRepository = followRepository;
         this.userRepository = userRepository;
         this.followMapper = followMapper;
+        this.notificationCommandService = notificationCommandService;
     }
 
     @Override
@@ -46,6 +50,7 @@ public class FollowUserService implements FollowUserUseCase {
                 .build();
 
         Follow savedFollow = followRepository.save(follow);
+        notificationCommandService.notifyFollow(currentUser.getId(), followingId);
         return followMapper.toFollowResponse(savedFollow);
     }
 }

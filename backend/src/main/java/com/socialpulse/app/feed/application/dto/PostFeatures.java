@@ -11,15 +11,16 @@ import lombok.NoArgsConstructor;
 @Builder
 public class PostFeatures {
     private Long postId;
-    private Long upvoteCount;
-    private Long downvoteCount;
-    private Long cmtCount;
-    private Long viewCount;
-    private Long shareCount;
-    private Double hotScore;
-    private Double upvoteRatio;
-    private Boolean hasImage;
     private Integer contentLength;
+    private Boolean hasMultimedia;
     private Boolean isSharePost;
     private Double postAgeHours;
+    private Double hotScore;
+    private Double upvoteRatio;
+    private Long upvoteCount;
+    private Long downvoteCount;
+    private Long commentCount;
+    private Long viewCount;
+    private Long shareCount;
+    private Double popularity;
 }

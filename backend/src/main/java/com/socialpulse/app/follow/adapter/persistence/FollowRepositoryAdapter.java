@@ -9,6 +9,9 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Pageable;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.follow.domain.model.Follow;
@@ -81,21 +84,12 @@ public class FollowRepositoryAdapter implements FollowRepository {
     }
 
     @Override
-    public List<Follow> findFollowersByUserId(Long userId, int offset, int limit) {
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-        return jpaFollowRepository.findFollowersByFollowingId(userId, pageable)
-                .stream()
-                .map(mapper::toDomain)
-                .collect(Collectors.toList());
+    public Page<Long> findFollowerIdsByFollowingId(Long followingId, Pageable pageable) {
+        return jpaFollowRepository.findFollowerIdsByFollowingId(followingId, pageable);
     }
 
     @Override
-    public List<Follow> findFollowingByUserId(Long userId, int offset, int limit) {
-        Pageable pageable = PageRequest.of(offset / limit, limit);
-        return jpaFollowRepository.findFollowingByFollowerId(userId, pageable)
-                .stream()
-                .map(mapper::toDomain)
-                .collect(Collectors.toList());
+    public Page<Long> findFollowingIdsByFollowerId(Long followerId, Pageable pageable) {
+        return jpaFollowRepository.findFollowingIdsByFollowerId(followerId, pageable);
     }
 }
-

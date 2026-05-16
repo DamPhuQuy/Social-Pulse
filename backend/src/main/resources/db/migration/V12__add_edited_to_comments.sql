@@ -1,2 +1,2 @@
--- Add edited column to comments table
-ALTER TABLE comments ADD COLUMN edited BOOLEAN NOT NULL DEFAULT FALSE;
+ALTER TABLE comments
+    ADD COLUMN IF NOT EXISTS edited BOOLEAN NOT NULL DEFAULT FALSE;

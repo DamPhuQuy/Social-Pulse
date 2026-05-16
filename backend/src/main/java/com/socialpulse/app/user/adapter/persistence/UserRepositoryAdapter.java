@@ -5,6 +5,9 @@ import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
@@ -68,7 +71,12 @@ public class UserRepositoryAdapter implements UserRepository {
                 .map(userPersistenceMapper::toDomain)
                 .collect(Collectors.toList());
     }
-}
 
+    @Override
+    public Page<User> searchByQuery(String query, Pageable pageable) {
+        return jpaUserRepository.searchByQuery(query, pageable)
+                .map(userPersistenceMapper::toDomain);
+    }
+}
 
 

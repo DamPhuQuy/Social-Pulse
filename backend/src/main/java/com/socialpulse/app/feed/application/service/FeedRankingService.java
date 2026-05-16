@@ -23,25 +23,26 @@ import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
 public class FeedRankingService implements RankFeedUseCase {
-    private static final String FEATURE_SCHEMA_VERSION = "v1";
-
     private final SelectCandidatesUseCase selectCandidatesUseCase;
     private final ExtractFeaturesUseCase extractFeaturesUseCase;
     private final PredictRankingUseCase predictRankingUseCase;
     private final CacheFeedUseCase cacheFeedUseCase;
     private final FallbackRankingService fallbackRankingService;
+    private final String featureSchemaVersion;
 
     public FeedRankingService(
             SelectCandidatesUseCase selectCandidatesUseCase,
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
-            FallbackRankingService fallbackRankingService) {
+            FallbackRankingService fallbackRankingService,
+            String featureSchemaVersion) {
         this.selectCandidatesUseCase = selectCandidatesUseCase;
         this.extractFeaturesUseCase = extractFeaturesUseCase;
         this.predictRankingUseCase = predictRankingUseCase;
         this.cacheFeedUseCase = cacheFeedUseCase;
         this.fallbackRankingService = fallbackRankingService;
+        this.featureSchemaVersion = featureSchemaVersion;
     }
 
     @Override
@@ -61,7 +62,7 @@ public class FeedRankingService implements RankFeedUseCase {
         List<RankingFeatures> features = extractFeaturesUseCase.extractFeatures(userId, candidates);
         if (!features.isEmpty()) {
             RankingRequest request = RankingRequest.builder()
-                    .featureSchemaVersion(FEATURE_SCHEMA_VERSION)
+                    .featureSchemaVersion(featureSchemaVersion)
                     .features(features)
                     .build();
 
@@ -124,7 +125,7 @@ public class FeedRankingService implements RankFeedUseCase {
         return predictedScores.stream().allMatch(score ->
                 score.getPostId() != null
                         && score.getScore() != null
-                        && FEATURE_SCHEMA_VERSION.equals(score.getFeatureSchemaVersion())
+                        && featureSchemaVersion.equals(score.getFeatureSchemaVersion())
                         && candidateIds.contains(score.getPostId()));
     }
 }

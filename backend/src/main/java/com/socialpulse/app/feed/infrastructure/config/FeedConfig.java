@@ -1,14 +1,17 @@
 package com.socialpulse.app.feed.infrastructure.config;
 
-import org.springframework.beans.factory.annotation.Value;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
+import com.socialpulse.app.ai.inference.LightGbmRankingService;
+import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
-import com.socialpulse.app.feed.application.service.AiRankingService;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
 import com.socialpulse.app.feed.application.service.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.FeatureExtractionService;
@@ -20,11 +23,11 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
-import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
+@EnableConfigurationProperties(LightGbmProperties.class)
 public class FeedConfig {
 
     @Bean
@@ -41,27 +44,40 @@ public class FeedConfig {
     public ExtractFeaturesUseCase extractFeaturesUseCase(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
-            FollowRepository followRepository,
             UserRepository userRepository,
             PostRepository postRepository) {
         return new FeatureExtractionService(
                 redisTemplate, objectMapper,
-                followRepository, userRepository,
+                userRepository,
                 postRepository);
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase(
-            @Value("${ai.service.url:http://localhost:5000}") String aiServiceUrl,
-            @Value("${ai.service.enabled:false}") boolean aiServiceEnabled,
-            @Value("${ai.service.timeout-ms:1500}") int timeoutMs,
-            @Value("${ai.service.ranking-path:/rank}") String rankingPath) {
-        return new AiRankingService(aiServiceUrl, aiServiceEnabled, timeoutMs, rankingPath);
+    public LightGbmFeatureVectorizer lightGbmFeatureVectorizer() {
+        return new LightGbmFeatureVectorizer();
     }
 
     @Bean
-    public FallbackRankingService fallbackRankingService() {
-        return new FallbackRankingService();
+    public LightGbmRankingService lightGbmRankingService(
+            LightGbmProperties lightGbmProperties,
+            ObjectMapper objectMapper,
+            ResourceLoader resourceLoader,
+            LightGbmFeatureVectorizer lightGbmFeatureVectorizer) {
+        return new LightGbmRankingService(
+                lightGbmProperties,
+                objectMapper,
+                resourceLoader,
+                lightGbmFeatureVectorizer);
+    }
+
+    @Bean
+    public PredictRankingUseCase predictRankingUseCase(LightGbmRankingService lightGbmRankingService) {
+        return lightGbmRankingService;
+    }
+
+    @Bean
+    public FallbackRankingService fallbackRankingService(LightGbmProperties lightGbmProperties) {
+        return new FallbackRankingService(lightGbmProperties.getFeatureSchemaVersion());
     }
 
     @Bean
@@ -75,13 +91,14 @@ public class FeedConfig {
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
-            FallbackRankingService fallbackRankingService) {
+            FallbackRankingService fallbackRankingService,
+            LightGbmProperties lightGbmProperties) {
         return new FeedRankingService(
                 selectCandidatesUseCase,
                 extractFeaturesUseCase,
                 predictRankingUseCase,
                 cacheFeedUseCase,
-                fallbackRankingService);
+                fallbackRankingService,
+                lightGbmProperties.getFeatureSchemaVersion());
     }
 }
-
