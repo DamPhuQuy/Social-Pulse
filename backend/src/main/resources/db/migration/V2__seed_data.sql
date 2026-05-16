@@ -1,13 +1,6 @@
--- ============================================================
--- V2: Seed data — tạo user test để dùng ngay trên Swagger
--- ============================================================
-
--- pgcrypto: extension của PostgreSQL để hash password bằng bcrypt
--- crypt('Admin@123', gen_salt('bf', 12)) → bcrypt hash tương thích
--- với BCryptPasswordEncoder(12) của Spring Security
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- Insert user test (chỉ insert nếu chưa tồn tại — idempotent)
+-- Seed the default administrator used for local testing.
 INSERT INTO users (
     username,
     email,
@@ -23,12 +16,10 @@ INSERT INTO users (
 SELECT
     'admin',
     'admin@socialpulse.com',
-    -- bcrypt hash của "Admin@123" với cost factor 12
-    -- tương thích với PasswordEncoder(12) trong Java
     crypt('Admin@123', gen_salt('bf', 12)),
-    'ACTIVE',      -- UserStatus.ACTIVE → có thể đăng nhập
-    'USER',        -- UserRole.USER
-    'VERIFIED',    -- VerificationStatus.VERIFIED → email đã xác thực
+    'ACTIVE',
+    'ADMIN',
+    'VERIFIED',
     false,
     0,
     NOW(),
@@ -36,9 +27,3 @@ SELECT
 WHERE NOT EXISTS (
     SELECT 1 FROM users WHERE email = 'admin@socialpulse.com'
 );
-
--- ============================================================
--- Thông tin đăng nhập để test trên Swagger:
---   Email:    admin@socialpulse.com
---   Password: Admin@123
--- ============================================================

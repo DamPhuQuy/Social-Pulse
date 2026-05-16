@@ -18,10 +18,6 @@ public class CommentCreationRequest {
     @Size(max = 2000, message = "Content must not exceed 2000 characters")
     private String content;
 
-    @NotNull(message = "Post ID must not be null")
-    @Positive(message = "Post ID must be greater than 0")
-    private Long postId;
-
     @Positive(message = "Parent comment ID must be greater than 0")
     private Long parentCommentId; // optional
 }

@@ -8,5 +8,8 @@ public interface UserProfileRepository {
     Optional<UserProfile> findByUserId(Long userId);
 
     Optional<UserProfile> findByUsername(String username);
-}
 
+    UserProfile save(UserProfile userProfile);
+
+    void deleteByUserId(Long userId);
+}

@@ -9,20 +9,25 @@ import com.socialpulse.app.report.domain.model.Report;
 public class CreateReportService implements CreateReportUseCase {
 
     private final ReportRepository reportRepositoryPort;
+    private final ReportTargetValidator reportTargetValidator;
     private final ReportMapper reportMapper;
 
-    public CreateReportService(ReportRepository reportRepositoryPort, ReportMapper reportMapper) {
+    public CreateReportService(
+            ReportRepository reportRepositoryPort,
+            ReportTargetValidator reportTargetValidator,
+            ReportMapper reportMapper) {
         this.reportRepositoryPort = reportRepositoryPort;
+        this.reportTargetValidator = reportTargetValidator;
         this.reportMapper = reportMapper;
     }
 
     @Override
     public Report createReport(Long reporterId, CreateReportRequest request) {
+        reportTargetValidator.validate(request.getTargetType(), request.getTargetId());
         Report report = reportMapper.toReport(request, reporterId);
 
         report.markPending();
         return reportRepositoryPort.save(report);
     }
 }
-
 

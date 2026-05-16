@@ -115,7 +115,7 @@ export async function registerUser(payload: RegisterRequest): Promise<RegisterRe
   const body: RegisterApiRequest = {
     username: payload.username,
     email: payload.email,
-    rawPassword: payload.password,
+    rawPassword: payload.rawPassword,
     confirmPassword: payload.confirmPassword,
   };
 

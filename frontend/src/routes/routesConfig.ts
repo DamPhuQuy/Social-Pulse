@@ -6,6 +6,7 @@ import RegisterPage from "@/pages/auth/RegisterPage";
 import ResetPasswordOtpPage from "@/pages/auth/ResetPasswordOtpPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
+import HomePage from "@/pages/HomePage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -47,6 +48,11 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.RESET_PASSWORD_NEW,
     element: ResetPasswordPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.HOME,
+    element: HomePage,
     isPrivate: false,
   },
 ];

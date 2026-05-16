@@ -10,26 +10,31 @@ type HeaderProps = {
  * App-wide top navigation bar.
  * Fixed at the top with a frosted-glass backdrop.
  */
-function Header({ isHomePage = true }: HeaderProps) {
+export default function Header({ isHomePage = true }: HeaderProps) {
   return (
-    <header className="fixed top-0 w-full z-50 bg-surface/80 backdrop-blur-2xl border-b border-outline-variant/40">
-      <div className="flex items-center h-16 px-8 max-w-screen-2xl mx-auto">
-        <Link
-          to={PATHS.ONBOARDING}
-          className="text-2xl font-extrabold text-on-surface tracking-tighter font-headline cursor-pointer"
-        >
-          Social Pulse
-        </Link>
+    <header className="fixed top-0 w-full z-50 bg-[rgba(0,0,0,0.8)] backdrop-blur-[20px] saturate-[180%]">
+      <div className="flex justify-between items-center h-12 px-4 max-w-[980px] mx-auto w-full" style={{ fontFamily: '"SF Pro Text", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}>
+        <div className="flex items-center gap-8">
+          <Link
+            to={PATHS.ONBOARDING}
+            className="text-[14px] font-semibold text-[#f5f5f7] tracking-tight cursor-pointer flex items-center opacity-90 hover:opacity-100 transition-opacity"
+            style={{ fontFamily: '"SF Pro Display", "SF Pro Icons", "Helvetica Neue", Helvetica, Arial, sans-serif' }}
+          >
+            Social Pulse
+          </Link>
+          
+          <div className="hidden md:flex items-center gap-8 text-[12px] font-normal text-[#f5f5f7] opacity-80">
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Features</Link>
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Community</Link>
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Pricing</Link>
+          </div>
+        </div>
 
         {isHomePage && (
-          <div className="ml-auto flex items-center gap-3">
-            <span className="hidden md:inline text-sm text-on-surface-variant">
-              Already a member?
-            </span>
-
+          <div className="flex items-center gap-4">
             <Link
               to={PATHS.LOGIN}
-              className="px-5 py-2 rounded-full border border-outline-variant text-sm font-medium text-on-surface hover:bg-surface-container transition-colors"
+              className="text-[12px] font-normal text-[#f5f5f7] opacity-80 hover:opacity-100 transition-opacity"
             >
               Sign In
             </Link>
@@ -39,5 +44,3 @@ function Header({ isHomePage = true }: HeaderProps) {
     </header>
   );
 }
-
-export default Header;

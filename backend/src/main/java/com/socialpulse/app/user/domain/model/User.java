@@ -1,8 +1,9 @@
 package com.socialpulse.app.user.domain.model;
 
 import java.time.LocalDateTime;
+import java.util.HashSet;
+import java.util.Set;
 
-import com.socialpulse.app.user.domain.enums.UserRole;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 
@@ -22,7 +23,8 @@ public class User {
 	private String email;
 	private String passwordHash;
 	private UserStatus status;
-	private UserRole role;
+	@Builder.Default
+	private Set<Role> roles = new HashSet<>();
 	private VerificationStatus verification;
 	private boolean isLocked;
 	private int failedLoginAttempts;
@@ -31,8 +33,8 @@ public class User {
 	private LocalDateTime updatedAt;
 
 	public void applyDefaultState() {
-		if (this.role == null) {
-			this.role = UserRole.USER;
+		if (this.roles == null || this.roles.isEmpty()) {
+			this.roles = new HashSet<>();
 		}
 
 		if (this.verification == null) {

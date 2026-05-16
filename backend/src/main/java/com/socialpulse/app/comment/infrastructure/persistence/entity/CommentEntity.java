@@ -72,4 +72,8 @@ public class CommentEntity {
     @Column(nullable = false)
     @Builder.Default
     private boolean deleted = false;
+
+    @Column(nullable = false)
+    @Builder.Default
+    private boolean edited = false;
 }

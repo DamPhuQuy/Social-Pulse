@@ -21,7 +21,7 @@ import com.socialpulse.app.auth.application.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.application.dto.request.VerifyOtpRequest;
 import com.socialpulse.app.auth.application.dto.response.LoginResponse;
 import com.socialpulse.app.auth.application.usecase.JwtUseCase;
-import com.socialpulse.app.auth.application.usecase.LoginUseCase;
+import com.socialpulse.app.auth.application.usecase.AuthenticationUseCase;
 import com.socialpulse.app.auth.application.usecase.PasswordResetUseCase;
 import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
 import com.socialpulse.app.auth.application.usecase.RegisterUseCase;
@@ -48,7 +48,7 @@ public class AuthController {
 
         private final RegisterUseCase registerUseCase;
         private final VerifyEmailUseCase verifyEmailUseCase;
-        private final LoginUseCase loginUseCase;
+        private final AuthenticationUseCase authenticationUseCase;
         private final JwtUseCase jwtUseCase;
         private final RefreshTokenUseCase refreshTokenUseCase;
         private final PasswordResetUseCase passwordResetUseCase;
@@ -56,14 +56,14 @@ public class AuthController {
 
         public AuthController(RegisterUseCase registerUseCase,
                                                   VerifyEmailUseCase verifyEmailUseCase,
-                                                  LoginUseCase loginUseCase,
+                                                  AuthenticationUseCase authenticationUseCase,
                                                   JwtUseCase jwtUseCase,
                                                   RefreshTokenUseCase refreshTokenUseCase,
                                                   PasswordResetUseCase passwordResetUseCase,
                                                   AuthMapper authMapper) {
                 this.registerUseCase = registerUseCase;
                 this.verifyEmailUseCase = verifyEmailUseCase;
-                this.loginUseCase = loginUseCase;
+                this.authenticationUseCase = authenticationUseCase;
         this.jwtUseCase = jwtUseCase;
         this.refreshTokenUseCase = refreshTokenUseCase;
         this.passwordResetUseCase = passwordResetUseCase;
@@ -130,7 +130,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<LoginResponse>> login(@Valid @RequestBody LoginRequest request) {
-        TokenPair tokens = loginUseCase.login(request);
+        TokenPair tokens = authenticationUseCase.authenticate(request);
                 long accessExpiresInMs = jwtUseCase.getAccessExpirationMs();
         ResponseCookie refreshCookie = buildRefreshCookie(tokens.refreshToken());
         LoginResponse result = authMapper.toLoginResponse(tokens, accessExpiresInMs);
@@ -242,7 +242,7 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<UserAuthorizedResponse>> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
-                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.getUser());
+                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.user());
 
         return ResponseEntity.ok(ApiResponse.<UserAuthorizedResponse>builder()
                 .code(200)

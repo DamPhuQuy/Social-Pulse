@@ -35,4 +35,10 @@ build/
 
 .venv
 
+.claude
+
 /node_modules
+.metals/
+*.zst
+.bsp/
+.bloop

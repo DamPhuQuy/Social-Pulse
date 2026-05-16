@@ -36,8 +36,14 @@ app:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   version: 1.0.0
 
+ai:
+  lightgbm:
+    enabled: ${AI_LIGHTGBM_ENABLED:false}
+    model-location: ${AI_LIGHTGBM_MODEL_LOCATION:classpath:ai/lightgbm-ranking-model.json}
+    feature-schema-version: ${AI_LIGHTGBM_FEATURE_SCHEMA_VERSION:v1}
+
 cloudinary:
-  url: ${CLOUDINARY_URL}
+  url: ${CLOUDINARY_URL:}
   cloud-name: ${CLOUDINARY_CLOUD_NAME:}
   api-key: ${CLOUDINARY_API_KEY:}
   api-secret: ${CLOUDINARY_API_SECRET:}

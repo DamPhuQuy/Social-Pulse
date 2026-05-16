@@ -29,6 +29,18 @@ public class UserProfileRepositoryAdapter implements UserProfileRepository {
 				.map(userPersistenceMapper::toDomain);
 	}
 
-}
+	@Override
+	public UserProfile save(UserProfile userProfile) {
+		return userPersistenceMapper.toDomain(
+				jpaUserProfileRepository.save(userPersistenceMapper.toEntity(userProfile))
+		);
+	}
 
+	@Override
+	public void deleteByUserId(Long userId) {
+		jpaUserProfileRepository.findByUserId(userId)
+				.ifPresent(jpaUserProfileRepository::delete);
+	}
+
+}
 

@@ -12,19 +12,29 @@ import com.socialpulse.app.user.application.dto.mapper.UserMapper;
 import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.domain.model.UserProfile;
+import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
 public class CreateUserService implements CreateUserUseCase {
 
     private final UserRepository userRepository;
+    private final UserProfileRepository userProfileRepository;
     private final AppPasswordEncoder passwordEncode;
     private final UserMapper userMapper;
+    private final UserRoleService userRoleService;
 
-    public CreateUserService(UserRepository userRepository, AppPasswordEncoder passwordEncode, UserMapper userMapper) {
+    public CreateUserService(UserRepository userRepository,
+                             UserProfileRepository userProfileRepository,
+                             AppPasswordEncoder passwordEncode,
+                             UserMapper userMapper,
+                             UserRoleService userRoleService) {
         this.userRepository = userRepository;
+        this.userProfileRepository = userProfileRepository;
         this.passwordEncode = passwordEncode;
         this.userMapper = userMapper;
+        this.userRoleService = userRoleService;
     }
 
     @Override
@@ -48,12 +58,17 @@ public class CreateUserService implements CreateUserUseCase {
         User user = userMapper.toUser(request, normalizedEmail, encodedPassword);
         user.applyDefaultState();
 
+        userRoleService.assignDefaultRole(user);
+
         user = userRepository.save(user);
+        userProfileRepository.save(UserProfile.builder()
+                .id(user.getId())
+                .displayName(user.getUsername())
+                .build());
         String message = "User created successfully for email: " + user.getEmail();
 
         return userMapper.toUserCreationResponse(user, message);
     }
 
 }
-
 

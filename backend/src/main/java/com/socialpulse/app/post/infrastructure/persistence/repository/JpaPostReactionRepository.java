@@ -1,5 +1,7 @@
 package com.socialpulse.app.post.infrastructure.persistence.repository;
 
+import java.util.Collection;
+import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -10,4 +12,6 @@ import com.socialpulse.app.post.infrastructure.persistence.entity.PostReactionsE
 @Repository
 public interface JpaPostReactionRepository extends JpaRepository<PostReactionsEntity, Long> {
     Optional<PostReactionsEntity> findByPostIdAndUserId(Long postId, Long userId);
+
+    List<PostReactionsEntity> findByUserIdAndPostIdIn(Long userId, Collection<Long> postIds);
 }

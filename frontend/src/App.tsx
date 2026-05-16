@@ -1,3 +1,4 @@
+import { useEffect } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { ProtectedRoute } from "@/routes/ProtectedRoute";
 import { Route, Routes } from "react-router-dom";
@@ -6,6 +7,17 @@ import { routesConfig } from "./routes/routesConfig";
 import { AuthProvider } from "@/hooks/useAuth";
 
 function App() {
+  useEffect(() => {
+    const isDark = localStorage.getItem('theme') === 'dark' || 
+      (!('theme' in localStorage) && window.matchMedia('(prefers-color-scheme: dark)').matches);
+    
+    if (isDark) {
+      document.documentElement.classList.add('dark');
+    } else {
+      document.documentElement.classList.remove('dark');
+    }
+  }, []);
+
   return (
     <AuthProvider>
       <Routes>

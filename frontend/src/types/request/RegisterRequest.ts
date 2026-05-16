@@ -1,6 +1,6 @@
 export type RegisterRequest = {
   username: string;
   email: string;
-  password: string;
+  rawPassword: string;
   confirmPassword: string;
 };

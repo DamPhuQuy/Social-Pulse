@@ -1,12 +1,6 @@
--- ============================================================
--- V4: Seed USER accounts, posts, and comments (idempotent)
--- ============================================================
-
 CREATE EXTENSION IF NOT EXISTS pgcrypto;
 
--- ------------------------------------------------------------
--- 1) Seed users with USER role
--- ------------------------------------------------------------
+-- Seed a small sample social graph for local development.
 INSERT INTO users (
     username,
     email,
@@ -42,9 +36,6 @@ WHERE NOT EXISTS (
     WHERE u.email = s.email
 );
 
--- ------------------------------------------------------------
--- 2) Seed profiles for seeded users
--- ------------------------------------------------------------
 INSERT INTO profiles (
     user_id,
     bio,
@@ -76,9 +67,6 @@ WHERE NOT EXISTS (
     WHERE pr.user_id = u.id
 );
 
--- ------------------------------------------------------------
--- 3) Seed posts from USER accounts
--- ------------------------------------------------------------
 INSERT INTO posts (
     user_id,
     content,
@@ -112,9 +100,6 @@ WHERE NOT EXISTS (
       AND p.content = sp.content
 );
 
--- ------------------------------------------------------------
--- 4) Seed top-level comments
--- ------------------------------------------------------------
 INSERT INTO comments (
     post_id,
     user_id,
@@ -152,9 +137,6 @@ WHERE NOT EXISTS (
       AND c.content = sc.content
 );
 
--- ------------------------------------------------------------
--- 5) Seed reply comments
--- ------------------------------------------------------------
 INSERT INTO comments (
     post_id,
     user_id,
