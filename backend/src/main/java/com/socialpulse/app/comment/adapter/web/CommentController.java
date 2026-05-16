@@ -92,6 +92,7 @@ public class CommentController {
     }
 
     @GetMapping
+    @PreAuthorize("hasAuthority('comment:read')")
     @Operation(summary = "Get top level comments", description = "Get top level comments for a post with offset and limit")
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getTopLevelComments(
             @PathVariable Long postId,
@@ -108,7 +109,7 @@ public class CommentController {
     }
 
     @PutMapping("/{commentId}")
-    @PreAuthorize("hasAuthority('comment:update')")
+    @PreAuthorize("hasAnyAuthority('comment:update', 'comment:manage')")
     @Operation(
         summary = "Update comment",
         description = "Update a comment content",
@@ -155,7 +156,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    @PreAuthorize("hasAuthority('comment:delete')")
+    @PreAuthorize("hasAnyAuthority('comment:delete', 'comment:manage')")
     @Operation(
         summary = "Delete comment",
         description = "Soft delete a comment (only owner can delete)",
@@ -196,4 +197,3 @@ public class CommentController {
     }
 
 }
-

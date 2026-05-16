@@ -12,12 +12,18 @@ import com.socialpulse.app.security.encoder.AppPasswordEncoder;
 import com.socialpulse.app.user.adapter.persistence.UserProfileRepositoryAdapter;
 import com.socialpulse.app.user.adapter.persistence.UserRepositoryAdapter;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
+import com.socialpulse.app.user.application.service.CreateUserProfileService;
 import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
+import com.socialpulse.app.user.application.service.DeleteUserProfileService;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.GetUserProfileService;
+import com.socialpulse.app.user.application.service.UpdateUserProfileService;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
@@ -60,12 +66,33 @@ public class UserConfig {
     @Bean
     public CreateUserUseCase createUserUseCase(
             UserRepository userRepository,
+            UserProfileRepository userProfileRepository,
             AppPasswordEncoder appPasswordEncoder,
             UserMapper userMapper,
             UserRoleService userRoleService
     ) {
-        return new CreateUserService(userRepository, appPasswordEncoder, userMapper, userRoleService);
+        return new CreateUserService(userRepository, userProfileRepository, appPasswordEncoder, userMapper, userRoleService);
+    }
+
+    @Bean
+    public CreateUserProfileUseCase createUserProfileUseCase(
+            UserRepository userRepository,
+            UserProfileRepository userProfileRepository,
+            UserMapper userMapper) {
+        return new CreateUserProfileService(userRepository, userProfileRepository, userMapper);
+    }
+
+    @Bean
+    public UpdateUserProfileUseCase updateUserProfileUseCase(
+            UserRepository userRepository,
+            UserProfileRepository userProfileRepository,
+            UserMapper userMapper) {
+        return new UpdateUserProfileService(userRepository, userProfileRepository, userMapper);
+    }
+
+    @Bean
+    public DeleteUserProfileUseCase deleteUserProfileUseCase(UserProfileRepository userProfileRepository) {
+        return new DeleteUserProfileService(userProfileRepository);
     }
 }
-
 

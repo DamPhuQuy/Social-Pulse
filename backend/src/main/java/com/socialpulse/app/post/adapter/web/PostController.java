@@ -55,7 +55,7 @@ public class PostController {
     }
 
     @PostMapping
-    @PreAuthorize("hasRole('USER') and hasAuthority('post:create')")
+    @PreAuthorize("hasAuthority('post:create')")
     @Operation(
             summary = "Create post",
             description = "Create a new post for current authenticated user",
@@ -87,13 +87,13 @@ public class PostController {
     }
 
     @GetMapping("/{postId}")
-    @PreAuthorize("hasRole('USER') and hasAuthority('post:read')")
+    @PreAuthorize("hasAuthority('post:read')")
     public ResponseEntity<ApiResponse<ViewPostResponse>> viewPost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<ViewPostResponse>builder().data(viewPostUseCase.viewPost(postId, currentUser)).build());
     }
 
     @PostMapping("/react")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('post:react')")
     public ResponseEntity<ApiResponse<PostReactionResponse>> react(
             @RequestBody @Valid PostReactionRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -101,7 +101,7 @@ public class PostController {
     }
 
     @DeleteMapping("/{postId}")
-    @PreAuthorize("hasAnyRole('USER', 'ADMIN')")
+    @PreAuthorize("hasAnyAuthority('post:delete', 'post:manage')")
     @Operation(summary = "Delete post", description = "Soft delete a post. Only the author or an admin can delete.")
     public ResponseEntity<ApiResponse<Void>> deletePost(@PathVariable Long postId, @AuthenticationPrincipal CustomUserDetails currentUser) {
         deletePostUseCase.deletePost(postId, currentUser);
@@ -109,7 +109,7 @@ public class PostController {
     }
 
     @PutMapping("/{postId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAnyAuthority('post:update', 'post:manage')")
     @Operation(summary = "Edit post", description = "Edit an existing post")
     public ResponseEntity<ApiResponse<PostUpdateResponse>> editPost(
             @PathVariable Long postId,
@@ -120,4 +120,3 @@ public class PostController {
     }
 
 }
-

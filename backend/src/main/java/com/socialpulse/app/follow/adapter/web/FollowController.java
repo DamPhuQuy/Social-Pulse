@@ -34,7 +34,7 @@ public class FollowController {
     }
 
     @PostMapping("/{userId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('follow:create')")
     @Operation(
         summary = "Follow a user",
         description = "Follow another user by their ID",
@@ -65,7 +65,7 @@ public class FollowController {
     }
 
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasRole('USER')")
+    @PreAuthorize("hasAuthority('follow:delete')")
     @Operation(
         summary = "Unfollow a user",
         description = "Unfollow a user by their ID",

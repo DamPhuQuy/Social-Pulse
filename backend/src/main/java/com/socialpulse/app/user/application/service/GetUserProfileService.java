@@ -28,7 +28,7 @@ public class GetUserProfileService implements GetUserProfileUseCase {
     @Transactional(readOnly = true)
     public UserViewProfileResponse getProfile(UserViewProfileRequest request) {
         var userProfile = userProfileRepository.findByUserId(request.getTargetUserId())
-            .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+            .orElseThrow(() -> new AppException(UserCode.USER_PROFILE_NOT_FOUND));
         return userMapper.toUserViewProfileResponse(userProfile);
     }
 
@@ -37,9 +37,8 @@ public class GetUserProfileService implements GetUserProfileUseCase {
     public UserViewProfileResponse getProfileByUsername(String username) {
         var normalizedUsername = username == null ? null : username.toLowerCase(Locale.ROOT);
         var userProfile = userProfileRepository.findByUsername(normalizedUsername)
-                .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
+                .orElseThrow(() -> new AppException(UserCode.USER_PROFILE_NOT_FOUND));
         return userMapper.toUserViewProfileResponse(userProfile);
     }
 }
-
 

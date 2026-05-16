@@ -2,6 +2,7 @@ package com.socialpulse.app.report.adapter.web;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -31,6 +32,7 @@ public class ReportController {
     }
 
     @PostMapping
+    @PreAuthorize("hasAuthority('report:create')")
     public ResponseEntity<ApiResponse<ReportResponse>> submitReport(
         @RequestBody CreateReportRequest request,
         @AuthenticationPrincipal CustomUserDetails currentUser
@@ -41,4 +43,3 @@ public class ReportController {
         return ResponseEntity.ok(ApiResponse.<ReportResponse>builder().data(response).build());
     }
 }
-

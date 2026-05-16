@@ -24,7 +24,11 @@ public class DeleteCommentService implements DeleteCommentUseCase {
             throw new AppException(CommentCode.COMMENT_NOT_BELONG_TO_POST);
         }
 
-        if (!comment.getUserId().equals(currentUser.getId())) {
+        boolean isOwner = comment.getUserId().equals(currentUser.getId());
+        boolean hasManagePermission = currentUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("comment:manage"));
+
+        if (!isOwner && !hasManagePermission) {
             throw new AppException(CommentCode.COMMENT_NOT_OWNER);
         }
 

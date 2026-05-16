@@ -4,7 +4,6 @@ import java.util.Collection;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import org.jspecify.annotations.NullMarked;
 import org.jspecify.annotations.Nullable;
@@ -21,8 +20,6 @@ import lombok.Getter;
 @Getter
 public class CustomUserDetails implements UserDetails {
 
-    private static final String ROLE_PREFIX = "ROLE_";
-
     private final User user;
     private final Collection<GrantedAuthority> authorities;
 
@@ -31,13 +28,10 @@ public class CustomUserDetails implements UserDetails {
         this.authorities = Optional.ofNullable(user.getRoles())
                             .orElse(Set.of())
                             .stream()
-                            .flatMap(role -> Stream.concat(
-                                    Stream.of(new SimpleGrantedAuthority(ROLE_PREFIX + role.getName())),
-                                    Optional.ofNullable(role.getPermissions())
-                                            .orElse(Set.of())
-                                            .stream()
-                                            .map(permission -> new SimpleGrantedAuthority(permission.getName())
-                            )))
+                            .flatMap(role -> Optional.ofNullable(role.getPermissions())
+                                    .orElse(Set.of())
+                                    .stream()
+                                    .map(permission -> new SimpleGrantedAuthority(permission.getName())))
                             .collect(Collectors.toUnmodifiableSet());
     }
 
