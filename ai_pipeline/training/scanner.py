@@ -39,12 +39,15 @@ class PushshiftDatasetScanner:
                 agg = author_aggregates.setdefault(record.author, AuthorAggregate())
                 agg.increment(popularity)
 
-                if len(reservoir) < arguments.sample_size:
-                    reservoir.append(record)
+                if arguments.sample_size > 0:
+                    if len(reservoir) < arguments.sample_size:
+                        reservoir.append(record)
+                    else:
+                        idx = rng.randint(0, accepted - 1)
+                        if idx < arguments.sample_size:
+                            reservoir[idx] = record
                 else:
-                    idx = rng.randint(0, accepted - 1)
-                    if idx < arguments.sample_size:
-                        reservoir[idx] = record
+                    reservoir.append(record)
 
                 if arguments.scan_limit_posts > 0 and accepted >= arguments.scan_limit_posts:
                     break

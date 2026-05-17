@@ -28,7 +28,13 @@ class GradientBoostedTreeTrainer:
         train_features = np.array([r.features for r in train_rows])
         val_features = np.array([r.features for r in validation_rows]) if validation_rows else np.empty((0, len(LightGbmFeatureSchema.FEATURE_ORDER)))
 
-        for _ in range(arguments.n_estimators):
+        best_val_rmse = float("inf")
+        rounds_no_improve = 0
+        best_n_trees = len(tree_info)
+        best_train_preds = train_preds.copy()
+        best_val_preds = val_preds.copy()
+
+        for iteration in range(arguments.n_estimators):
             residuals = train_targets - train_preds
             indices = np.arange(len(train_rows))
 
@@ -42,13 +48,32 @@ class GradientBoostedTreeTrainer:
             if len(val_features) > 0:
                 val_preds += arguments.learning_rate * tree.predict_batch(val_features)
 
+            val_rmse = _rmse(val_targets, val_preds)
+            if (iteration + 1) % 5 == 0 or iteration == 0:
+                print(f"[iter {iteration + 1:>3}] train_rmse={_rmse(train_targets, train_preds):.6f}  val_rmse={val_rmse:.6f}")
+
+            if val_rmse < best_val_rmse:
+                best_val_rmse = val_rmse
+                rounds_no_improve = 0
+                best_n_trees = len(tree_info)
+                best_train_preds = train_preds.copy()
+                best_val_preds = val_preds.copy()
+            else:
+                rounds_no_improve += 1
+                if rounds_no_improve >= arguments.early_stopping_rounds:
+                    print(f"Early stopping at iteration {iteration + 1}, best val_rmse={best_val_rmse:.6f}")
+                    break
+
+        # Trim trees to best checkpoint
+        tree_info = tree_info[:best_n_trees]
+
         metrics = Metrics(
-            train_rmse=_rmse(train_targets, train_preds),
-            validation_rmse=_rmse(val_targets, val_preds),
-            train_mae=_mae(train_targets, train_preds),
-            validation_mae=_mae(val_targets, val_preds),
-            train_ndcg_k=_ndcg_k(train_rows, train_preds, k=10),
-            validation_ndcg_k=_ndcg_k(validation_rows, val_preds, k=10),
+            train_rmse=_rmse(train_targets, best_train_preds),
+            validation_rmse=_rmse(val_targets, best_val_preds),
+            train_mae=_mae(train_targets, best_train_preds),
+            validation_mae=_mae(val_targets, best_val_preds),
+            train_ndcg_k=_ndcg_k(train_rows, best_train_preds, k=10),
+            validation_ndcg_k=_ndcg_k(validation_rows, best_val_preds, k=10),
         )
         model_dump = {
             "objective": "regression",
