@@ -9,9 +9,12 @@ import com.cloudinary.Cloudinary;
 import com.cloudinary.utils.ObjectUtils;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.SystemCode;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 @Service
 public class CloudinaryService {
+    private static final Logger logger = LoggerFactory.getLogger(CloudinaryService.class);
     private final Cloudinary cloudinary;
 
     public CloudinaryService(Cloudinary cloudinary) {
@@ -26,18 +29,18 @@ public class CloudinaryService {
         try {
             Map<?, ?> result = cloudinary.uploader().upload(
                     file.getBytes(),
-                    ObjectUtils.emptyMap()
+                    ObjectUtils.asMap("resource_type", "auto")
             );
 
             Object secureUrl = result.get("secure_url");
             if (secureUrl == null) {
+                logger.error("Cloudinary upload successful but secure_url is null. Result: {}", result);
                 throw new AppException(SystemCode.UPLOAD_FAILED);
             }
 
             return secureUrl.toString();
-        } catch (AppException e) {
-            throw e;
         } catch (Exception e) {
+            logger.error("Cloudinary upload failed: {}", e.getMessage(), e);
             throw new AppException(SystemCode.UPLOAD_FAILED);
         }
     }

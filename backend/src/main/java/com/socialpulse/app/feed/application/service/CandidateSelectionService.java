@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Set;
 
 import org.springframework.data.domain.PageRequest;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
@@ -16,6 +17,7 @@ import com.socialpulse.app.post.domain.model.Post;
 
 public class CandidateSelectionService implements SelectCandidatesUseCase {
     private final FeedRepository feedRepository;
+    private final StringRedisTemplate redisTemplate;
 
     private static final int RECENT_COUNT = 200;
     private static final int FOLLOWING_COUNT = 100;
@@ -23,8 +25,9 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
     private static final int RANDOM_COUNT = 100;
     private static final int LOOKBACK_DAYS = 7;
 
-    public CandidateSelectionService(FeedRepository feedRepository) {
+    public CandidateSelectionService(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
         this.feedRepository = feedRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -32,6 +35,17 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
         LocalDateTime since = LocalDateTime.now().minusDays(LOOKBACK_DAYS);
         List<CandidatePost> candidates = new ArrayList<>();
         Set<Long> seenIds = new HashSet<>();
+
+        // Initialize seenIds with the user's view history to filter out seen posts
+        String seenKey = "user:seen:" + userId;
+        Set<String> history = redisTemplate.opsForSet().members(seenKey);
+        if (history != null) {
+            for (String idStr : history) {
+                try {
+                    seenIds.add(Long.parseLong(idStr));
+                } catch (NumberFormatException ignored) {}
+            }
+        }
 
         List<Post> recentPosts = feedRepository.findRecentPosts(since, PageRequest.of(0, RECENT_COUNT));
         for (Post post : recentPosts) {

@@ -89,4 +89,11 @@ public class UserEntity {
     public void preUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
+
+    public void setProfile(UserProfileEntity profile) {
+        this.profile = profile;
+        if (profile != null) {
+            profile.setUser(this);
+        }
+    }
 }
