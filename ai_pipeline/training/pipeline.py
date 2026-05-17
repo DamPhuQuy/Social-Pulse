@@ -3,7 +3,7 @@ from __future__ import annotations
 
 from datetime import datetime, timezone
 
-from ..shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from . import json_support as js
 from .arguments import TrainingArguments
 from .feature_engineering import PushshiftFeatureEngineering

@@ -3,7 +3,7 @@ from __future__ import annotations
 
 import hashlib
 
-from ..shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from .scanner import PushshiftDatasetScanner
 from .types import (
     AuthorAggregate, DatasetSplit, SubmissionRecord, TrainingDataset, TrainingRow,

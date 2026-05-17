@@ -6,7 +6,7 @@ from typing import Any
 
 import numpy as np
 
-from ..shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from .arguments import TrainingArguments
 from .types import GradientBoostedModel, Metrics, TrainingRow
 

@@ -5,7 +5,7 @@ import random
 from collections import defaultdict
 from pathlib import Path
 
-from ..shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from . import json_support as js
 from .arguments import TrainingArguments
 from .types import AuthorAggregate, InteractionScanResult, ScanResult, SubmissionRecord

@@ -4,7 +4,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Any
 
-from ..shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
 
 
 @dataclass

@@ -8,9 +8,9 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
-from ..shared.model import LightGbmModel, parse_artifact, parse_model
-from ..shared.schema import LightGbmFeatureSchema
-from ..shared.scorer import LightGbmModelScorer
+from ai_pipeline.shared.model import LightGbmModel, parse_artifact, parse_model
+from ai_pipeline.shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.scorer import LightGbmModelScorer
 from .vectorizer import LightGbmFeatureVectorizer, RankingFeatures
 
 logger = logging.getLogger(__name__)
