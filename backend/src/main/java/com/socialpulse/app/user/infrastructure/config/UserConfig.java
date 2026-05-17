@@ -5,6 +5,14 @@ import com.socialpulse.app.user.application.service.UserRoleService;
 import com.socialpulse.app.user.domain.repository.RoleRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
+import com.socialpulse.app.user.application.service.AdminAssignUserRoleService;
+import com.socialpulse.app.user.application.service.AdminGetUserDetailsService;
+import com.socialpulse.app.user.application.service.AdminLockUnlockUserService;
+import com.socialpulse.app.user.application.service.AdminSearchUsersService;
+import com.socialpulse.app.user.application.usecase.AdminAssignUserRoleUseCase;
+import com.socialpulse.app.user.application.usecase.AdminGetUserDetailsUseCase;
+import com.socialpulse.app.user.application.usecase.AdminLockUnlockUserUseCase;
+import com.socialpulse.app.user.application.usecase.AdminSearchUsersUseCase;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
@@ -116,5 +124,36 @@ public class UserConfig {
             TopicRepository topicRepository,
             TopicPersistenceMapper topicMapper) {
         return new UpdateUserTopicsService(userRepository, topicRepository, topicMapper);
+    }
+
+    // --- Admin Use Cases ---
+
+    @Bean
+    public AdminSearchUsersUseCase adminSearchUsersUseCase(
+            UserRepository userRepository,
+            UserMapper userMapper) {
+        return new AdminSearchUsersService(userRepository, userMapper);
+    }
+
+    @Bean
+    public AdminGetUserDetailsUseCase adminGetUserDetailsUseCase(
+            UserRepository userRepository,
+            UserMapper userMapper) {
+        return new AdminGetUserDetailsService(userRepository, userMapper);
+    }
+
+    @Bean
+    public AdminLockUnlockUserUseCase adminLockUnlockUserUseCase(
+            UserRepository userRepository,
+            UserMapper userMapper) {
+        return new AdminLockUnlockUserService(userRepository, userMapper);
+    }
+
+    @Bean
+    public AdminAssignUserRoleUseCase adminAssignUserRoleUseCase(
+            UserRepository userRepository,
+            UserRoleService userRoleService,
+            UserMapper userMapper) {
+        return new AdminAssignUserRoleService(userRepository, userRoleService, userMapper);
     }
 }
