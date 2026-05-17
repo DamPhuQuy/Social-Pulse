@@ -9,4 +9,4 @@ dependencies = [
 ]
 
 [project.scripts]
-train = "ai_pipeline.training.cli:main"
+train = "ai_pipeline.training.main:main"

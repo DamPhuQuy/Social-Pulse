@@ -11,9 +11,9 @@ class TrainingArguments:
     comments_path: Path | None
     output_path: Path
     metrics_output_path: Path | None
-    sample_size: int = 12000
-    scan_limit_posts: int = 180000
-    scan_limit_comments: int = 300000
+    sample_size: int = 100000
+    scan_limit_posts: int = 0
+    scan_limit_comments: int = 0
     min_content_length: int = 20
     n_estimators: int = 16
     max_depth: int = 3
@@ -76,8 +76,7 @@ class TrainingArguments:
         if self.comments_path and not self.comments_path.exists():
             raise ValueError(f"Comments archive not found: {self.comments_path}")
         if any(v <= 0 for v in [
-            self.sample_size, self.scan_limit_posts, self.scan_limit_comments,
-            self.n_estimators, self.max_depth, self.min_samples_leaf,
-            self.max_thresholds, self.learning_rate,
+            self.sample_size, self.n_estimators, self.max_depth,
+            self.min_samples_leaf, self.max_thresholds, self.learning_rate,
         ]):
             raise ValueError("Training arguments must be positive.")

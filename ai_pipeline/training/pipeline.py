@@ -79,6 +79,8 @@ class PushshiftTrainingPipeline:
                 "validation_rmse": metrics.validation_rmse,
                 "train_mae": metrics.train_mae,
                 "validation_mae": metrics.validation_mae,
+                "train_ndcg_k": metrics.train_ndcg_k,
+                "validation_ndcg_k": metrics.validation_ndcg_k,
             },
             "hyperparameters": {
                 "sample_size": arguments.sample_size,

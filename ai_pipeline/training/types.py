@@ -78,6 +78,8 @@ class Metrics:
     validation_rmse: float
     train_mae: float
     validation_mae: float
+    train_ndcg_k: float
+    validation_ndcg_k: float
 
 
 @dataclass(frozen=True)

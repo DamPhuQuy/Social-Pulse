@@ -47,6 +47,8 @@ class GradientBoostedTreeTrainer:
             validation_rmse=_rmse(val_targets, val_preds),
             train_mae=_mae(train_targets, train_preds),
             validation_mae=_mae(val_targets, val_preds),
+            train_ndcg_k=_ndcg_k(train_rows, train_preds, k=10),
+            validation_ndcg_k=_ndcg_k(validation_rows, val_preds, k=10),
         )
         model_dump = {
             "objective": "regression",
@@ -201,3 +203,26 @@ def _mae(actual: np.ndarray, predicted: np.ndarray) -> float:
     if len(actual) == 0:
         return 0.0
     return float(np.abs(actual - predicted).mean())
+
+
+def _ndcg_k(rows: list[TrainingRow], predictions: np.ndarray, k: int = 10) -> float:
+    from collections import defaultdict
+    groups: dict[str, list[int]] = defaultdict(list)
+    for i, row in enumerate(rows):
+        groups[row.post_id].append(i)
+    if not groups:
+        return 0.0
+    ndcg_sum = 0.0
+    count = 0
+    for indices in groups.values():
+        if len(indices) < 2:
+            continue
+        relevances = np.array([rows[i].label for i in indices])
+        scores = predictions[indices]
+        ranked = np.argsort(-scores)[:k]
+        dcg = float(np.sum((2.0 ** relevances[ranked] - 1.0) / np.log2(np.arange(len(ranked)) + 2.0)))
+        ideal_order = np.argsort(-relevances)[:k]
+        idcg = float(np.sum((2.0 ** relevances[ideal_order] - 1.0) / np.log2(np.arange(len(ideal_order)) + 2.0)))
+        ndcg_sum += dcg / idcg if idcg > 0 else 0.0
+        count += 1
+    return ndcg_sum / count if count > 0 else 0.0

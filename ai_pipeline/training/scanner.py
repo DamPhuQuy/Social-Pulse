@@ -46,7 +46,7 @@ class PushshiftDatasetScanner:
                     if idx < arguments.sample_size:
                         reservoir[idx] = record
 
-                if accepted >= arguments.scan_limit_posts:
+                if arguments.scan_limit_posts > 0 and accepted >= arguments.scan_limit_posts:
                     break
 
         stats = {
@@ -83,7 +83,7 @@ class PushshiftDatasetScanner:
                 matched += 1
                 interactions[commenter][post_author].append(created_utc)
 
-                if scanned >= scan_limit:
+                if scan_limit > 0 and scanned >= scan_limit:
                     break
 
         stats = {
