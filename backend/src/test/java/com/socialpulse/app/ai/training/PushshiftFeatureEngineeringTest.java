@@ -27,7 +27,7 @@ class PushshiftFeatureEngineeringTest {
         aggregate.increment(50.0);
 
         TrainingDataset dataset = featureEngineering.buildTrainingDataset(
-                List.of(record), Map.of("testuser", aggregate));
+                List.of(record), Map.of("testuser", aggregate), Map.of(), 0);
 
         assertEquals(1, dataset.rows().size());
         double[] features = dataset.rows().get(0).features();
@@ -51,7 +51,7 @@ class PushshiftFeatureEngineeringTest {
         aggregate.increment(120.0);
 
         TrainingDataset dataset = featureEngineering.buildTrainingDataset(
-                List.of(record), Map.of("author1", aggregate));
+                List.of(record), Map.of("author1", aggregate), Map.of(), 0);
 
         double[] features = dataset.rows().get(0).features();
         int featureCount = LightGbmFeatureSchema.FEATURE_ORDER.size();
@@ -97,7 +97,7 @@ class PushshiftFeatureEngineeringTest {
                 record("ggg"), record("hhh"), record("iii"), record("jjj"));
 
         TrainingDataset dataset = featureEngineering.buildTrainingDataset(
-                records, Map.of());
+                records, Map.of(), Map.of(), 0);
 
         DatasetSplit split = featureEngineering.splitRows(dataset.rows());
 
@@ -119,7 +119,7 @@ class PushshiftFeatureEngineeringTest {
             records.add(record("post_" + i));
         }
 
-        TrainingDataset dataset = featureEngineering.buildTrainingDataset(records, Map.of());
+        TrainingDataset dataset = featureEngineering.buildTrainingDataset(records, Map.of(), Map.of(), 0);
         DatasetSplit split = featureEngineering.splitRows(dataset.rows());
 
         double validationRatio = (double) split.validationRows().size() / dataset.rows().size();

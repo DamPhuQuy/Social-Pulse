@@ -42,3 +42,5 @@ build/
 *.zst
 .bsp/
 .bloop
+.kiro
+.jqwik-database

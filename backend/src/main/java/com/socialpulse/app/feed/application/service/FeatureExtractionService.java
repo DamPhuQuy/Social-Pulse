@@ -12,10 +12,12 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.feed.application.dto.AuthorFeatures;
+import com.socialpulse.app.feed.application.dto.InteractionFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.model.User;
@@ -23,27 +25,25 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;
 
-/**
- * Extracts Pushshift-aligned ranking features from static post and author data.
- *
- * <p>Behavior and viewer-personalization signals are intentionally excluded from this contract.</p>
- */
 @Slf4j
 public class FeatureExtractionService implements ExtractFeaturesUseCase {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;
     private final UserRepository userRepository;
     private final PostRepository postRepository;
+    private final UserInteractionRepository userInteractionRepository;
 
     public FeatureExtractionService(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
             UserRepository userRepository,
-            PostRepository postRepository) {
+            PostRepository postRepository,
+            UserInteractionRepository userInteractionRepository) {
         this.redisTemplate = redisTemplate;
         this.objectMapper = objectMapper;
         this.userRepository = userRepository;
         this.postRepository = postRepository;
+        this.userInteractionRepository = userInteractionRepository;
     }
 
     @Override
@@ -63,8 +63,8 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
         Map<Long, Long> postCountMap = postRepository.countByUserIds(authorIds);
         Map<Long, Double> averagePopularityMap = postRepository.averagePopularityByUserIds(authorIds);
 
-        log.debug("Feature extraction batch queries: {} authors, {} author-post-counts, {} author-popularity-aggregates",
-                userMap.size(), postCountMap.size(), averagePopularityMap.size());
+        // Compute viewer's total interactions for affinity normalization
+        long viewerTotalInteractions = userInteractionRepository.countTotalByViewerSince(viewerId, now.minusDays(30));
 
         return candidates.stream().map(candidate -> {
             Post post = candidate.getPost();
@@ -74,8 +74,28 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
                     .postId(post.getId())
                     .postFeatures(extractPostFeatures(post, now))
                     .authorFeatures(buildAuthorFeatures(authorId, userMap, postCountMap, averagePopularityMap))
+                    .interactionFeatures(buildInteractionFeatures(viewerId, authorId, now, viewerTotalInteractions))
                     .build();
         }).toList();
+    }
+
+    private InteractionFeatures buildInteractionFeatures(Long viewerId, Long authorId, LocalDateTime now, long viewerTotal) {
+        long count7d = userInteractionRepository.countByViewerAndAuthorSince(viewerId, authorId, now.minusDays(7));
+        long count30d = userInteractionRepository.countByViewerAndAuthorSince(viewerId, authorId, now.minusDays(30));
+
+        LocalDateTime lastInteraction = userInteractionRepository.findLatestInteractionTime(viewerId, authorId);
+        double hoursSinceLast = lastInteraction != null
+                ? ChronoUnit.MINUTES.between(lastInteraction, now) / 60.0
+                : 999.0;
+
+        double affinity = viewerTotal > 0 ? (double) count30d / viewerTotal : 0.0;
+
+        return InteractionFeatures.builder()
+                .interactionCount7d(count7d)
+                .interactionCount30d(count30d)
+                .hoursSinceLastInteraction(hoursSinceLast)
+                .affinityScore(affinity)
+                .build();
     }
 
     private PostFeatures extractPostFeatures(Post post, LocalDateTime now) {

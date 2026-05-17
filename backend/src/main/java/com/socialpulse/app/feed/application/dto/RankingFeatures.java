@@ -13,4 +13,5 @@ public class RankingFeatures {
     private Long postId;
     private PostFeatures postFeatures;
     private AuthorFeatures authorFeatures;
+    private InteractionFeatures interactionFeatures;
 }

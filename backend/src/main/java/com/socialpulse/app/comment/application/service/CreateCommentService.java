@@ -10,6 +10,7 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.post.domain.repository.PostRepository;
@@ -27,6 +28,7 @@ public class CreateCommentService implements CreateCommentUseCase {
     private final CommentResponseAssembler commentResponseAssembler;
     private final CommentMapper commentMapper;
     private final NotificationCommandService notificationCommandService;
+    private final UserInteractionRepository userInteractionRepository;
 
     public CreateCommentService(CommentRepository commentRepositoryPort,
                                 PostRepository postRepositoryPort,
@@ -34,7 +36,8 @@ public class CreateCommentService implements CreateCommentUseCase {
                                 ValidateParentCommentUseCase validateParentCommentUseCase,
                                 CommentResponseAssembler commentResponseAssembler,
                                 CommentMapper commentMapper,
-                                NotificationCommandService notificationCommandService) {
+                                NotificationCommandService notificationCommandService,
+                                UserInteractionRepository userInteractionRepository) {
         this.commentRepositoryPort = commentRepositoryPort;
         this.postRepositoryPort = postRepositoryPort;
         this.userRepositoryPort = userRepositoryPort;
@@ -42,6 +45,7 @@ public class CreateCommentService implements CreateCommentUseCase {
         this.commentResponseAssembler = commentResponseAssembler;
         this.commentMapper = commentMapper;
         this.notificationCommandService = notificationCommandService;
+        this.userInteractionRepository = userInteractionRepository;
     }
 
     @Override
@@ -61,6 +65,12 @@ public class CreateCommentService implements CreateCommentUseCase {
         Comment savedComment = commentRepositoryPort.save(comment);
         post.incrementCommentCount();
         postRepositoryPort.save(post);
+
+        // Record interaction for personalized feed ranking
+        if (!user.getId().equals(post.getUserId())) {
+            userInteractionRepository.save(user.getId(), post.getUserId(), "COMMENT");
+        }
+
         if (parent == null) {
             notificationCommandService.notifyCommentOnPost(user.getId(), post.getUserId(), postId, savedComment.getId());
         } else {

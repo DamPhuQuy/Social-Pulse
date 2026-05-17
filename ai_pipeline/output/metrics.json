@@ -1,0 +1,38 @@
+{
+  "scan_stats": {
+    "submissions_scanned": 8445,
+    "submissions_filtered": 3445,
+    "submissions_accepted": 5000,
+    "reservoir_size": 1000
+  },
+  "interaction_stats": {
+    "comments_scanned": 10112,
+    "interactions_extracted": 34,
+    "unique_viewers": 20
+  },
+  "feature_stats": {
+    "total_training_rows": 3039,
+    "reference_utc": 1560415608.0
+  },
+  "train_rows": 2413,
+  "validation_rows": 626,
+  "metrics": {
+    "train_rmse": 0.30894431015205337,
+    "validation_rmse": 0.422066882976464,
+    "train_mae": 0.05967213252101651,
+    "validation_mae": 0.07220134309930495,
+    "train_ndcg_k": 0.030226700251889168,
+    "validation_ndcg_k": 0.02912621359223301
+  },
+  "hyperparameters": {
+    "sample_size": 1000,
+    "scan_limit_posts": 5000,
+    "scan_limit_comments": 10000,
+    "n_estimators": 200,
+    "max_depth": 3,
+    "min_samples_leaf": 64,
+    "max_thresholds": 16,
+    "learning_rate": 0.18,
+    "seed": 42
+  }
+}

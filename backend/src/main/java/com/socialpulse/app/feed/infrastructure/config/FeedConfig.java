@@ -12,6 +12,7 @@ import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
 import com.socialpulse.app.ai.inference.LightGbmRankingService;
 import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
+import com.socialpulse.app.feed.adapter.persistence.UserInteractionRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
 import com.socialpulse.app.feed.application.service.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.FeatureExtractionService;
@@ -23,6 +24,7 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -36,8 +38,13 @@ public class FeedConfig {
     }
 
     @Bean
-    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
-        return new CandidateSelectionService(feedRepository, redisTemplate);
+    public UserInteractionRepository userInteractionRepository(JdbcTemplate jdbcTemplate) {
+        return new UserInteractionRepositoryAdapter(jdbcTemplate);
+    }
+
+    @Bean
+    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository) {
+        return new CandidateSelectionService(feedRepository);
     }
 
     @Bean
@@ -45,11 +52,13 @@ public class FeedConfig {
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
             UserRepository userRepository,
-            PostRepository postRepository) {
+            PostRepository postRepository,
+            UserInteractionRepository userInteractionRepository) {
         return new FeatureExtractionService(
                 redisTemplate, objectMapper,
                 userRepository,
-                postRepository);
+                postRepository,
+                userInteractionRepository);
     }
 
     @Bean
