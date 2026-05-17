@@ -11,8 +11,8 @@ from .pipeline import PushshiftTrainingPipeline
 _BASE = Path(__file__).resolve().parent.parent
 _SUBMISSIONS = _BASE / "data" / "RS_2019-04.zst"
 _COMMENTS = _BASE / "data" / "RC_2019-04.zst"
-_OUTPUT = _BASE / "output" / "model.json"
-_METRICS_OUTPUT = _BASE / "output" / "metrics.json"
+_OUTPUT = _BASE / "model" / "model.json"
+_METRICS_OUTPUT = _BASE / "model" / "metrics.json"
 
 
 def main(args: list[str] | None = None) -> None:

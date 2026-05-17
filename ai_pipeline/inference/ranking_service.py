@@ -1,4 +1,5 @@
 """Ranking service: loads model artifact and scores feature vectors."""
+
 from __future__ import annotations
 
 import json
@@ -19,7 +20,7 @@ logger = logging.getLogger(__name__)
 @dataclass
 class LightGbmProperties:
     enabled: bool = False
-    model_location: str = "ai/lightgbm-ranking-model.json"
+    model_location: str = "ai_pipeline/model/model.json"
     feature_schema_version: str = LightGbmFeatureSchema.DEFAULT_SCHEMA_VERSION
 
 
@@ -47,8 +48,11 @@ class LightGbmRankingService:
         if not self._properties.enabled or not features:
             return []
         if self._properties.feature_schema_version != feature_schema_version:
-            logger.warning("Schema mismatch: expected=%s, actual=%s",
-                           self._properties.feature_schema_version, feature_schema_version)
+            logger.warning(
+                "Schema mismatch: expected=%s, actual=%s",
+                self._properties.feature_schema_version,
+                feature_schema_version,
+            )
             return []
 
         scorer = self._get_or_load_scorer()
@@ -92,15 +96,27 @@ class LightGbmRankingService:
             return None
 
         if schema_ver and schema_ver != self._properties.feature_schema_version:
-            logger.warning("Artifact schema mismatch: expected=%s, actual=%s",
-                           self._properties.feature_schema_version, schema_ver)
+            logger.warning(
+                "Artifact schema mismatch: expected=%s, actual=%s",
+                self._properties.feature_schema_version,
+                schema_ver,
+            )
             return None
 
-        logger.info("Loaded model from %s: %d trees, objective=%s, schema=%s, dataset=%s, trainedAt=%s",
-                    path, len(model.tree_info), model.objective_name, schema_ver, dataset, trained_at)
+        logger.info(
+            "Loaded model from %s: %d trees, objective=%s, schema=%s, dataset=%s, trainedAt=%s",
+            path,
+            len(model.tree_info),
+            model.objective_name,
+            schema_ver,
+            dataset,
+            trained_at,
+        )
         return LightGbmModelScorer(model)
 
-    def _read_artifact(self, data: dict) -> tuple[LightGbmModel, str | None, str | None, str | None]:
+    def _read_artifact(
+        self, data: dict
+    ) -> tuple[LightGbmModel, str | None, str | None, str | None]:
         if "tree_info" in data:
             model = parse_model(data)
             return model, self._properties.feature_schema_version, None, None
@@ -109,6 +125,11 @@ class LightGbmRankingService:
             artifact = parse_artifact(data)
             if artifact.model_dump is None:
                 raise ValueError("Artifact missing model_dump")
-            return artifact.model_dump, artifact.feature_schema_version, artifact.training_dataset, artifact.trained_at
+            return (
+                artifact.model_dump,
+                artifact.feature_schema_version,
+                artifact.training_dataset,
+                artifact.trained_at,
+            )
 
         raise ValueError("Unsupported artifact format")
