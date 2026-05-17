@@ -70,10 +70,10 @@ export default function ResetPasswordOtpPage() {
     return () => clearTimeout(id);
   }, [email, isVerified, navigate]);
 
-  const submitOtpVerification = useCallback(
+    const submitOtpVerification = useCallback(
     async (otpCode: string) => {
       if (!email) {
-        toast.error("Missing email context.");
+        toast.error("Thiếu thông tin email.");
         return;
       }
 
@@ -84,16 +84,16 @@ export default function ResetPasswordOtpPage() {
         sessionStorage.setItem(RESET_VERIFIED_FLAG_KEY, "1");
         sessionStorage.setItem(RESET_OTP_CODE_KEY, otpCode);
         setIsVerified(true);
-        toast.success("Identity Verified", { description: "You can now set your new password." });
+        toast.success("Xác thực Thành công", { description: "Bạn đã có thể thiết lập mật khẩu mới." });
       } else {
         const nextAttempts = failedAttempts + 1;
         setFailedAttempts(nextAttempts);
         const attemptsLeft = MAX_FAILED_ATTEMPTS - nextAttempts;
         
         if (attemptsLeft > 0) {
-          toast.error("Invalid Code", { description: `You have ${attemptsLeft} attempt(s) remaining.` });
+          toast.error("Mã không hợp lệ", { description: `Bạn còn ${attemptsLeft} lần thử.` });
         } else {
-          toast.error("Verification Locked", { description: "Please resend a new OTP code." });
+          toast.error("Khóa Xác thực", { description: "Vui lòng yêu cầu gửi lại mã OTP mới." });
         }
         setOtp("");
       }
@@ -119,14 +119,14 @@ export default function ResetPasswordOtpPage() {
       setOtp("");
       setFailedAttempts(0);
       setIsVerified(false);
-      toast.success("New code sent", { description: "Please check your inbox." });
+      toast.success("Mã mới đã được gửi", { description: "Vui lòng kiểm tra hộp thư đến." });
     } else {
-      toast.error("Failed to resend", { description: result.message });
+      toast.error("Gửi lại thất bại", { description: result.message });
     }
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       <InteractiveBackground />
 
       <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-[160px] -z-10" />
@@ -142,7 +142,7 @@ export default function ResetPasswordOtpPage() {
         <div className="flex items-center gap-6">
           <Link to={PATHS.LOGIN} className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-400 hover:text-blue-600 transition-colors group">
             <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-            Back to Login
+            Quay lại Đăng nhập
           </Link>
         </div>
       </nav>
@@ -163,12 +163,12 @@ export default function ResetPasswordOtpPage() {
               )}
             </div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
-              {isVerified ? "Verified!" : "Reset Security"}
+              {isVerified ? "Đã Xác thực!" : "Bảo mật Khôi phục"}
             </h1>
             <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
               {isVerified 
-                ? "Code accepted. Redirecting you to set a new password..."
-                : `We've sent a recovery code to ${email}. Enter it below.`}
+                ? "Mã đã được chấp nhận. Đang chuyển hướng để đặt mật khẩu mới..."
+                : `Chúng tôi đã gửi mã khôi phục đến ${email}. Nhập mã xuống bên dưới.`}
             </p>
           </div>
 
@@ -183,7 +183,7 @@ export default function ResetPasswordOtpPage() {
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center justify-center gap-2 text-sm font-medium">
                 <span className="text-gray-400">
-                  {secondsLeft > 0 ? `Resend in ${formatCountdown(secondsLeft)}` : "Didn't get a code?"}
+                  {secondsLeft > 0 ? `Gửi lại sau ${formatCountdown(secondsLeft)}` : "Chưa nhận được mã?"}
                 </span>
                 <button
                   type="button"
@@ -194,13 +194,13 @@ export default function ResetPasswordOtpPage() {
                   {isResending ? (
                     <RefreshCcw className="w-3 h-3 animate-spin" />
                   ) : null}
-                  Resend Code
+                  Gửi lại Mã
                 </button>
               </div>
 
               {!isVerified && (
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                  {isVerifying ? "Securing channel..." : `${MAX_FAILED_ATTEMPTS - failedAttempts} attempts left`}
+                  {isVerifying ? "Đang bảo mật kênh..." : `Còn ${MAX_FAILED_ATTEMPTS - failedAttempts} lần thử`}
                 </p>
               )}
             </div>
@@ -208,9 +208,10 @@ export default function ResetPasswordOtpPage() {
         </div>
 
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Pulse-Secure Recovery Active
+          Khôi phục bảo mật Pulse đang hoạt động
         </p>
       </motion.div>
     </div>
+
   );
 }

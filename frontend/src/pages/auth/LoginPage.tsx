@@ -64,7 +64,7 @@ export default function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       {/* Shared Interactive Background */}
       <InteractiveBackground />
 
@@ -92,13 +92,13 @@ export default function LoginPage() {
       >
         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-slate-300 dark:border-slate-800 rounded-[3rem] p-12 shadow-2xl shadow-blue-500/5">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Welcome back</h1>
-            <p className="text-gray-500 dark:text-slate-400 font-medium">Reconnect with your social pulse</p>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Chào mừng trở lại</h1>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">Kết nối lại với nhịp đập xã hội của bạn</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Email Address</Label>
+              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Địa chỉ Email</Label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -115,7 +115,7 @@ export default function LoginPage() {
 
             <div className="space-y-2">
               <div className="flex items-center justify-between ml-1">
-                <Label htmlFor="password" className="text-sm font-bold text-gray-700 dark:text-slate-300">Password</Label>
+                <Label htmlFor="password" className="text-sm font-bold text-gray-700 dark:text-slate-300">Mật khẩu</Label>
               </div>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
@@ -143,9 +143,9 @@ export default function LoginPage() {
               disabled={isSubmitting}
               className="w-full py-7 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all flex items-center justify-center gap-2 group"
             >
-              {isSubmitting ? "Signing in..." : (
+              {isSubmitting ? "Đang đăng nhập..." : (
                 <>
-                  Sign In <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Đăng nhập <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
@@ -153,9 +153,9 @@ export default function LoginPage() {
 
           <div className="mt-10 pt-8 border-t border-slate-300 dark:border-slate-800 text-center">
             <p className="text-sm text-gray-500 dark:text-slate-400 font-medium">
-              Having trouble?{" "}
+              Gặp sự cố?{" "}
               <Link to={PATHS.FORGOT_PASSWORD} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">
-                Reset your password
+                Khôi phục mật khẩu
               </Link>
             </p>
           </div>
@@ -163,7 +163,7 @@ export default function LoginPage() {
 
         {/* Footer info */}
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Secure AI-Powered Authentication
+          Xác thực bảo mật bằng AI
         </p>
       </motion.div>
     </div>

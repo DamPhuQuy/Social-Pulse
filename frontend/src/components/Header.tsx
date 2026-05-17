@@ -24,9 +24,9 @@ export default function Header({ isHomePage = true }: HeaderProps) {
           </Link>
           
           <div className="hidden md:flex items-center gap-8 text-[12px] font-normal text-[#f5f5f7] opacity-80">
-            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Features</Link>
-            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Community</Link>
-            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Pricing</Link>
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Tính năng</Link>
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Cộng đồng</Link>
+            <Link to={PATHS.LEARN_MORE} className="hover:opacity-100 transition-opacity">Bảng giá</Link>
           </div>
         </div>
 
@@ -36,7 +36,7 @@ export default function Header({ isHomePage = true }: HeaderProps) {
               to={PATHS.LOGIN}
               className="text-[12px] font-normal text-[#f5f5f7] opacity-80 hover:opacity-100 transition-opacity"
             >
-              Sign In
+              Đăng nhập
             </Link>
           </div>
         )}

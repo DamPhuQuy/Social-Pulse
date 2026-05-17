@@ -1,8 +1,10 @@
 package com.socialpulse.app.user.infrastructure.persistence.mapper;
 
 import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
+import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
+import org.mapstruct.MappingTarget;
 
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.model.UserProfile;
@@ -20,9 +22,10 @@ public interface UserPersistenceMapper {
     UserProfile toDomain(UserProfileEntity entity);
 
     @Mapping(target = "isLocked", expression = "java(user.isLocked())")
-    @Mapping(target = "profile", ignore = true)
+    @Mapping(target = "profile", source = "profile")
     UserEntity toEntity(User user);
 
+    @Mapping(target = "id", source = "id")
     @Mapping(target = "user", source = "id", qualifiedByName = "userIdToUserEntity")
     UserProfileEntity toEntity(UserProfile userProfile);
 
@@ -49,5 +52,11 @@ public interface UserPersistenceMapper {
         }
 
         return UserEntity.builder().id(userId).build();
+    }
+    @AfterMapping
+    default void linkProfile(@MappingTarget UserEntity entity) {
+        if (entity.getProfile() != null) {
+            entity.getProfile().setUser(entity);
+        }
     }
 }

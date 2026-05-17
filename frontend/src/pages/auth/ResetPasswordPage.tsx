@@ -53,7 +53,7 @@ export default function ResetPasswordPage() {
 
   useEffect(() => {
     if (!email || isOtpVerified) return;
-    toast.error("OTP verification required.");
+    toast.error("Yêu cầu xác thực OTP.");
     navigate(`${PATHS.FORGOT_PASSWORD}?email=${encodeURIComponent(email)}`, { replace: true });
   }, [email, isOtpVerified, navigate]);
 
@@ -73,17 +73,17 @@ export default function ResetPasswordPage() {
     event.preventDefault();
 
     if (!email || !isOtpVerified || !otpCode) {
-      toast.error("Process interrupted. Please start over.");
+      toast.error("Quá trình bị gián đoạn. Vui lòng bắt đầu lại.");
       return;
     }
 
     if (newPassword.length < 6) {
-      toast.error("Password must be at least 6 characters.");
+      toast.error("Mật khẩu phải có ít nhất 6 ký tự.");
       return;
     }
 
     if (newPassword !== confirmPassword) {
-      toast.error("Passwords do not match.");
+      toast.error("Mật khẩu không khớp.");
       return;
     }
 
@@ -92,15 +92,15 @@ export default function ResetPasswordPage() {
 
     if (result.ok) {
       setIsSuccess(true);
-      toast.success("Security Updated", { description: "Your password has been changed. Taking you to login..." });
+      toast.success("Đã cập nhật Bảo mật", { description: "Mật khẩu của bạn đã được thay đổi. Đang chuyển đến trang đăng nhập..." });
     } else {
-      toast.error("Reset failed.", { description: result.message });
+      toast.error("Khôi phục thất bại.", { description: result.message });
     }
     setIsSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       <InteractiveBackground />
 
       <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-[160px] -z-10" />
@@ -115,7 +115,7 @@ export default function ResetPasswordPage() {
         </Link>
         <Link to={PATHS.LOGIN} className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-400 hover:text-blue-600 transition-colors group">
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Cancel
+          Hủy
         </Link>
       </nav>
 
@@ -135,18 +135,18 @@ export default function ResetPasswordPage() {
               )}
             </div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
-              {isSuccess ? "Secure!" : "New Password"}
+              {isSuccess ? "Bảo mật!" : "Mật khẩu Mới"}
             </h1>
             <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
               {isSuccess 
-                ? "Your security profile has been updated. Redirecting to login..."
-                : "Choose a strong password that you don't use elsewhere."}
+                ? "Hồ sơ bảo mật của bạn đã được cập nhật. Đang chuyển hướng đến đăng nhập..."
+                : "Chọn một mật khẩu mạnh mà bạn không sử dụng ở nơi khác."}
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="new-password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">New Password</Label>
+              <Label htmlFor="new-password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Mật khẩu Mới</Label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -162,7 +162,7 @@ export default function ResetPasswordPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirm-password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Confirm New Password</Label>
+              <Label htmlFor="confirm-password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Xác nhận Mật khẩu Mới</Label>
               <div className="relative group">
                 <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -189,9 +189,9 @@ export default function ResetPasswordPage() {
               disabled={isSubmitting || isSuccess}
               className="w-full py-7 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all flex items-center justify-center gap-2 group"
             >
-              {isSubmitting ? "Updating..." : isSuccess ? "Success" : (
+              {isSubmitting ? "Đang cập nhật..." : isSuccess ? "Thành công" : (
                 <>
-                  Update Password <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Cập nhật Mật khẩu <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
@@ -199,7 +199,7 @@ export default function ResetPasswordPage() {
         </div>
 
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Security Protocol Re-Initialised
+          Giao thức Bảo mật đã được Khởi tạo lại
         </p>
       </motion.div>
     </div>
