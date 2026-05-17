@@ -2,8 +2,6 @@ package com.socialpulse.app.feed.application.dto;
 
 import java.util.List;
 
-import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
-
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
@@ -14,7 +12,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 public class RankingRequest {
+    public static final String DEFAULT_SCHEMA_VERSION = "v1";
+
     @Builder.Default
-    private String featureSchemaVersion = LightGbmFeatureSchema.DEFAULT_SCHEMA_VERSION;
+    private String featureSchemaVersion = DEFAULT_SCHEMA_VERSION;
     private List<RankingFeatures> features;
 }
