@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.dto;
+package com.socialpulse.app.feed.application.dto.features;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

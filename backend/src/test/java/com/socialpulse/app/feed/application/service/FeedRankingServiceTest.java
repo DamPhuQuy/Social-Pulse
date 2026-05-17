@@ -14,8 +14,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.socialpulse.app.feed.application.dto.RankingFeatures;
-import com.socialpulse.app.feed.application.dto.RankingResponse;
+import com.socialpulse.app.feed.application.dto.features.RankingFeatures;
+import com.socialpulse.app.feed.application.dto.features.RankingResponse;
 import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;

@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.dto;
+package com.socialpulse.app.feed.application.dto.features;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;

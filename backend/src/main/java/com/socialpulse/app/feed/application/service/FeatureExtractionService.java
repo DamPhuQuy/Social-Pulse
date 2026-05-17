@@ -11,10 +11,10 @@ import java.util.stream.Collectors;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.feed.application.dto.AuthorFeatures;
-import com.socialpulse.app.feed.application.dto.InteractionFeatures;
-import com.socialpulse.app.feed.application.dto.PostFeatures;
-import com.socialpulse.app.feed.application.dto.RankingFeatures;
+import com.socialpulse.app.feed.application.dto.features.AuthorFeatures;
+import com.socialpulse.app.feed.application.dto.features.InteractionFeatures;
+import com.socialpulse.app.feed.application.dto.features.PostFeatures;
+import com.socialpulse.app.feed.application.dto.features.RankingFeatures;
 import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;

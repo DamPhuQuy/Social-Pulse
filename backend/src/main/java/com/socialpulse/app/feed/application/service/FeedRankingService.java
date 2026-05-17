@@ -7,9 +7,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-import com.socialpulse.app.feed.application.dto.RankingFeatures;
-import com.socialpulse.app.feed.application.dto.RankingRequest;
-import com.socialpulse.app.feed.application.dto.RankingResponse;
+import com.socialpulse.app.feed.application.dto.features.RankingFeatures;
+import com.socialpulse.app.feed.application.dto.features.RankingRequest;
+import com.socialpulse.app.feed.application.dto.features.RankingResponse;
 import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
@@ -85,7 +85,7 @@ public class FeedRankingService implements RankFeedUseCase {
                 .map(score -> {
                     Post post = candidateMap.get(score.getPostId()).getPost();
                     double boostedScore = score.getScore() != null ? score.getScore() : 0.0;
-                    
+
                     // CRITICAL UX FIX: AI Models suffer from "Cold Start" problem.
                     // A brand new post has 0 likes/comments/views, so AI ranks it very low,
                     // causing it to be buried under old seed posts.
@@ -95,7 +95,7 @@ public class FeedRankingService implements RankFeedUseCase {
                         if (ageMinutes <= 60) {
                             boostedScore += 10000.0;
                         }
-                    } 
+                    }
                     // 2. Follower Boost: +5,000 boost for posts from people the user FOLLOWS, if created within 24 hours.
                     // This ensures followers actually see new posts so they can interact with them and train the AI!
                     else if (candidateMap.get(score.getPostId()).getSource() == Source.FOLLOWING && post.getCreatedAt() != null) {
@@ -105,7 +105,7 @@ public class FeedRankingService implements RankFeedUseCase {
                             boostedScore += 5000.0 - (ageHours * 50.0);
                         }
                     }
-                    
+
                     return FeedItem.builder()
                             .postId(score.getPostId())
                             .userId(userId)
