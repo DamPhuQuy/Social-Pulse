@@ -6,6 +6,7 @@ import java.util.Map;
 
 import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 import com.socialpulse.app.feed.application.dto.AuthorFeatures;
+import com.socialpulse.app.feed.application.dto.InteractionFeatures;
 import com.socialpulse.app.feed.application.dto.PostFeatures;
 import com.socialpulse.app.feed.application.dto.RankingFeatures;
 
@@ -18,6 +19,7 @@ public class LightGbmFeatureVectorizer {
     public Map<String, Double> toFeatureMap(RankingFeatures features) {
         PostFeatures postFeatures = features.getPostFeatures();
         AuthorFeatures authorFeatures = features.getAuthorFeatures();
+        InteractionFeatures interactionFeatures = features.getInteractionFeatures();
 
         Map<String, Double> vector = new LinkedHashMap<>();
         vector.put("content_length", safeInt(postFeatures != null ? postFeatures.getContentLength() : null));
@@ -31,10 +33,12 @@ public class LightGbmFeatureVectorizer {
         vector.put("author_post_count", safeLong(authorFeatures != null ? authorFeatures.getPostCount() : null));
         vector.put("author_engagement_rate", safeDouble(authorFeatures != null ? authorFeatures.getAveragePopularity() : null));
 
-        vector.put("interaction_count_7d", DEFAULT_NUMERIC_VALUE);
-        vector.put("interaction_count_30d", DEFAULT_NUMERIC_VALUE);
-        vector.put("hours_since_last_interaction", DEFAULT_LAST_INTERACTION_HOURS);
-        vector.put("affinity_score", DEFAULT_NUMERIC_VALUE);
+        vector.put("interaction_count_7d", safeLong(interactionFeatures != null ? interactionFeatures.getInteractionCount7d() : null));
+        vector.put("interaction_count_30d", safeLong(interactionFeatures != null ? interactionFeatures.getInteractionCount30d() : null));
+        vector.put("hours_since_last_interaction", safeDouble(
+                interactionFeatures != null ? interactionFeatures.getHoursSinceLastInteraction() : null,
+                DEFAULT_LAST_INTERACTION_HOURS));
+        vector.put("affinity_score", safeDouble(interactionFeatures != null ? interactionFeatures.getAffinityScore() : null));
 
         double upvoteCount = safeLong(postFeatures != null ? postFeatures.getUpvoteCount() : null);
         double downvoteCount = safeLong(postFeatures != null ? postFeatures.getDownvoteCount() : null);

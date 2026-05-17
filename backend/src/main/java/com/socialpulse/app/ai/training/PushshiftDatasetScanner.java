@@ -4,13 +4,11 @@ import java.io.IOException;
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Random;
-import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
 import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
@@ -67,13 +65,13 @@ final class PushshiftDatasetScanner {
         return new ScanResult(List.copyOf(reservoir), Map.copyOf(authorAggregates), scanStats);
     }
 
-    Map<String, Integer> scanComments(Path commentsPath, List<SubmissionRecord> sampledPosts, int scanLimitComments)
+    /**
+     * Scans RC .zst to build viewer-author interaction pairs from comments.
+     * A comment by user X on a post by user Y = implicit interaction (X → Y).
+     */
+    InteractionScanResult scanInteractions(Path commentsPath, Map<String, String> postAuthorMap, int scanLimit)
             throws IOException {
-        Set<String> sampledPostIds = new HashSet<>();
-        for (SubmissionRecord sampledPost : sampledPosts) {
-            sampledPostIds.add(sampledPost.postId());
-        }
-
+        Map<String, Map<String, List<Double>>> interactions = new HashMap<>();
         int scanned = 0;
         int matched = 0;
 
@@ -82,22 +80,40 @@ final class PushshiftDatasetScanner {
             while ((payload = reader.readNext()) != null) {
                 scanned++;
 
-                String linkId = TrainingJsonSupport.textValue(payload.get("link_id"));
-                String postId = TrainingJsonSupport.stripThingPrefix(linkId);
-                if (!postId.isBlank() && sampledPostIds.contains(postId)) {
-                    matched++;
+                String commenter = TrainingJsonSupport.normalizeText(TrainingJsonSupport.textValue(payload.get("author")));
+                if (commenter.isBlank() || "[deleted]".equalsIgnoreCase(commenter)) {
+                    continue;
                 }
 
-                if (scanned >= scanLimitComments) {
+                String linkId = TrainingJsonSupport.textValue(payload.get("link_id"));
+                String postId = TrainingJsonSupport.stripThingPrefix(linkId);
+                String postAuthor = postAuthorMap.get(postId);
+                if (postAuthor == null || postAuthor.equalsIgnoreCase(commenter)) {
+                    continue;
+                }
+
+                double createdUtc = TrainingJsonSupport.doubleValue(payload.get("created_utc"));
+                if (createdUtc <= 0) {
+                    continue;
+                }
+
+                matched++;
+                interactions
+                        .computeIfAbsent(commenter, k -> new HashMap<>())
+                        .computeIfAbsent(postAuthor, k -> new ArrayList<>())
+                        .add(createdUtc);
+
+                if (scanned >= scanLimit) {
                     break;
                 }
             }
         }
 
-        Map<String, Integer> commentStats = new LinkedHashMap<>();
-        commentStats.put("comments_scanned", scanned);
-        commentStats.put("matched_sample_posts", matched);
-        return commentStats;
+        Map<String, Integer> stats = new LinkedHashMap<>();
+        stats.put("comments_scanned", scanned);
+        stats.put("interactions_extracted", matched);
+        stats.put("unique_viewers", interactions.size());
+        return new InteractionScanResult(interactions, stats);
     }
 
     private SubmissionRecord preprocessSubmission(JsonNode payload, int minContentLength) {

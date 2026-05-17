@@ -71,3 +71,11 @@ record TrainingRunResult(
         int trainRows,
         int validationRows) {
 }
+
+/**
+ * Maps viewer → (author → list of interaction timestamps).
+ */
+record InteractionScanResult(
+        Map<String, Map<String, List<Double>>> interactions,
+        Map<String, Integer> stats) {
+}

@@ -9,9 +9,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
-public class RankingFeatures {
-    private Long postId;
-    private PostFeatures postFeatures;
-    private AuthorFeatures authorFeatures;
-    private InteractionFeatures interactionFeatures;
+public class InteractionFeatures {
+    private Long interactionCount7d;
+    private Long interactionCount30d;
+    private Double hoursSinceLastInteraction;
+    private Double affinityScore;
 }

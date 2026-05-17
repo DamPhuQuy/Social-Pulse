@@ -6,6 +6,7 @@ import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.common.utils.ReactionType;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
 import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
@@ -28,17 +29,20 @@ public class ReactPostService implements ReactPostUseCase {
     private final UserRepository userRepository;
     private final PostMapper postMapper;
     private final NotificationCommandService notificationCommandService;
+    private final UserInteractionRepository userInteractionRepository;
 
     public ReactPostService(PostRepository postRepository,
                             PostReactionsRepository postReactionsRepository,
                             UserRepository userRepository,
                             PostMapper postMapper,
-                            NotificationCommandService notificationCommandService) {
+                            NotificationCommandService notificationCommandService,
+                            UserInteractionRepository userInteractionRepository) {
         this.postRepository = postRepository;
         this.postReactionsRepository = postReactionsRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
         this.notificationCommandService = notificationCommandService;
+        this.userInteractionRepository = userInteractionRepository;
     }
 
     @Override
@@ -64,6 +68,11 @@ public class ReactPostService implements ReactPostUseCase {
             incrementReactionCount(post, targetReaction);
             postRepository.save(post);
             notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
+
+            // Record interaction for personalized feed ranking
+            if (targetReaction == ReactionType.UPVOTE && !currentUser.getId().equals(post.getUserId())) {
+                userInteractionRepository.save(currentUser.getId(), post.getUserId(), "UPVOTE");
+            }
 
             log.debug("New reaction saved for user {} on post {}", currentUser.getId(), post.getId());
             return postMapper.toPostReactionResponse(savedReaction);

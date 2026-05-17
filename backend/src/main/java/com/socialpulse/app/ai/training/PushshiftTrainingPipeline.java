@@ -4,14 +4,17 @@ import java.io.IOException;
 import java.time.OffsetDateTime;
 import java.time.ZoneOffset;
 import java.time.format.DateTimeFormatter;
+import java.util.HashMap;
 import java.util.LinkedHashMap;
+import java.util.List;
 import java.util.Map;
 
 import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftTrainingPipeline {
     private static final String DATASET_NAME = "pushshift_reddit_apr2019";
-    private static final String LABEL_STRATEGY = "log_popularity_proxy";
+    private static final String LABEL_STRATEGY = "log_popularity_proxy_personalized";
+    private static final int NEGATIVE_SAMPLES_PER_POST = 3;
 
     private final PushshiftDatasetScanner datasetScanner = new PushshiftDatasetScanner();
     private final PushshiftFeatureEngineering featureEngineering = new PushshiftFeatureEngineering();
@@ -25,15 +28,27 @@ final class PushshiftTrainingPipeline {
             throw new IllegalStateException("Not enough cleaned submissions to train a model: " + scanResult.sampledPosts().size());
         }
 
-        Map<String, Integer> commentStats = arguments.getCommentsPath() != null
-                ? datasetScanner.scanComments(arguments.getCommentsPath(), scanResult.sampledPosts(), arguments.getScanLimitComments())
-                : Map.of(
-                        "comments_scanned", 0,
-                        "matched_sample_posts", 0);
+        // Build post_id → author map for interaction extraction
+        Map<String, String> postAuthorMap = new HashMap<>();
+        for (SubmissionRecord post : scanResult.sampledPosts()) {
+            postAuthorMap.put(post.postId(), post.author());
+        }
+
+        // Scan RC comments to build interaction map
+        Map<String, Map<String, List<Double>>> interactions = Map.of();
+        Map<String, Integer> interactionStats = Map.of("comments_scanned", 0, "interactions_extracted", 0);
+        if (arguments.getCommentsPath() != null) {
+            InteractionScanResult interactionResult = datasetScanner.scanInteractions(
+                    arguments.getCommentsPath(), postAuthorMap, arguments.getScanLimitComments());
+            interactions = interactionResult.interactions();
+            interactionStats = interactionResult.stats();
+        }
 
         TrainingDataset dataset = featureEngineering.buildTrainingDataset(
                 scanResult.sampledPosts(),
-                scanResult.authorAggregates());
+                scanResult.authorAggregates(),
+                interactions,
+                NEGATIVE_SAMPLES_PER_POST);
         DatasetSplit split = featureEngineering.splitRows(dataset.rows());
         if (split.trainRows().isEmpty() || split.validationRows().isEmpty()) {
             throw new IllegalStateException("Unable to build both train and validation splits.");
@@ -45,7 +60,7 @@ final class PushshiftTrainingPipeline {
         Map<String, Object> trainingSummary = buildTrainingSummary(
                 arguments,
                 scanResult.scanStats(),
-                commentStats,
+                interactionStats,
                 dataset.featureStats(),
                 split.trainRows().size(),
                 split.validationRows().size(),
@@ -67,14 +82,14 @@ final class PushshiftTrainingPipeline {
     private Map<String, Object> buildTrainingSummary(
             TrainingArguments arguments,
             Map<String, Integer> scanStats,
-            Map<String, Integer> commentStats,
+            Map<String, Integer> interactionStats,
             Map<String, Object> featureStats,
             int trainRows,
             int validationRows,
             Metrics metrics) {
         Map<String, Object> summary = new LinkedHashMap<>();
         summary.put("scan_stats", scanStats);
-        summary.put("comment_stats", commentStats);
+        summary.put("interaction_stats", interactionStats);
         summary.put("feature_stats", featureStats);
         summary.put("train_rows", trainRows);
         summary.put("validation_rows", validationRows);
