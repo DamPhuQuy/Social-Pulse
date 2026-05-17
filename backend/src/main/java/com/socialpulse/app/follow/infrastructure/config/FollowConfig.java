@@ -50,17 +50,6 @@ public class FollowConfig {
     }
 
     @Bean
-<<<<<<< HEAD
-    public GetFollowersUseCase getFollowersUseCase(FollowRepository followRepository,
-                                                   UserRepository userRepository) {
-        return new GetFollowersService(followRepository, userRepository);
-    }
-
-    @Bean
-    public GetFollowingUseCase getFollowingUseCase(FollowRepository followRepository,
-                                                   UserRepository userRepository) {
-        return new GetFollowingService(followRepository, userRepository);
-=======
     public FollowGraphPageService followGraphPageService(UserRepository userRepository, UserMapper userMapper) {
         return new FollowGraphPageService(userRepository, userMapper);
     }
@@ -93,6 +82,5 @@ public class FollowConfig {
             FollowRepository followRepository,
             UserRepository userRepository) {
         return new GetFollowCountsService(followRepository, userRepository);
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
     }
 }

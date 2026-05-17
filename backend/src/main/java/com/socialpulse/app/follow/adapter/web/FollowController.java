@@ -40,31 +40,21 @@ public class FollowController {
     private final UnfollowUserUseCase unfollowUserUseCase;
     private final GetFollowersUseCase getFollowersUseCase;
     private final GetFollowingUseCase getFollowingUseCase;
-<<<<<<< HEAD
-=======
     private final GetFollowStatusUseCase getFollowStatusUseCase;
     private final GetFollowCountsUseCase getFollowCountsUseCase;
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
 
     public FollowController(FollowUserUseCase followUserUseCase,
                            UnfollowUserUseCase unfollowUserUseCase,
                            GetFollowersUseCase getFollowersUseCase,
-<<<<<<< HEAD
-                           GetFollowingUseCase getFollowingUseCase) {
-=======
                            GetFollowingUseCase getFollowingUseCase,
                            GetFollowStatusUseCase getFollowStatusUseCase,
                            GetFollowCountsUseCase getFollowCountsUseCase) {
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
         this.followUserUseCase = followUserUseCase;
         this.unfollowUserUseCase = unfollowUserUseCase;
         this.getFollowersUseCase = getFollowersUseCase;
         this.getFollowingUseCase = getFollowingUseCase;
-<<<<<<< HEAD
-=======
         this.getFollowStatusUseCase = getFollowStatusUseCase;
         this.getFollowCountsUseCase = getFollowCountsUseCase;
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
     }
 
     @PostMapping("/{userId}")
@@ -124,32 +114,6 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/followers")
-<<<<<<< HEAD
-    @PreAuthorize("hasRole('USER')")
-    @Operation(
-        summary = "Get user's followers",
-        description = "Get list of users who follow the specified user",
-        responses = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "200",
-                description = "Successfully retrieved followers list"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "404",
-                description = "User not found"
-            )
-        }
-    )
-    public ResponseEntity<ApiResponse<FollowersListResponse>> getFollowers(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
-        FollowersListResponse response = getFollowersUseCase.getFollowers(userId, currentUser.getId(), page, size);
-        return ResponseEntity.ok(ApiResponse.<FollowersListResponse>builder()
-                .data(response)
-                .message("Successfully retrieved followers")
-=======
     @PreAuthorize("hasAuthority('follow:read')")
     @Operation(summary = "Get followers", description = "Get paginated followers of a user")
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowers(
@@ -158,37 +122,10 @@ public class FollowController {
             @RequestParam(defaultValue = "20") int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserSummary>>builder()
                 .data(getFollowersUseCase.getFollowers(userId, page, size))
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
                 .build());
     }
 
     @GetMapping("/{userId}/following")
-<<<<<<< HEAD
-    @PreAuthorize("hasRole('USER')")
-    @Operation(
-        summary = "Get user's following",
-        description = "Get list of users that the specified user is following",
-        responses = {
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "200",
-                description = "Successfully retrieved following list"
-            ),
-            @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                responseCode = "404",
-                description = "User not found"
-            )
-        }
-    )
-    public ResponseEntity<ApiResponse<FollowingListResponse>> getFollowing(
-            @PathVariable Long userId,
-            @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
-            @AuthenticationPrincipal CustomUserDetails currentUser) {
-        FollowingListResponse response = getFollowingUseCase.getFollowing(userId, currentUser.getId(), page, size);
-        return ResponseEntity.ok(ApiResponse.<FollowingListResponse>builder()
-                .data(response)
-                .message("Successfully retrieved following")
-=======
     @PreAuthorize("hasAuthority('follow:read')")
     @Operation(summary = "Get following", description = "Get paginated users a user is following")
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowing(
@@ -217,7 +154,6 @@ public class FollowController {
     public ResponseEntity<ApiResponse<FollowCountsResponse>> getFollowCounts(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.<FollowCountsResponse>builder()
                 .data(getFollowCountsUseCase.getFollowCounts(userId))
->>>>>>> 607b960041ce7b4c689004bb05e77939ef44d3f2
                 .build());
     }
 }
