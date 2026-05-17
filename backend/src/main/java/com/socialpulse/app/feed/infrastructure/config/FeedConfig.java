@@ -39,8 +39,8 @@ public class FeedConfig {
     }
 
     @Bean
-    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository) {
-        return new CandidateSelectionService(feedRepository);
+    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
+        return new CandidateSelectionService(feedRepository, redisTemplate);
     }
 
     @Bean
