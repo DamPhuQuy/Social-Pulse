@@ -10,7 +10,10 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
+import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.post.domain.repository.PostRepository;
+import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
@@ -21,23 +24,30 @@ public class CreateCommentService implements CreateCommentUseCase {
     private final PostRepository postRepositoryPort;
     private final UserRepository userRepositoryPort;
     private final ValidateParentCommentUseCase validateParentCommentUseCase;
+    private final CommentResponseAssembler commentResponseAssembler;
     private final CommentMapper commentMapper;
+    private final NotificationCommandService notificationCommandService;
 
     public CreateCommentService(CommentRepository commentRepositoryPort,
                                 PostRepository postRepositoryPort,
                                 UserRepository userRepositoryPort,
                                 ValidateParentCommentUseCase validateParentCommentUseCase,
-                                CommentMapper commentMapper) {
+                                CommentResponseAssembler commentResponseAssembler,
+                                CommentMapper commentMapper,
+                                NotificationCommandService notificationCommandService) {
         this.commentRepositoryPort = commentRepositoryPort;
         this.postRepositoryPort = postRepositoryPort;
         this.userRepositoryPort = userRepositoryPort;
         this.validateParentCommentUseCase = validateParentCommentUseCase;
+        this.commentResponseAssembler = commentResponseAssembler;
         this.commentMapper = commentMapper;
+        this.notificationCommandService = notificationCommandService;
     }
 
     @Override
+    @Transactional
     public CommentCreationResponse createComment(Long postId, CommentCreationRequest request, CustomUserDetails currentUser) {
-        postRepositoryPort.findById(postId)
+        Post post = postRepositoryPort.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
         User user = userRepositoryPort.findById(currentUser.getId())
@@ -49,9 +59,14 @@ public class CreateCommentService implements CreateCommentUseCase {
         Comment comment = commentMapper.toComment(postId, request, user.getId(), parent == null ? null : parent.getId());
 
         Comment savedComment = commentRepositoryPort.save(comment);
+        post.incrementCommentCount();
+        postRepositoryPort.save(post);
+        if (parent == null) {
+            notificationCommandService.notifyCommentOnPost(user.getId(), post.getUserId(), postId, savedComment.getId());
+        } else {
+            notificationCommandService.notifyReply(user.getId(), parent.getUserId(), savedComment.getId());
+        }
 
-        return commentMapper.toCommentCreationResponse(savedComment, user);
+        return commentResponseAssembler.toCommentCreationResponse(savedComment, user);
     }
 }
-
-

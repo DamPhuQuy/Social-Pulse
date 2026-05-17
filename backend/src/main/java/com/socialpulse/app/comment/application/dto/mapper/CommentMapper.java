@@ -3,9 +3,13 @@ package com.socialpulse.app.comment.application.dto.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
+import com.socialpulse.app.comment.application.dto.request.CommentReactionRequest;
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
+import com.socialpulse.app.comment.application.dto.response.CommentReactionResponse;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
 import com.socialpulse.app.comment.domain.model.Comment;
+import com.socialpulse.app.comment.domain.model.CommentReaction;
+import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.user.application.dto.response.UserSummary;
 import com.socialpulse.app.user.domain.model.User;
 
@@ -31,19 +35,30 @@ public interface CommentMapper {
     @Mapping(target = "createdAt", source = "comment.createdAt")
     @Mapping(target = "edited", source = "comment.edited")
     @Mapping(target = "user", source = "user")
-    @Mapping(target = "replyCount", constant = "0")
-    CommentCreationResponse toCommentCreationResponse(Comment comment, User user);
+    @Mapping(target = "replyCount", source = "replyCount")
+    CommentCreationResponse toCommentCreationResponse(Comment comment, User user, Integer replyCount);
 
     @Mapping(target = "id", source = "comment.id")
     @Mapping(target = "content", source = "comment.content")
     @Mapping(target = "createdAt", source = "comment.createdAt")
     @Mapping(target = "edited", source = "comment.edited")
     @Mapping(target = "user", source = "user")
-    @Mapping(target = "replyCount", constant = "0")
+    @Mapping(target = "replyCount", source = "replyCount")
     @Mapping(target = "upvoteCount", source = "comment.upvoteCount")
     @Mapping(target = "downvoteCount", source = "comment.downvoteCount")
-    com.socialpulse.app.comment.application.dto.response.CommentResponse toCommentResponse(Comment comment, User user);
+    com.socialpulse.app.comment.application.dto.response.CommentResponse toCommentResponse(Comment comment, User user, Integer replyCount);
 
     @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
     UserSummary toUserSummary(User user);
+
+    @Mapping(target = "id", ignore = true)
+    @Mapping(target = "createdAt", ignore = true)
+    @Mapping(target = "commentId", source = "commentId")
+    @Mapping(target = "userId", source = "userId")
+    @Mapping(target = "reactionType", source = "reactionType")
+    CommentReaction toCommentReaction(Long userId, Long commentId, ReactionType reactionType);
+
+    @Mapping(target = "commentId", source = "commentId")
+    @Mapping(target = "reactionType", source = "reactionType")
+    CommentReactionResponse toCommentReactionResponse(CommentReaction reaction);
 }

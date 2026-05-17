@@ -29,10 +29,10 @@ public class DeletePostService implements DeletePostUseCase {
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
         boolean isAuthor = post.getUserId().equals(currentUser.getId());
-        boolean hasDeleteAnyPermission = currentUser.getAuthorities().stream()
-                .anyMatch(auth -> auth.getAuthority().equals("post:delete:any"));
+        boolean hasManagePermission = currentUser.getAuthorities().stream()
+                .anyMatch(auth -> auth.getAuthority().equals("post:manage"));
 
-        if (!isAuthor && !hasDeleteAnyPermission) {
+        if (!isAuthor && !hasManagePermission) {
             log.warn("User {} is not authorized to delete post {}", currentUser.getId(), postId);
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }

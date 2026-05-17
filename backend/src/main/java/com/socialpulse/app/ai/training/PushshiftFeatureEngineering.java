@@ -8,7 +8,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftFeatureEngineering {
     private static final double SECONDS_PER_HOUR = 3600.0;
@@ -44,7 +44,7 @@ final class PushshiftFeatureEngineering {
                             record.isSharePost() ? 1.0 : 0.0,
                             Math.max(referenceUtc - record.createdUtc(), 0.0) / SECONDS_PER_HOUR,
                             record.hotScore(),
-                            LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO,
+                            record.upvoteRatio(),
                             authorSeniority,
                             aggregate.postCount(),
                             aggregate.averagePopularity(),

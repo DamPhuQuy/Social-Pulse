@@ -23,6 +23,6 @@ public final class PushshiftTrainingCli {
         rows.put("validation", result.validationRows());
         output.put("rows", rows);
 
-    System.out.println(TrainingJsonSupport.toPrettyJson(output));
+        System.out.println(TrainingJsonSupport.toPrettyJson(output));
     }
 }

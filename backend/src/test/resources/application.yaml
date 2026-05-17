@@ -10,6 +10,12 @@ spring:
     database-platform: org.hibernate.dialect.H2Dialect
     hibernate:
       ddl-auto: none
+  mail:
+    host: localhost
+    port: 2525
 
 cloudinary:
   url: cloudinary://key:secret@test-cloud
+
+app:
+  version: test

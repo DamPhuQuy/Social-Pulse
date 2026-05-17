@@ -7,7 +7,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.LinkedHashMap;
 import java.util.Map;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftTrainingPipeline {
     private static final String DATASET_NAME = "pushshift_reddit_apr2019";
@@ -25,8 +25,8 @@ final class PushshiftTrainingPipeline {
             throw new IllegalStateException("Not enough cleaned submissions to train a model: " + scanResult.sampledPosts().size());
         }
 
-        Map<String, Integer> commentStats = arguments.commentsPath() != null
-                ? datasetScanner.scanComments(arguments.commentsPath(), scanResult.sampledPosts(), arguments.scanLimitComments())
+        Map<String, Integer> commentStats = arguments.getCommentsPath() != null
+                ? datasetScanner.scanComments(arguments.getCommentsPath(), scanResult.sampledPosts(), arguments.getScanLimitComments())
                 : Map.of(
                         "comments_scanned", 0,
                         "matched_sample_posts", 0);
@@ -51,13 +51,13 @@ final class PushshiftTrainingPipeline {
                 split.validationRows().size(),
                 model.metrics());
 
-        TrainingJsonSupport.writeJson(arguments.outputPath(), buildArtifact(trainedAt, trainingSummary, model));
-        if (arguments.metricsOutputPath() != null) {
-            TrainingJsonSupport.writeJson(arguments.metricsOutputPath(), trainingSummary);
+        TrainingJsonSupport.writeJson(arguments.getOutputPath(), buildArtifact(trainedAt, trainingSummary, model));
+        if (arguments.getMetricsOutputPath() != null) {
+            TrainingJsonSupport.writeJson(arguments.getMetricsOutputPath(), trainingSummary);
         }
 
         return new TrainingRunResult(
-                arguments.outputPath(),
+                arguments.getOutputPath(),
                 trainedAt,
                 model.metrics(),
                 split.trainRows().size(),
@@ -87,15 +87,15 @@ final class PushshiftTrainingPipeline {
         summary.put("metrics", metricMap);
 
         Map<String, Object> hyperparameters = new LinkedHashMap<>();
-        hyperparameters.put("sample_size", arguments.sampleSize());
-        hyperparameters.put("scan_limit_posts", arguments.scanLimitPosts());
-        hyperparameters.put("scan_limit_comments", arguments.scanLimitComments());
-        hyperparameters.put("n_estimators", arguments.nEstimators());
-        hyperparameters.put("max_depth", arguments.maxDepth());
-        hyperparameters.put("min_samples_leaf", arguments.minSamplesLeaf());
-        hyperparameters.put("max_thresholds", arguments.maxThresholds());
-        hyperparameters.put("learning_rate", arguments.learningRate());
-        hyperparameters.put("seed", arguments.seed());
+        hyperparameters.put("sample_size", arguments.getSampleSize());
+        hyperparameters.put("scan_limit_posts", arguments.getScanLimitPosts());
+        hyperparameters.put("scan_limit_comments", arguments.getScanLimitComments());
+        hyperparameters.put("n_estimators", arguments.getNEstimators());
+        hyperparameters.put("max_depth", arguments.getMaxDepth());
+        hyperparameters.put("min_samples_leaf", arguments.getMinSamplesLeaf());
+        hyperparameters.put("max_thresholds", arguments.getMaxThresholds());
+        hyperparameters.put("learning_rate", arguments.getLearningRate());
+        hyperparameters.put("seed", arguments.getSeed());
         summary.put("hyperparameters", hyperparameters);
         return summary;
     }

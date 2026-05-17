@@ -11,6 +11,7 @@ import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.model.PostReactions;
+import com.socialpulse.app.user.domain.model.User;
 
 @Mapper(componentModel = "spring")
 public interface PostMapper {
@@ -34,10 +35,21 @@ public interface PostMapper {
 
     PostCreationResponse toPostCreationResponse(Post post);
 
-    @Mapping(target = "username", ignore = true)
-    @Mapping(target = "userAvatar", ignore = true)
-    @Mapping(target = "myVote", ignore = true)
-    ViewPostResponse toViewPostResponse(Post post);
+    @Mapping(target = "id", source = "post.id")
+    @Mapping(target = "parentPostId", source = "post.parentPostId")
+    @Mapping(target = "type", source = "post.type")
+    @Mapping(target = "content", source = "post.content")
+    @Mapping(target = "imageUrl", source = "post.imageUrl")
+    @Mapping(target = "userId", source = "post.userId")
+    @Mapping(target = "username", source = "author.username")
+    @Mapping(target = "userAvatar", source = "author.profile.avatarUrl")
+    @Mapping(target = "upvoteCount", source = "post.upvoteCount")
+    @Mapping(target = "downvoteCount", source = "post.downvoteCount")
+    @Mapping(target = "cmtCount", source = "post.cmtCount")
+    @Mapping(target = "shareCount", source = "post.shareCount")
+    @Mapping(target = "myVote", source = "myVote")
+    @Mapping(target = "createdAt", source = "post.createdAt")
+    ViewPostResponse toViewPostResponse(Post post, User author, Integer myVote);
 
     PostUpdateResponse toPostUpdateResponse(Post post);
 

@@ -10,6 +10,7 @@ import java.util.function.Function;
 import javax.crypto.SecretKey;
 
 import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.security.core.GrantedAuthority;
 
 import com.socialpulse.app.auth.application.usecase.JwtUseCase;
 import com.socialpulse.app.security.jwt.JwtProperties;
@@ -41,8 +42,13 @@ public class JwtService implements JwtUseCase {
         Map<String, Object> extraClaims = new HashMap<>();
 
         extraClaims.put("userId", userDetails.getId());
-        extraClaims.put("roles", userDetails.user().getRoles().stream()
+        extraClaims.put("roles", userDetails.user().getRoles() == null ? java.util.List.of() : userDetails.user().getRoles().stream()
+                .filter(java.util.Objects::nonNull)
                 .map(role -> role.getName())
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        extraClaims.put("permissions", userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
                 .toList());
         extraClaims.put("type", "access");
 
@@ -134,4 +140,3 @@ public class JwtService implements JwtUseCase {
         return extractExpiration(token).before(new Date());
     }
 }
-

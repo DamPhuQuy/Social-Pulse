@@ -8,9 +8,9 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.config.LightGbmProperties;
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.service.LightGbmRankingService;
+import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
+import com.socialpulse.app.ai.inference.LightGbmRankingService;
+import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
 import com.socialpulse.app.feed.application.service.FallbackRankingService;
@@ -23,7 +23,6 @@ import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
-import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -45,12 +44,11 @@ public class FeedConfig {
     public ExtractFeaturesUseCase extractFeaturesUseCase(
             StringRedisTemplate redisTemplate,
             ObjectMapper objectMapper,
-            FollowRepository followRepository,
             UserRepository userRepository,
             PostRepository postRepository) {
         return new FeatureExtractionService(
                 redisTemplate, objectMapper,
-                followRepository, userRepository,
+                userRepository,
                 postRepository);
     }
 

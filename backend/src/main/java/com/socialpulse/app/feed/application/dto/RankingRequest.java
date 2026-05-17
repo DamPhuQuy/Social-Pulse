@@ -2,7 +2,7 @@ package com.socialpulse.app.feed.application.dto;
 
 import java.util.List;
 
-import com.socialpulse.app.ai.lightgbm.LightGbmFeatureSchema;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

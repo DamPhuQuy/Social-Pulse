@@ -7,14 +7,14 @@ target/
 Dockerfile
 .dockerignore
 
-*.zst
-*.zip
-*.tar
-*.tar.gz
-*.7z
-*.csv
-*.jsonl
-*.parquet
+**/*.zst
+**/*.zip
+**/*.tar
+**/*.tar.gz
+**/*.7z
+**/*.csv
+**/*.jsonl
+**/*.parquet
 
 data/
 datasets/
@@ -24,3 +24,4 @@ tmp/
 target/
 node_modules/
 .git/
+src/main/java/com/socialpulse/app/ai/data/

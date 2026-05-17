@@ -26,10 +26,12 @@ import com.socialpulse.app.user.domain.model.User;
 class GetFeedServiceTest {
     @Mock
     private RankFeedUseCase rankFeedUseCase;
+    @Mock
+    private FeedItemResponseAssembler feedItemResponseAssembler;
 
     @Test
     void returnsPaginatedFeedWithoutTrainingSideEffects() {
-        GetFeedService service = new GetFeedService(rankFeedUseCase);
+        GetFeedService service = new GetFeedService(rankFeedUseCase, feedItemResponseAssembler);
         CustomUserDetails currentUser = new CustomUserDetails(User.builder()
                 .id(42L)
                 .email("user@example.com")
@@ -42,10 +44,14 @@ class GetFeedServiceTest {
                 FeedItem.builder().postId(100L).userId(42L).aiScore(0.9).source(Source.RECENT).rankedAt(LocalDateTime.now()).build(),
                 FeedItem.builder().postId(101L).userId(42L).aiScore(0.8).source(Source.POPULAR).rankedAt(LocalDateTime.now()).build());
         when(rankFeedUseCase.getPaginatedFeed(42L, 2, 2)).thenReturn(feedItems);
+        when(feedItemResponseAssembler.assemble(feedItems, 42L)).thenReturn(List.of(
+                com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(100L).build(),
+                com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(101L).build()));
 
         var response = service.getFeed(2, 2, currentUser);
 
         assertEquals(2, response.size());
         verify(rankFeedUseCase).getPaginatedFeed(42L, 2, 2);
+        verify(feedItemResponseAssembler).assemble(feedItems, 42L);
     }
 }

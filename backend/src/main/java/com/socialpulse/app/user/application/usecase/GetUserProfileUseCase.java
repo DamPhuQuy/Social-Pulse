@@ -4,8 +4,7 @@ import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
 
 public interface GetUserProfileUseCase {
-    UserViewProfileResponse getProfile(UserViewProfileRequest request);
+    UserViewProfileResponse getProfile(UserViewProfileRequest request, Long viewerUserId);
 
-    UserViewProfileResponse getProfileByUsername(String username);
+    UserViewProfileResponse getProfileByUsername(String username, Long viewerUserId);
 }
-

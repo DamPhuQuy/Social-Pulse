@@ -5,6 +5,13 @@ import java.nio.file.Path;
 import java.util.HashMap;
 import java.util.Map;
 
+import lombok.AllArgsConstructor;
+import lombok.Getter;
+import lombok.Setter;
+
+@Getter
+@Setter
+@AllArgsConstructor
 final class TrainingArguments {
     private final Path submissionsPath;
     private final Path commentsPath;
@@ -20,37 +27,6 @@ final class TrainingArguments {
     private final int maxThresholds;
     private final double learningRate;
     private final long seed;
-
-    private TrainingArguments(
-            Path submissionsPath,
-            Path commentsPath,
-            Path outputPath,
-            Path metricsOutputPath,
-            int sampleSize,
-            int scanLimitPosts,
-            int scanLimitComments,
-            int minContentLength,
-            int nEstimators,
-            int maxDepth,
-            int minSamplesLeaf,
-            int maxThresholds,
-            double learningRate,
-            long seed) {
-        this.submissionsPath = submissionsPath;
-        this.commentsPath = commentsPath;
-        this.outputPath = outputPath;
-        this.metricsOutputPath = metricsOutputPath;
-        this.sampleSize = sampleSize;
-        this.scanLimitPosts = scanLimitPosts;
-        this.scanLimitComments = scanLimitComments;
-        this.minContentLength = minContentLength;
-        this.nEstimators = nEstimators;
-        this.maxDepth = maxDepth;
-        this.minSamplesLeaf = minSamplesLeaf;
-        this.maxThresholds = maxThresholds;
-        this.learningRate = learningRate;
-        this.seed = seed;
-    }
 
     static TrainingArguments parse(String[] args) {
         Map<String, String> values = new HashMap<>();
@@ -99,62 +75,6 @@ final class TrainingArguments {
                 || learningRate <= 0.0) {
             throw new IllegalArgumentException("Training arguments must be positive.");
         }
-    }
-
-    Path submissionsPath() {
-        return submissionsPath;
-    }
-
-    Path commentsPath() {
-        return commentsPath;
-    }
-
-    Path outputPath() {
-        return outputPath;
-    }
-
-    Path metricsOutputPath() {
-        return metricsOutputPath;
-    }
-
-    int sampleSize() {
-        return sampleSize;
-    }
-
-    int scanLimitPosts() {
-        return scanLimitPosts;
-    }
-
-    int scanLimitComments() {
-        return scanLimitComments;
-    }
-
-    int minContentLength() {
-        return minContentLength;
-    }
-
-    int nEstimators() {
-        return nEstimators;
-    }
-
-    int maxDepth() {
-        return maxDepth;
-    }
-
-    int minSamplesLeaf() {
-        return minSamplesLeaf;
-    }
-
-    int maxThresholds() {
-        return maxThresholds;
-    }
-
-    double learningRate() {
-        return learningRate;
-    }
-
-    long seed() {
-        return seed;
     }
 
     private static Path requiredPath(Map<String, String> values, String key) {

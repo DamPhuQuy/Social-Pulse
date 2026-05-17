@@ -1,0 +1,176 @@
+@startuml
+title POST /api/posts/{postId}/bookmark - Bookmark Post
+
+actor Client
+participant AuthFilter
+participant BookmarkController
+participant BookmarkPostService
+participant PostRepository
+participant BookmarkRepository
+database Database
+
+Client -> AuthFilter: POST /api/posts/{postId}/bookmark
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> BookmarkController: forward request with currentUserId
+activate BookmarkController
+
+BookmarkController -> BookmarkPostService: bookmarkPost(postId, currentUserId)
+activate BookmarkPostService
+
+BookmarkPostService -> PostRepository: findById(postId)
+PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+Database --> PostRepository: post row
+PostRepository --> BookmarkPostService: Optional<Post>
+
+alt Post not found
+    BookmarkPostService --> BookmarkController: PostNotFoundException
+    BookmarkController --> Client: 404 Not Found
+else Post found
+    BookmarkPostService -> BookmarkPostService: check post visibility\nand access permission
+
+    alt No access to post
+        BookmarkPostService --> BookmarkController: ForbiddenException
+        BookmarkController --> Client: 403 Forbidden
+    else Has access
+        BookmarkPostService -> BookmarkRepository: existsByPostIdAndUserId(postId, currentUserId)
+        BookmarkRepository -> Database: SELECT COUNT(*) FROM bookmarks\nWHERE post_id = ? AND user_id = ?
+        Database --> BookmarkRepository: count
+        BookmarkRepository --> BookmarkPostService: boolean
+
+        alt Already bookmarked
+            BookmarkPostService --> BookmarkController: AlreadyBookmarkedException
+            BookmarkController --> Client: 409 Conflict
+        else Not bookmarked yet
+            BookmarkPostService -> BookmarkPostService: create Bookmark entity
+
+            BookmarkPostService -> BookmarkRepository: save(bookmark)
+            BookmarkRepository -> Database: INSERT INTO bookmarks
+            Database --> BookmarkRepository: saved bookmark
+            BookmarkRepository --> BookmarkPostService: Bookmark
+
+            BookmarkPostService --> BookmarkController: BookmarkResponse
+            deactivate BookmarkPostService
+
+            BookmarkController --> Client: 201 Created(response)
+            deactivate BookmarkController
+        end
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title DELETE /api/posts/{postId}/bookmark - Remove Bookmark
+
+actor Client
+participant AuthFilter
+participant BookmarkController
+participant RemoveBookmarkService
+participant PostRepository
+participant BookmarkRepository
+database Database
+
+Client -> AuthFilter: DELETE /api/posts/{postId}/bookmark
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> BookmarkController: forward request with currentUserId
+activate BookmarkController
+
+BookmarkController -> RemoveBookmarkService: removeBookmark(postId, currentUserId)
+activate RemoveBookmarkService
+
+RemoveBookmarkService -> PostRepository: findById(postId)
+PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+Database --> PostRepository: post row
+PostRepository --> RemoveBookmarkService: Optional<Post>
+
+alt Post not found
+    RemoveBookmarkService --> BookmarkController: PostNotFoundException
+    BookmarkController --> Client: 404 Not Found
+else Post found
+    RemoveBookmarkService -> BookmarkRepository: findByPostIdAndUserId(postId, currentUserId)
+    BookmarkRepository -> Database: SELECT * FROM bookmarks\nWHERE post_id = ? AND user_id = ?
+    Database --> BookmarkRepository: bookmark row
+    BookmarkRepository --> RemoveBookmarkService: Optional<Bookmark>
+
+    alt Bookmark not found
+        RemoveBookmarkService --> BookmarkController: BookmarkNotFoundException
+        BookmarkController --> Client: 404 Not Found
+    else Bookmark found
+        RemoveBookmarkService -> BookmarkRepository: delete(bookmark)
+        BookmarkRepository -> Database: DELETE FROM bookmarks WHERE id = ?
+        Database --> BookmarkRepository: void
+
+        RemoveBookmarkService --> BookmarkController: void
+        deactivate RemoveBookmarkService
+
+        BookmarkController --> Client: 204 No Content
+        deactivate BookmarkController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/bookmarks - Get User Bookmarks
+
+actor Client
+participant AuthFilter
+participant BookmarkController
+participant GetBookmarksService
+participant BookmarkRepository
+participant PostRepository
+participant UserRepository
+participant PostMapper
+database Database
+
+Client -> AuthFilter: GET /api/bookmarks?page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> BookmarkController: forward request with currentUserId
+activate BookmarkController
+
+BookmarkController -> GetBookmarksService: getBookmarks(currentUserId, pageable)
+activate GetBookmarksService
+
+GetBookmarksService -> BookmarkRepository: findByUserId(currentUserId, pageable)
+BookmarkRepository -> Database: SELECT * FROM bookmarks\nWHERE user_id = ?\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+Database --> BookmarkRepository: bookmark rows
+BookmarkRepository --> GetBookmarksService: Page<Bookmark>
+
+loop for each bookmark
+    GetBookmarksService -> PostRepository: findById(bookmark.postId)
+    PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+    Database --> PostRepository: post row
+    PostRepository --> GetBookmarksService: Optional<Post>
+
+    opt post exists
+        GetBookmarksService -> UserRepository: findById(post.authorId)
+        UserRepository -> Database: SELECT * FROM users WHERE id = ?
+        Database --> UserRepository: user row
+        UserRepository --> GetBookmarksService: Optional<User>
+
+        GetBookmarksService -> GetBookmarksService: check if liked by current user
+
+        GetBookmarksService -> PostMapper: toPostResponse(post, author, isLiked, true)
+        PostMapper --> GetBookmarksService: PostResponse
+    end
+end
+
+GetBookmarksService --> BookmarkController: Page<PostResponse>
+deactivate GetBookmarksService
+
+BookmarkController --> Client: 200 OK(response)
+deactivate BookmarkController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml

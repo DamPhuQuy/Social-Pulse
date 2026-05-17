@@ -4,6 +4,9 @@ import java.util.HashSet;
 import java.util.Optional;
 import java.util.Set;
 
+import org.springframework.data.domain.Page;
+import org.springframework.data.domain.Pageable;
+
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.follow.domain.model.Follow;
@@ -74,5 +77,14 @@ public class FollowRepositoryAdapter implements FollowRepository {
         return new HashSet<>(jpaFollowRepository.findFollowingIdsByFollowerIdAndFollowingIdIn(
                 followerId, candidateFolloweeIds));
     }
-}
 
+    @Override
+    public Page<Long> findFollowerIdsByFollowingId(Long followingId, Pageable pageable) {
+        return jpaFollowRepository.findFollowerIdsByFollowingId(followingId, pageable);
+    }
+
+    @Override
+    public Page<Long> findFollowingIdsByFollowerId(Long followerId, Pageable pageable) {
+        return jpaFollowRepository.findFollowingIdsByFollowerId(followerId, pageable);
+    }
+}

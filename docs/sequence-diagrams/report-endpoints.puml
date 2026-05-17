@@ -1,0 +1,262 @@
+@startuml
+title POST /api/reports - Create Report
+
+actor Client
+participant AuthFilter
+participant ReportController
+participant CreateReportService
+participant UserRepository
+participant PostRepository
+participant CommentRepository
+participant ReportRepository
+database Database
+
+Client -> AuthFilter: POST /api/reports(CreateReportRequest)
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> ReportController: forward request with currentUserId
+activate ReportController
+
+ReportController -> CreateReportService: createReport(currentUserId, request)
+activate CreateReportService
+
+CreateReportService -> CreateReportService: validate request\n(reason, type, targetId)
+
+CreateReportService -> UserRepository: findById(currentUserId)
+UserRepository -> Database: SELECT * FROM users WHERE id = ?
+Database --> UserRepository: user row
+UserRepository --> CreateReportService: Optional<User>
+
+alt User not found
+    CreateReportService --> ReportController: UserNotFoundException
+    ReportController --> Client: 404 Not Found
+else User found
+    alt reportType == POST
+        CreateReportService -> PostRepository: findById(targetId)
+        PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+        Database --> PostRepository: post row
+        PostRepository --> CreateReportService: Optional<Post>
+
+        alt Post not found
+            CreateReportService --> ReportController: PostNotFoundException
+            ReportController --> Client: 404 Not Found
+        end
+    else reportType == COMMENT
+        CreateReportService -> CommentRepository: findById(targetId)
+        CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+        Database --> CommentRepository: comment row
+        CommentRepository --> CreateReportService: Optional<Comment>
+
+        alt Comment not found
+            CreateReportService --> ReportController: CommentNotFoundException
+            ReportController --> Client: 404 Not Found
+        end
+    else reportType == USER
+        CreateReportService -> UserRepository: findById(targetId)
+        UserRepository -> Database: SELECT * FROM users WHERE id = ?
+        Database --> UserRepository: user row
+        UserRepository --> CreateReportService: Optional<User>
+
+        alt Target user not found
+            CreateReportService --> ReportController: UserNotFoundException
+            ReportController --> Client: 404 Not Found
+        end
+    end
+
+    CreateReportService -> ReportRepository: existsByReporterIdAndTargetIdAndType(currentUserId, targetId, type)
+    ReportRepository -> Database: SELECT COUNT(*) FROM reports\nWHERE reporter_id = ? AND target_id = ? AND type = ?
+    Database --> ReportRepository: count
+    ReportRepository --> CreateReportService: boolean
+
+    alt Already reported
+        CreateReportService --> ReportController: AlreadyReportedException
+        ReportController --> Client: 409 Conflict
+    else Not reported yet
+        CreateReportService -> CreateReportService: create Report entity\n(status: PENDING)
+
+        CreateReportService -> ReportRepository: save(report)
+        ReportRepository -> Database: INSERT INTO reports
+        Database --> ReportRepository: saved report
+        ReportRepository --> CreateReportService: Report
+
+        CreateReportService --> ReportController: CreateReportResponse
+        deactivate CreateReportService
+
+        ReportController --> Client: 201 Created(response)
+        deactivate ReportController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/reports - Get Reports (Admin)
+
+actor Client
+participant AuthFilter
+participant RoleAuthorizationFilter
+participant ReportController
+participant GetReportsService
+participant ReportRepository
+participant UserRepository
+participant ReportMapper
+database Database
+
+Client -> AuthFilter: GET /api/reports?status={status}&type={type}&page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> RoleAuthorizationFilter: check role
+RoleAuthorizationFilter -> RoleAuthorizationFilter: verify ADMIN or MODERATOR role
+
+alt Not authorized
+    RoleAuthorizationFilter --> Client: 403 Forbidden
+else Authorized
+    RoleAuthorizationFilter -> ReportController: forward request with currentUserId
+    activate ReportController
+
+    ReportController -> GetReportsService: getReports(status, type, pageable)
+    activate GetReportsService
+
+    GetReportsService -> ReportRepository: findByStatusAndType(status, type, pageable)
+    ReportRepository -> Database: SELECT * FROM reports\nWHERE status = ? AND type = ?\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+    Database --> ReportRepository: report rows
+    ReportRepository --> GetReportsService: Page<Report>
+
+    loop for each report
+        GetReportsService -> UserRepository: findById(report.reporterId)
+        UserRepository -> Database: SELECT * FROM users WHERE id = ?
+        Database --> UserRepository: user row
+        UserRepository --> GetReportsService: Optional<User>
+
+        GetReportsService -> ReportMapper: toReportResponse(report, reporter)
+        ReportMapper --> GetReportsService: ReportResponse
+    end
+
+    GetReportsService --> ReportController: Page<ReportResponse>
+    deactivate GetReportsService
+
+    ReportController --> Client: 200 OK(response)
+    deactivate ReportController
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title PUT /api/reports/{reportId}/status - Update Report Status (Admin)
+
+actor Client
+participant AuthFilter
+participant RoleAuthorizationFilter
+participant ReportController
+participant UpdateReportStatusService
+participant ReportRepository
+participant PostRepository
+participant CommentRepository
+participant UserRepository
+database Database
+
+Client -> AuthFilter: PUT /api/reports/{reportId}/status(UpdateReportStatusRequest)
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> RoleAuthorizationFilter: check role
+RoleAuthorizationFilter -> RoleAuthorizationFilter: verify ADMIN or MODERATOR role
+
+alt Not authorized
+    RoleAuthorizationFilter --> Client: 403 Forbidden
+else Authorized
+    RoleAuthorizationFilter -> ReportController: forward request with currentUserId
+    activate ReportController
+
+    ReportController -> UpdateReportStatusService: updateStatus(reportId, currentUserId, request)
+    activate UpdateReportStatusService
+
+    UpdateReportStatusService -> ReportRepository: findById(reportId)
+    ReportRepository -> Database: SELECT * FROM reports WHERE id = ?
+    Database --> ReportRepository: report row
+    ReportRepository --> UpdateReportStatusService: Optional<Report>
+
+    alt Report not found
+        UpdateReportStatusService --> ReportController: ReportNotFoundException
+        ReportController --> Client: 404 Not Found
+    else Report found
+        UpdateReportStatusService -> UpdateReportStatusService: validate status transition
+
+        UpdateReportStatusService -> UpdateReportStatusService: update Report entity\n(status, reviewedBy, reviewedAt)
+
+        UpdateReportStatusService -> ReportRepository: save(report)
+        ReportRepository -> Database: UPDATE reports SET status = ?, reviewed_by = ?, reviewed_at = ?\nWHERE id = ?
+        Database --> ReportRepository: updated report
+        ReportRepository --> UpdateReportStatusService: Report
+
+        opt status == APPROVED
+            alt reportType == POST
+                UpdateReportStatusService -> PostRepository: delete(targetId)
+                PostRepository -> Database: DELETE FROM posts WHERE id = ?
+            else reportType == COMMENT
+                UpdateReportStatusService -> CommentRepository: delete(targetId)
+                CommentRepository -> Database: DELETE FROM comments WHERE id = ?
+            else reportType == USER
+                UpdateReportStatusService -> UserRepository: updateStatus(targetId, SUSPENDED)
+                UserRepository -> Database: UPDATE users SET status = 'SUSPENDED' WHERE id = ?
+            end
+        end
+
+        UpdateReportStatusService --> ReportController: UpdateReportStatusResponse
+        deactivate UpdateReportStatusService
+
+        ReportController --> Client: 200 OK(response)
+        deactivate ReportController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/reports/my - Get My Reports
+
+actor Client
+participant AuthFilter
+participant ReportController
+participant GetMyReportsService
+participant ReportRepository
+participant ReportMapper
+database Database
+
+Client -> AuthFilter: GET /api/reports/my?page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> ReportController: forward request with currentUserId
+activate ReportController
+
+ReportController -> GetMyReportsService: getMyReports(currentUserId, pageable)
+activate GetMyReportsService
+
+GetMyReportsService -> ReportRepository: findByReporterId(currentUserId, pageable)
+ReportRepository -> Database: SELECT * FROM reports\nWHERE reporter_id = ?\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+Database --> ReportRepository: report rows
+ReportRepository --> GetMyReportsService: Page<Report>
+
+loop for each report
+    GetMyReportsService -> ReportMapper: toReportResponse(report)
+    ReportMapper --> GetMyReportsService: ReportResponse
+end
+
+GetMyReportsService --> ReportController: Page<ReportResponse>
+deactivate GetMyReportsService
+
+ReportController --> Client: 200 OK(response)
+deactivate ReportController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml

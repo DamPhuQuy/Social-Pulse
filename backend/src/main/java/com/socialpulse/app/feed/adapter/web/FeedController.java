@@ -29,7 +29,7 @@ public class FeedController {
     }
 
     @GetMapping
-    @PreAuthorize("hasRole('USER') and hasAuthority('VIEW_POST')")
+    @PreAuthorize("hasAuthority('feed:read')")
     @Operation(
             summary = "Get personalized feed",
             description = "Get personalized feed for current user with pagination",

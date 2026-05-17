@@ -13,26 +13,27 @@ import java.util.Random;
 import java.util.Set;
 
 import com.fasterxml.jackson.databind.JsonNode;
+import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
 
 final class PushshiftDatasetScanner {
     private static final double HOT_SCORE_TIME_DIVISOR = 45000.0;
     private static final long REDDIT_EPOCH = 1134028003L;
 
     ScanResult scanSubmissions(TrainingArguments arguments) throws IOException {
-        Random random = new Random(arguments.seed());
-        List<SubmissionRecord> reservoir = new ArrayList<>(arguments.sampleSize());
+        Random random = new Random(arguments.getSeed());
+        List<SubmissionRecord> reservoir = new ArrayList<>(arguments.getSampleSize());
         Map<String, AuthorAggregate> authorAggregates = new HashMap<>();
 
         int scanned = 0;
         int filtered = 0;
         int accepted = 0;
 
-        try (TrainingJsonSupport.JsonLineReader reader = new TrainingJsonSupport.JsonLineReader(arguments.submissionsPath())) {
+        try (TrainingJsonSupport.JsonLineReader reader = new TrainingJsonSupport.JsonLineReader(arguments.getSubmissionsPath())) {
             JsonNode payload;
             while ((payload = reader.readNext()) != null) {
                 scanned++;
 
-                SubmissionRecord record = preprocessSubmission(payload, arguments.minContentLength());
+                SubmissionRecord record = preprocessSubmission(payload, arguments.getMinContentLength());
                 if (record == null) {
                     filtered++;
                     continue;
@@ -43,16 +44,16 @@ final class PushshiftDatasetScanner {
                 AuthorAggregate aggregate = authorAggregates.computeIfAbsent(record.author(), ignored -> new AuthorAggregate());
                 aggregate.increment(popularity);
 
-                if (reservoir.size() < arguments.sampleSize()) {
+                if (reservoir.size() < arguments.getSampleSize()) {
                     reservoir.add(record);
                 } else {
                     int replacementIndex = random.nextInt(accepted);
-                    if (replacementIndex < arguments.sampleSize()) {
+                    if (replacementIndex < arguments.getSampleSize()) {
                         reservoir.set(replacementIndex, record);
                     }
                 }
 
-                if (accepted >= arguments.scanLimitPosts()) {
+                if (accepted >= arguments.getScanLimitPosts()) {
                     break;
                 }
             }
@@ -132,6 +133,11 @@ final class PushshiftDatasetScanner {
             return null;
         }
 
+        Double rawUpvoteRatio = TrainingJsonSupport.optionalDoubleValue(payload.get("upvote_ratio"));
+        double upvoteRatio = (rawUpvoteRatio != null && rawUpvoteRatio >= 0.0 && rawUpvoteRatio <= 1.0)
+                ? rawUpvoteRatio
+                : LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO;
+
         return new SubmissionRecord(
                 postId,
                 author,
@@ -145,7 +151,8 @@ final class PushshiftDatasetScanner {
                 numCrossposts,
                 detectMultimedia(payload),
                 detectSharePost(payload),
-                redditHotScore(score, createdUtc));
+                redditHotScore(score, createdUtc),
+                upvoteRatio);
     }
 
     static double popularity(int score, int numComments, int numCrossposts) {

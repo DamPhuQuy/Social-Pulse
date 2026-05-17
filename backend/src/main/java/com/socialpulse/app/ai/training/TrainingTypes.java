@@ -17,7 +17,8 @@ record SubmissionRecord(
         int numCrossposts,
         boolean hasMultimedia,
         boolean isSharePost,
-        double hotScore) {
+        double hotScore,
+        double upvoteRatio) {
 }
 
 final class AuthorAggregate {
