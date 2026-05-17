@@ -107,4 +107,11 @@ public class UserEntity {
             this.topics.addAll(newTopics);
         }
     }
+
+    public void setProfile(UserProfileEntity profile) {
+        this.profile = profile;
+        if (profile != null) {
+            profile.setUser(this);
+        }
+    }
 }

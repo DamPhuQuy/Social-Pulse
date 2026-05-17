@@ -50,6 +50,9 @@ public class JwtService implements JwtUseCase {
         extraClaims.put("permissions", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)
                 .toList());
+        extraClaims.put("permissions", userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
+                .toList());
         extraClaims.put("type", "access");
 
         Date now = new Date();

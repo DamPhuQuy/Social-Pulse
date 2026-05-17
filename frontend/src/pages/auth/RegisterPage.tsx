@@ -41,17 +41,17 @@ export default function RegisterPage() {
     const email = form.email.trim();
 
     if (!username || !email || !form.rawPassword || !form.confirmPassword) {
-      toast.error("Please fill in all required fields.");
+      toast.error("Vui lòng điền vào tất cả các trường bắt buộc.");
       return;
     }
 
     if (form.rawPassword !== form.confirmPassword) {
-      toast.error("Passwords do not match.");
+      toast.error("Mật khẩu không khớp.");
       return;
     }
 
     if (!form.acceptedTerms) {
-      toast.error("Please accept the Terms and Privacy Policy.");
+      toast.error("Vui lòng đồng ý với Điều khoản và Chính sách Bảo mật.");
       return;
     }
 
@@ -64,17 +64,17 @@ export default function RegisterPage() {
     });
 
     if (result.ok) {
-      toast.success("Registration successful.", { description: "Please verify your email." });
+      toast.success("Đăng ký thành công.", { description: "Vui lòng xác thực email của bạn." });
       sessionStorage.setItem("pendingVerificationEmail", email);
       navigate(`${PATHS.VERIFY_EMAIL}?email=${encodeURIComponent(email)}`);
     } else {
-      toast.error("Registration failed.", { description: result.message });
+      toast.error("Đăng ký thất bại.", { description: result.message });
     }
     setIsSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden py-20">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden py-20">
       <InteractiveBackground />
 
       {/* Decorative Glows */}
@@ -90,7 +90,7 @@ export default function RegisterPage() {
           <span className="text-xl font-bold tracking-tight text-gray-900 dark:text-white">SocialPulse</span>
         </Link>
         <Link to={PATHS.LOGIN} className="text-sm font-bold text-blue-600 dark:text-blue-400 hover:text-blue-700 transition-colors">
-          Sign In Instead
+          Đăng nhập
         </Link>
       </nav>
 
@@ -102,13 +102,13 @@ export default function RegisterPage() {
       >
         <div className="bg-white/70 dark:bg-slate-900/70 backdrop-blur-2xl border border-slate-300 dark:border-slate-800 rounded-[3rem] p-12 shadow-2xl shadow-blue-500/5">
           <div className="text-center mb-10">
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Create Account</h1>
-            <p className="text-gray-500 dark:text-slate-400 font-medium">Join the next generation of social networking</p>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Tạo tài khoản</h1>
+            <p className="text-gray-500 dark:text-slate-400 font-medium">Tham gia mạng xã hội thế hệ mới</p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Username</Label>
+              <Label htmlFor="username" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Tên người dùng</Label>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -123,7 +123,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Email Address</Label>
+              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Địa chỉ Email</Label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -139,7 +139,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Password</Label>
+              <Label htmlFor="password" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Mật khẩu</Label>
               <div className="relative group">
                 <Lock className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -162,7 +162,7 @@ export default function RegisterPage() {
             </div>
 
             <div className="space-y-2">
-              <Label htmlFor="confirmPassword" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Confirm Password</Label>
+              <Label htmlFor="confirmPassword" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Xác nhận Mật khẩu</Label>
               <div className="relative group">
                 <CheckCircle2 className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -189,13 +189,13 @@ export default function RegisterPage() {
                 id="terms"
                 checked={form.acceptedTerms}
                 onCheckedChange={(checked) => setForm(prev => ({ ...prev, acceptedTerms: !!checked }))}
-                className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 rounded-[4px] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all cursor-pointer"
+                className="w-6 h-6 border-2 border-slate-300 dark:border-slate-700 rounded-[4px] data-[state=checked]:bg-blue-600 data-[state=checked]:border-blue-600 transition-all cursor-pointer shrink-0"
               />
-              <Label htmlFor="terms" className="text-base text-gray-500 dark:text-slate-400 font-medium cursor-pointer select-none">
-                I agree to the{" "}
-                <Link to={PATHS.TERMS} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Terms of Service</Link>{" "}
-                and{" "}
-                <Link to={PATHS.PRIVACY} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Privacy Policy</Link>.
+              <Label htmlFor="terms" className="text-sm text-gray-500 dark:text-slate-400 font-medium cursor-pointer select-none whitespace-nowrap">
+                Đồng ý{" "}
+                <Link to={PATHS.TERMS} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Điều khoản Dịch vụ</Link>{" "}
+                và{" "}
+                <Link to={PATHS.PRIVACY} className="text-blue-600 dark:text-blue-400 font-bold hover:underline">Chính sách Bảo mật</Link>.
               </Label>
             </div>
 
@@ -204,9 +204,9 @@ export default function RegisterPage() {
               disabled={isSubmitting}
               className="w-full py-7 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all flex items-center justify-center gap-2 group"
             >
-              {isSubmitting ? "Creating account..." : (
+              {isSubmitting ? "Đang tạo tài khoản..." : (
                 <>
-                  Join the Pulse <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Đăng ký <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
@@ -216,7 +216,7 @@ export default function RegisterPage() {
 
         {/* Footer info */}
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Neural-Linked Registration Sequence
+          Quá trình đăng ký liên kết bảo mật
         </p>
       </motion.div>
     </div>

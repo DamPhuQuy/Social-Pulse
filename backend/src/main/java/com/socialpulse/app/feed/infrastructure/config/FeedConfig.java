@@ -1,29 +1,35 @@
 package com.socialpulse.app.feed.infrastructure.config;
 
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.feed.application.dto.RankingRequest;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
-import com.socialpulse.app.feed.application.service.CandidateSelectionService;
-import com.socialpulse.app.feed.application.service.DisabledPredictRankingService;
-import com.socialpulse.app.feed.application.service.FallbackRankingService;
-import com.socialpulse.app.feed.application.service.FeatureExtractionService;
-import com.socialpulse.app.feed.application.service.FeedCacheService;
-import com.socialpulse.app.feed.application.service.FeedRankingService;
-import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
-import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
-import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.adapter.persistence.UserInteractionRepositoryAdapter;
+import com.socialpulse.app.feed.application.service.cache.FeedCacheService;
+import com.socialpulse.app.feed.application.service.candidate.CandidateSelectionService;
+import com.socialpulse.app.feed.application.service.extraction.AuthorFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.FeatureExtractionService;
+import com.socialpulse.app.feed.application.service.extraction.InteractionFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.PostFeatureExtractor;
+import com.socialpulse.app.feed.application.service.ranking.FallbackRankingService;
+import com.socialpulse.app.feed.application.service.ranking.FeedRankingService;
+import com.socialpulse.app.feed.application.service.ranking.ScoreBoostService;
+import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
+@EnableConfigurationProperties(AiPipelineProperties.class)
 public class FeedConfig {
 
     @Bean
@@ -32,30 +38,56 @@ public class FeedConfig {
     }
 
     @Bean
-    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository) {
-        return new CandidateSelectionService(feedRepository);
+    public UserInteractionRepository userInteractionRepository(JdbcTemplate jdbcTemplate) {
+        return new UserInteractionRepositoryAdapter(jdbcTemplate);
+    }
+
+    @Bean
+    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
+        return new CandidateSelectionService(feedRepository, redisTemplate);
+    }
+
+    @Bean
+    public PostFeatureExtractor postFeatureExtractor() {
+        return new PostFeatureExtractor();
+    }
+
+    @Bean
+    public AuthorFeatureExtractor authorFeatureExtractor(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+        return new AuthorFeatureExtractor(redisTemplate, objectMapper);
+    }
+
+    @Bean
+    public InteractionFeatureExtractor interactionFeatureExtractor(UserInteractionRepository userInteractionRepository) {
+        return new InteractionFeatureExtractor(userInteractionRepository);
     }
 
     @Bean
     public ExtractFeaturesUseCase extractFeaturesUseCase(
-            StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper,
             UserRepository userRepository,
-            PostRepository postRepository) {
+            PostRepository postRepository,
+            UserInteractionRepository userInteractionRepository,
+            PostFeatureExtractor postFeatureExtractor,
+            AuthorFeatureExtractor authorFeatureExtractor,
+            InteractionFeatureExtractor interactionFeatureExtractor) {
         return new FeatureExtractionService(
-                redisTemplate, objectMapper,
-                userRepository,
-                postRepository);
+                userRepository, postRepository, userInteractionRepository,
+                postFeatureExtractor, authorFeatureExtractor, interactionFeatureExtractor);
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase() {
-        return new DisabledPredictRankingService();
+    public PredictRankingUseCase predictRankingUseCase(AiPipelineProperties properties) {
+        return new AiPipelineRankingClient(properties.getBaseUrl(), properties.isEnabled());
     }
 
     @Bean
-    public FallbackRankingService fallbackRankingService() {
-        return new FallbackRankingService(RankingRequest.DEFAULT_SCHEMA_VERSION);
+    public FallbackRankingService fallbackRankingService(AiPipelineProperties properties) {
+        return new FallbackRankingService(properties.getFeatureSchemaVersion());
+    }
+
+    @Bean
+    public ScoreBoostService scoreBoostService() {
+        return new ScoreBoostService();
     }
 
     @Bean
@@ -69,13 +101,12 @@ public class FeedConfig {
             ExtractFeaturesUseCase extractFeaturesUseCase,
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
-            FallbackRankingService fallbackRankingService) {
+            FallbackRankingService fallbackRankingService,
+            ScoreBoostService scoreBoostService,
+            AiPipelineProperties properties) {
         return new FeedRankingService(
-                selectCandidatesUseCase,
-                extractFeaturesUseCase,
-                predictRankingUseCase,
-                cacheFeedUseCase,
-                fallbackRankingService,
-                RankingRequest.DEFAULT_SCHEMA_VERSION);
+                selectCandidatesUseCase, extractFeaturesUseCase, predictRankingUseCase,
+                cacheFeedUseCase, fallbackRankingService, scoreBoostService,
+                properties.getFeatureSchemaVersion());
     }
 }

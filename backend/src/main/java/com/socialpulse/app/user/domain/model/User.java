@@ -35,6 +35,10 @@ public class User {
 	private LocalDateTime lastLoginAt;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	
+	public void setProfile(UserProfile profile) {
+		this.profile = profile;
+	}
 
 	public void applyDefaultState() {
 		if (this.roles == null || this.roles.isEmpty()) {

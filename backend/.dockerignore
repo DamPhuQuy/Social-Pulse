@@ -24,3 +24,4 @@ tmp/
 target/
 node_modules/
 .git/
+src/main/java/com/socialpulse/app/ai/data/
