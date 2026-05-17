@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.service;
+package com.socialpulse.app.feed.application.service.cache;
 
 import java.time.Duration;
 import java.util.List;
@@ -7,7 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
 public class FeedCacheService implements CacheFeedUseCase {

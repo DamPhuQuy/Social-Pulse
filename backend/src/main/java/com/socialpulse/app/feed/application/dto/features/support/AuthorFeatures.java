@@ -1,6 +1,4 @@
-package com.socialpulse.app.feed.application.dto.features;
-
-import java.util.List;
+package com.socialpulse.app.feed.application.dto.features.support;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
@@ -15,8 +13,9 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class RankingRequest {
-    @Builder.Default
-    private String featureSchemaVersion = "v1";
-    private List<RankingFeatures> features;
+public class AuthorFeatures {
+    private Long authorId;
+    private Double seniorityYears;
+    private Long postCount;
+    private Double averagePopularity;
 }

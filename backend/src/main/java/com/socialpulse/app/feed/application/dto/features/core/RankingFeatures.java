@@ -1,7 +1,10 @@
-package com.socialpulse.app.feed.application.dto.features;
+package com.socialpulse.app.feed.application.dto.features.core;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
+import com.socialpulse.app.feed.application.dto.features.support.AuthorFeatures;
+import com.socialpulse.app.feed.application.dto.features.support.InteractionFeatures;
+import com.socialpulse.app.feed.application.dto.features.support.PostFeatures;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;

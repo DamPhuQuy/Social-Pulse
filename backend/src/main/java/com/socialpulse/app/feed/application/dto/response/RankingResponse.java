@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.dto.features;
+package com.socialpulse.app.feed.application.dto.response;
 
 import com.fasterxml.jackson.databind.PropertyNamingStrategies;
 import com.fasterxml.jackson.databind.annotation.JsonNaming;
@@ -13,9 +13,8 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @Builder
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
-public class AuthorFeatures {
-    private Long authorId;
-    private Double seniorityYears;
-    private Long postCount;
-    private Double averagePopularity;
+public class RankingResponse {
+    private Long postId;
+    private Double score;
+    private String featureSchemaVersion;
 }

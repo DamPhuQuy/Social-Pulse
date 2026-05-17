@@ -5,9 +5,9 @@ import java.util.List;
 import org.springframework.core.ParameterizedTypeReference;
 import org.springframework.web.client.RestClient;
 
-import com.socialpulse.app.feed.application.dto.features.RankingRequest;
-import com.socialpulse.app.feed.application.dto.features.RankingResponse;
-import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
+import com.socialpulse.app.feed.application.dto.request.RankingRequest;
+import com.socialpulse.app.feed.application.dto.response.RankingResponse;
+import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
 
 import lombok.extern.slf4j.Slf4j;
 

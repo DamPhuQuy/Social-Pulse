@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.service;
+package com.socialpulse.app.feed.application.service.candidate;
 
 import java.time.LocalDateTime;
 import java.util.ArrayList;
@@ -9,7 +9,7 @@ import java.util.Set;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
@@ -24,6 +24,8 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
     private static final int POPULAR_COUNT = 100;
     private static final int RANDOM_COUNT = 100;
     private static final int LOOKBACK_DAYS = 7;
+    private static final int EXTENDED_LOOKBACK_DAYS = 30;
+    private static final int MIN_CANDIDATES = 20;
 
     public CandidateSelectionService(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
         this.feedRepository = feedRepository;
@@ -32,7 +34,17 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
 
     @Override
     public List<CandidatePost> selectCandidates(Long userId) {
-        LocalDateTime since = LocalDateTime.now().minusDays(LOOKBACK_DAYS);
+        List<CandidatePost> candidates = collectCandidates(userId, LocalDateTime.now().minusDays(LOOKBACK_DAYS));
+
+        // Extend lookback window if not enough candidates
+        if (candidates.size() < MIN_CANDIDATES) {
+            candidates = collectCandidates(userId, LocalDateTime.now().minusDays(EXTENDED_LOOKBACK_DAYS));
+        }
+
+        return candidates;
+    }
+
+    private List<CandidatePost> collectCandidates(Long userId, LocalDateTime since) {
         List<CandidatePost> candidates = new ArrayList<>();
         Set<Long> seenIds = new HashSet<>();
 

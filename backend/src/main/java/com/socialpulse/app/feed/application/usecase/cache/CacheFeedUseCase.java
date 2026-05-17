@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.usecase;
+package com.socialpulse.app.feed.application.usecase.cache;
 
 import java.util.List;
 

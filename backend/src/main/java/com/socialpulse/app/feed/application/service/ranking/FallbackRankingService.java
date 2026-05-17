@@ -1,10 +1,10 @@
-package com.socialpulse.app.feed.application.service;
+package com.socialpulse.app.feed.application.service.ranking;
 
 import java.time.Duration;
 import java.time.LocalDateTime;
 import java.util.List;
 
-import com.socialpulse.app.feed.application.dto.features.RankingResponse;
+import com.socialpulse.app.feed.application.dto.response.RankingResponse;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.post.domain.model.Post;
 

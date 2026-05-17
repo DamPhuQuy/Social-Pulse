@@ -1,4 +1,4 @@
-package com.socialpulse.app.feed.application.service;
+package com.socialpulse.app.feed.application.service.assembler;
 
 import java.util.LinkedHashSet;
 import java.util.List;
