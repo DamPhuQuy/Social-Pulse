@@ -42,10 +42,10 @@ app:
   version: 1.0.0
 
 ai:
-  lightgbm:
-    enabled: ${AI_LIGHTGBM_ENABLED:false}
-    model-location: ${AI_LIGHTGBM_MODEL_LOCATION:classpath:ai/lightgbm-ranking-model.json}
-    feature-schema-version: ${AI_LIGHTGBM_FEATURE_SCHEMA_VERSION:v1}
+  pipeline:
+    enabled: ${AI_PIPELINE_ENABLED:false}
+    base-url: ${AI_PIPELINE_BASE_URL:http://localhost:8000}
+    feature-schema-version: ${AI_PIPELINE_FEATURE_SCHEMA_VERSION:v1}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}

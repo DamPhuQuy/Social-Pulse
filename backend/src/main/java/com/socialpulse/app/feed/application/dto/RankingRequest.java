@@ -2,7 +2,8 @@ package com.socialpulse.app.feed.application.dto;
 
 import java.util.List;
 
-import com.socialpulse.app.ai.shared.LightGbmFeatureSchema;
+import com.fasterxml.jackson.databind.PropertyNamingStrategies;
+import com.fasterxml.jackson.databind.annotation.JsonNaming;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -13,8 +14,9 @@ import lombok.NoArgsConstructor;
 @NoArgsConstructor
 @AllArgsConstructor
 @Builder
+@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class RankingRequest {
     @Builder.Default
-    private String featureSchemaVersion = LightGbmFeatureSchema.DEFAULT_SCHEMA_VERSION;
+    private String featureSchemaVersion = "v1";
     private List<RankingFeatures> features;
 }

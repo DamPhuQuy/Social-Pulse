@@ -3,14 +3,10 @@ package com.socialpulse.app.feed.infrastructure.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.inference.LightGbmRankingService;
-import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.adapter.persistence.UserInteractionRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.CandidateSelectionService;
@@ -29,7 +25,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
-@EnableConfigurationProperties(LightGbmProperties.class)
+@EnableConfigurationProperties(AiPipelineProperties.class)
 public class FeedConfig {
 
     @Bean
@@ -62,31 +58,13 @@ public class FeedConfig {
     }
 
     @Bean
-    public LightGbmFeatureVectorizer lightGbmFeatureVectorizer() {
-        return new LightGbmFeatureVectorizer();
+    public PredictRankingUseCase predictRankingUseCase(AiPipelineProperties properties) {
+        return new AiPipelineRankingClient(properties.getBaseUrl(), properties.isEnabled());
     }
 
     @Bean
-    public LightGbmRankingService lightGbmRankingService(
-            LightGbmProperties lightGbmProperties,
-            ObjectMapper objectMapper,
-            ResourceLoader resourceLoader,
-            LightGbmFeatureVectorizer lightGbmFeatureVectorizer) {
-        return new LightGbmRankingService(
-                lightGbmProperties,
-                objectMapper,
-                resourceLoader,
-                lightGbmFeatureVectorizer);
-    }
-
-    @Bean
-    public PredictRankingUseCase predictRankingUseCase(LightGbmRankingService lightGbmRankingService) {
-        return lightGbmRankingService;
-    }
-
-    @Bean
-    public FallbackRankingService fallbackRankingService(LightGbmProperties lightGbmProperties) {
-        return new FallbackRankingService(lightGbmProperties.getFeatureSchemaVersion());
+    public FallbackRankingService fallbackRankingService(AiPipelineProperties properties) {
+        return new FallbackRankingService(properties.getFeatureSchemaVersion());
     }
 
     @Bean
@@ -101,13 +79,13 @@ public class FeedConfig {
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
             FallbackRankingService fallbackRankingService,
-            LightGbmProperties lightGbmProperties) {
+            AiPipelineProperties properties) {
         return new FeedRankingService(
                 selectCandidatesUseCase,
                 extractFeaturesUseCase,
                 predictRankingUseCase,
                 cacheFeedUseCase,
                 fallbackRankingService,
-                lightGbmProperties.getFeatureSchemaVersion());
+                properties.getFeatureSchemaVersion());
     }
 }
