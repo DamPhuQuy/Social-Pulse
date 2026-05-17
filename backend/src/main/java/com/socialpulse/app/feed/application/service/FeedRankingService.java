@@ -18,6 +18,7 @@ import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
+import com.socialpulse.app.post.domain.model.Post;
 
 import lombok.extern.slf4j.Slf4j;
 
@@ -74,21 +75,46 @@ public class FeedRankingService implements RankFeedUseCase {
             }
         }
 
-        Map<Long, Source> sourceMap = candidates.stream()
+        Map<Long, CandidatePost> candidateMap = candidates.stream()
                 .collect(Collectors.toMap(
                         candidate -> candidate.getPost().getId(),
-                        CandidatePost::getSource
+                        candidate -> candidate
                 ));
 
         List<FeedItem> rankedFeed = scores.stream()
-                .sorted(Comparator.comparing(RankingResponse::getScore).reversed())
-                .map(score -> FeedItem.builder()
-                        .postId(score.getPostId())
-                        .userId(userId)
-                        .aiScore(score.getScore())
-                        .source(sourceMap.get(score.getPostId()))
-                        .rankedAt(LocalDateTime.now())
-                        .build())
+                .map(score -> {
+                    Post post = candidateMap.get(score.getPostId()).getPost();
+                    double boostedScore = score.getScore() != null ? score.getScore() : 0.0;
+                    
+                    // CRITICAL UX FIX: AI Models suffer from "Cold Start" problem.
+                    // A brand new post has 0 likes/comments/views, so AI ranks it very low,
+                    // causing it to be buried under old seed posts.
+                    // 1. Creator Boost: Massive +10,000 boost to the user's OWN posts created in the last 60 minutes
+                    if (post.getUserId().equals(userId) && post.getCreatedAt() != null) {
+                        long ageMinutes = Math.max(0, java.time.Duration.between(post.getCreatedAt(), java.time.LocalDateTime.now()).toMinutes());
+                        if (ageMinutes <= 60) {
+                            boostedScore += 10000.0;
+                        }
+                    } 
+                    // 2. Follower Boost: +5,000 boost for posts from people the user FOLLOWS, if created within 24 hours.
+                    // This ensures followers actually see new posts so they can interact with them and train the AI!
+                    else if (candidateMap.get(score.getPostId()).getSource() == Source.FOLLOWING && post.getCreatedAt() != null) {
+                        long ageHours = Math.max(0, java.time.Duration.between(post.getCreatedAt(), java.time.LocalDateTime.now()).toHours());
+                        if (ageHours <= 24) {
+                            // Boost decays slightly over 24 hours to keep the very newest ones on top
+                            boostedScore += 5000.0 - (ageHours * 50.0);
+                        }
+                    }
+                    
+                    return FeedItem.builder()
+                            .postId(score.getPostId())
+                            .userId(userId)
+                            .aiScore(boostedScore)
+                            .source(candidateMap.get(score.getPostId()).getSource())
+                            .rankedAt(LocalDateTime.now())
+                            .build();
+                })
+                .sorted(Comparator.comparing(FeedItem::getAiScore).reversed())
                 .toList();
 
         cacheFeedUseCase.cacheFeed(userId, rankedFeed);

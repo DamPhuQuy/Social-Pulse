@@ -57,14 +57,13 @@ public class CreateUserService implements CreateUserUseCase {
         String encodedPassword = passwordEncode.encode(request.getRawPassword());
         User user = userMapper.toUser(request, normalizedEmail, encodedPassword);
         user.applyDefaultState();
+        user.setProfile(UserProfile.builder()
+                .displayName(user.getUsername())
+                .build());
 
         userRoleService.assignDefaultRole(user);
 
         user = userRepository.save(user);
-        userProfileRepository.save(UserProfile.builder()
-                .id(user.getId())
-                .displayName(user.getUsername())
-                .build());
         String message = "User created successfully for email: " + user.getEmail();
 
         return userMapper.toUserCreationResponse(user, message);

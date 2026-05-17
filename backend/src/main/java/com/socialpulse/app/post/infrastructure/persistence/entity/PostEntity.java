@@ -52,7 +52,9 @@ public class PostEntity {
     @Column(columnDefinition = "TEXT")
     private String content;
 
+    @Column(columnDefinition = "TEXT")
     private String imageUrl;
+    
     private String imagePublicId;
 
     @Column(name = "parent_post_id")

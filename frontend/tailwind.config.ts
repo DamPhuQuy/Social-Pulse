@@ -62,9 +62,10 @@ module.exports = {
         full: "9999px",
       },
       fontFamily: {
-        headline: ["Manrope"],
-        body: ["Inter"],
-        label: ["Inter"],
+        sans: ["'Be Vietnam Pro'", "sans-serif"],
+        headline: ["'Be Vietnam Pro'", "sans-serif"],
+        body: ["'Be Vietnam Pro'", "sans-serif"],
+        label: ["'Be Vietnam Pro'", "sans-serif"],
       },
     },
   },
