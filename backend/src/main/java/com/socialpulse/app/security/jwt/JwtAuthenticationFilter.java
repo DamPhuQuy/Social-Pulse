@@ -3,6 +3,8 @@ package com.socialpulse.app.security.jwt;
 import java.io.IOException;
 
 import org.jspecify.annotations.NonNull;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
@@ -20,6 +22,8 @@ import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtAuthenticationFilter extends OncePerRequestFilter {
+
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthenticationFilter.class);
 
     private final JwtUseCase jwtUseCase;
     private final CustomUserDetailsService userDetailsService;
@@ -66,6 +70,8 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
             }
         } catch (Exception e) {
             // Token invalid/expired → tiếp tục chain không auth; Spring Security sẽ xử lý 401
+            log.warn("[JWT Filter] Token validation failed for request [{}]: {} - {}",
+                    request.getRequestURI(), e.getClass().getSimpleName(), e.getMessage());
         }
 
         filterChain.doFilter(request, response);

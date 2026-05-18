@@ -11,7 +11,7 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 @Getter
-@Builder
+@Builder(toBuilder = true)
 @NoArgsConstructor
 @AllArgsConstructor
 public class ReportResponse {
@@ -22,4 +22,9 @@ public class ReportResponse {
     private String reason;
     private ReportStatus status;
     private LocalDateTime createdAt;
+
+    // Enriched fields — populated dynamically by ReportResponseEnricher
+    private String targetContent;
+    private Long targetOwnerId;
+    private String targetOwnerUsername;
 }

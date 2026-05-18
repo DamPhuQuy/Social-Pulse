@@ -64,6 +64,10 @@ public class CreateUserService implements CreateUserUseCase {
         userRoleService.assignDefaultRole(user);
 
         user = userRepository.save(user);
+        userProfileRepository.save(UserProfile.builder()
+                .id(user.getId())
+                .displayName(user.getUsername())
+                .build());
         String message = "User created successfully for email: " + user.getEmail();
 
         return userMapper.toUserCreationResponse(user, message);
