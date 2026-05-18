@@ -1,0 +1,255 @@
+@startuml
+title GET /api/users/{userId} - Get User Profile
+
+actor Client
+participant AuthFilter
+participant UserController
+participant GetUserProfileService
+participant UserRepository
+participant UserMapper
+database Database
+
+Client -> AuthFilter: GET /api/users/{userId}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> UserController: forward request with currentUserId (if authenticated)
+activate UserController
+
+UserController -> GetUserProfileService: getUserProfile(userId, currentUserId)
+activate GetUserProfileService
+
+GetUserProfileService -> UserRepository: findById(userId)
+UserRepository -> Database: SELECT * FROM users WHERE id = ?
+Database --> UserRepository: user row
+UserRepository --> GetUserProfileService: Optional<User>
+
+alt User not found
+    GetUserProfileService --> UserController: UserNotFoundException
+    UserController --> Client: 404 Not Found
+else User found
+    GetUserProfileService -> GetUserProfileService: check visibility\n(public/private profile)
+
+    opt currentUserId provided
+        GetUserProfileService -> GetUserProfileService: check if following
+        GetUserProfileService -> GetUserProfileService: check if blocked
+    end
+
+    GetUserProfileService -> UserMapper: toUserProfileResponse(user, isFollowing, isBlocked)
+    UserMapper --> GetUserProfileService: UserProfileResponse
+
+    GetUserProfileService --> UserController: UserProfileResponse
+    deactivate GetUserProfileService
+
+    UserController --> Client: 200 OK(response)
+    deactivate UserController
+end
+
+@enduml
+
+@startuml
+title PUT /api/users/me - Update Current User Profile
+
+actor Client
+participant AuthFilter
+participant UserController
+participant UpdateUserProfileService
+participant UserRepository
+participant FileStorageService
+database Database
+
+Client -> AuthFilter: PUT /api/users/me(UpdateProfileRequest)
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> UserController: forward request with currentUserId
+activate UserController
+
+UserController -> UpdateUserProfileService: updateProfile(currentUserId, request)
+activate UpdateUserProfileService
+
+UpdateUserProfileService -> UserRepository: findById(currentUserId)
+UserRepository -> Database: SELECT * FROM users WHERE id = ?
+Database --> UserRepository: user row
+UserRepository --> UpdateUserProfileService: Optional<User>
+
+alt User not found
+    UpdateUserProfileService --> UserController: UserNotFoundException
+    UserController --> Client: 404 Not Found
+else User found
+    UpdateUserProfileService -> UpdateUserProfileService: validate request\n(bio length, display name)
+
+    opt username changed
+        UpdateUserProfileService -> UserRepository: existsByUsername(newUsername)
+        UserRepository -> Database: SELECT COUNT(*) WHERE username = ?
+        Database --> UserRepository: count
+        UserRepository --> UpdateUserProfileService: boolean
+
+        alt Username taken
+            UpdateUserProfileService --> UserController: UsernameAlreadyExistsException
+            UserController --> Client: 409 Conflict
+        end
+    end
+
+    opt avatar uploaded
+        UpdateUserProfileService -> FileStorageService: uploadFile(avatarFile)
+        FileStorageService --> UpdateUserProfileService: avatarUrl
+    end
+
+    UpdateUserProfileService -> UpdateUserProfileService: update User entity
+    UpdateUserProfileService -> UserRepository: save(user)
+    UserRepository -> Database: UPDATE users SET ... WHERE id = ?
+    Database --> UserRepository: updated user
+    UserRepository --> UpdateUserProfileService: User
+
+    UpdateUserProfileService --> UserController: UserProfileResponse
+    deactivate UpdateUserProfileService
+
+    UserController --> Client: 200 OK(response)
+    deactivate UserController
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/users/me - Get Current User Profile
+
+actor Client
+participant AuthFilter
+participant UserController
+participant GetCurrentUserService
+participant UserRepository
+participant UserMapper
+database Database
+
+Client -> AuthFilter: GET /api/users/me
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> UserController: forward request with currentUserId
+activate UserController
+
+UserController -> GetCurrentUserService: getCurrentUser(currentUserId)
+activate GetCurrentUserService
+
+GetCurrentUserService -> UserRepository: findById(currentUserId)
+UserRepository -> Database: SELECT * FROM users WHERE id = ?
+Database --> UserRepository: user row
+UserRepository --> GetCurrentUserService: Optional<User>
+
+alt User not found
+    GetCurrentUserService --> UserController: UserNotFoundException
+    UserController --> Client: 404 Not Found
+else User found
+    GetCurrentUserService -> UserMapper: toCurrentUserResponse(user)
+    UserMapper --> GetCurrentUserService: CurrentUserResponse
+
+    GetCurrentUserService --> UserController: CurrentUserResponse
+    deactivate GetCurrentUserService
+
+    UserController --> Client: 200 OK(response)
+    deactivate UserController
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title DELETE /api/users/me - Delete Current User Account
+
+actor Client
+participant AuthFilter
+participant UserController
+participant DeleteUserAccountService
+participant UserRepository
+participant PostRepository
+participant CommentRepository
+database Database
+
+Client -> AuthFilter: DELETE /api/users/me
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> UserController: forward request with currentUserId
+activate UserController
+
+UserController -> DeleteUserAccountService: deleteAccount(currentUserId)
+activate DeleteUserAccountService
+
+DeleteUserAccountService -> UserRepository: findById(currentUserId)
+UserRepository -> Database: SELECT * FROM users WHERE id = ?
+Database --> UserRepository: user row
+UserRepository --> DeleteUserAccountService: Optional<User>
+
+alt User not found
+    DeleteUserAccountService --> UserController: UserNotFoundException
+    UserController --> Client: 404 Not Found
+else User found
+    DeleteUserAccountService -> DeleteUserAccountService: begin transaction
+
+    DeleteUserAccountService -> CommentRepository: deleteByUserId(currentUserId)
+    CommentRepository -> Database: DELETE FROM comments WHERE user_id = ?
+    Database --> CommentRepository: deleted count
+
+    DeleteUserAccountService -> PostRepository: deleteByUserId(currentUserId)
+    PostRepository -> Database: DELETE FROM posts WHERE user_id = ?
+    Database --> PostRepository: deleted count
+
+    DeleteUserAccountService -> UserRepository: delete(user)
+    UserRepository -> Database: DELETE FROM users WHERE id = ?
+    Database --> UserRepository: void
+
+    DeleteUserAccountService -> DeleteUserAccountService: commit transaction
+
+    DeleteUserAccountService --> UserController: void
+    deactivate DeleteUserAccountService
+
+    UserController --> Client: 204 No Content
+    deactivate UserController
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/users/search - Search Users
+
+actor Client
+participant AuthFilter
+participant UserController
+participant SearchUsersService
+participant UserRepository
+participant UserMapper
+database Database
+
+Client -> AuthFilter: GET /api/users/search?query={query}&page={page}&size={size}
+AuthFilter -> AuthFilter: validate JWT (optional)
+AuthFilter -> UserController: forward request with currentUserId (if authenticated)
+activate UserController
+
+UserController -> SearchUsersService: searchUsers(query, pageable, currentUserId)
+activate SearchUsersService
+
+SearchUsersService -> SearchUsersService: validate query\n(min length, sanitize)
+
+SearchUsersService -> UserRepository: searchByUsernameOrDisplayName(query, pageable)
+UserRepository -> Database: SELECT * FROM users\nWHERE username LIKE ? OR display_name LIKE ?\nLIMIT ? OFFSET ?
+Database --> UserRepository: user rows
+UserRepository --> SearchUsersService: Page<User>
+
+SearchUsersService -> SearchUsersService: filter blocked users\n(if currentUserId provided)
+
+loop for each user
+    SearchUsersService -> UserMapper: toUserSearchResponse(user)
+    UserMapper --> SearchUsersService: UserSearchResponse
+end
+
+SearchUsersService --> UserController: Page<UserSearchResponse>
+deactivate SearchUsersService
+
+UserController --> Client: 200 OK(response)
+deactivate UserController
+
+@enduml

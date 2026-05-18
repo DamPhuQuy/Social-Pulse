@@ -70,7 +70,7 @@ export default function VerifyOtpPage() {
   const submitOtpVerification = useCallback(
     async (otpCode: string) => {
       if (!email) {
-        toast.error("Missing email context.");
+        toast.error("Thiếu thông tin email.");
         return;
       }
 
@@ -80,16 +80,16 @@ export default function VerifyOtpPage() {
       if (result.ok) {
         setIsVerified(true);
         sessionStorage.removeItem("pendingVerificationEmail");
-        toast.success("Identity Verified", { description: "Your account is now active. Redirecting to Login..." });
+        toast.success("Xác thực Thành công", { description: "Tài khoản của bạn đã được kích hoạt. Đang chuyển đến trang đăng nhập..." });
       } else {
         const nextAttempts = failedAttempts + 1;
         setFailedAttempts(nextAttempts);
         const attemptsLeft = MAX_FAILED_ATTEMPTS - nextAttempts;
         
         if (attemptsLeft > 0) {
-          toast.error("Invalid Code", { description: `You have ${attemptsLeft} attempt(s) remaining.` });
+          toast.error("Mã không hợp lệ", { description: `Bạn còn ${attemptsLeft} lần thử.` });
         } else {
-          toast.error("Verification Locked", { description: "Please resend a new OTP code." });
+          toast.error("Khóa Xác thực", { description: "Vui lòng yêu cầu gửi lại mã OTP mới." });
         }
         setOtp("");
         lastSubmittedOtpRef.current = null;
@@ -120,14 +120,14 @@ export default function VerifyOtpPage() {
       setFailedAttempts(0);
       lastSubmittedOtpRef.current = null;
       setIsVerified(false);
-      toast.success("New code sent", { description: "Please check your inbox." });
+      toast.success("Mã mới đã được gửi", { description: "Vui lòng kiểm tra hộp thư đến." });
     } else {
-      toast.error("Failed to resend", { description: result.message });
+      toast.error("Gửi lại thất bại", { description: result.message });
     }
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       <InteractiveBackground />
 
       <div className="fixed top-[-10%] left-[-10%] w-[60%] h-[60%] bg-blue-100/30 dark:bg-blue-900/10 rounded-full blur-[160px] -z-10" />
@@ -142,7 +142,7 @@ export default function VerifyOtpPage() {
         </Link>
         <Link to={PATHS.REGISTER} className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-400 hover:text-blue-600 transition-colors group">
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Register
+          Quay lại Đăng ký
         </Link>
       </nav>
 
@@ -162,12 +162,12 @@ export default function VerifyOtpPage() {
               )}
             </div>
             <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">
-              {isVerified ? "Verified!" : "Check Email"}
+              {isVerified ? "Đã Xác thực!" : "Kiểm tra Email"}
             </h1>
             <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
               {isVerified 
-                ? "Your account is ready. Taking you to the login screen..."
-                : `We've sent a 6-digit code to ${email}. Enter it below to continue.`}
+                ? "Tài khoản của bạn đã sẵn sàng. Đang chuyển hướng đến trang đăng nhập..."
+                : `Chúng tôi đã gửi mã 6 số đến ${email}. Nhập mã xuống bên dưới để tiếp tục.`}
             </p>
           </div>
 
@@ -182,7 +182,7 @@ export default function VerifyOtpPage() {
             <div className="flex flex-col items-center gap-4">
               <div className="flex items-center justify-center gap-2 text-sm font-medium">
                 <span className="text-gray-400">
-                  {secondsLeft > 0 ? `Code expires in ${formatCountdown(secondsLeft)}` : "Didn't get a code?"}
+                  {secondsLeft > 0 ? `Mã hết hạn sau ${formatCountdown(secondsLeft)}` : "Chưa nhận được mã?"}
                 </span>
                 <button
                   type="button"
@@ -193,13 +193,13 @@ export default function VerifyOtpPage() {
                   {isResending ? (
                     <RefreshCcw className="w-3 h-3 animate-spin" />
                   ) : null}
-                  Resend Code
+                  Gửi lại Mã
                 </button>
               </div>
 
               {!isVerified && (
                 <p className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
-                  {isVerifying ? "Securing connection..." : `${MAX_FAILED_ATTEMPTS - failedAttempts} attempts left`}
+                  {isVerifying ? "Đang bảo mật kết nối..." : `Còn ${MAX_FAILED_ATTEMPTS - failedAttempts} lần thử`}
                 </p>
               )}
             </div>
@@ -207,7 +207,7 @@ export default function VerifyOtpPage() {
         </div>
 
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Pulse-Sync Verification Active
+          Xác thực Pulse-Sync đang hoạt động
         </p>
       </motion.div>
     </div>

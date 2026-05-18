@@ -36,7 +36,7 @@ public class EditPostService implements EditPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
-        post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy());
+        post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy(), request.getTopicId());
 
         Post updatedPost = postRepository.save(post);
 

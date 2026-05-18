@@ -1,0 +1,227 @@
+@startuml
+title GET /api/notifications - Get User Notifications
+
+actor Client
+participant AuthFilter
+participant NotificationController
+participant GetNotificationsService
+participant NotificationRepository
+participant UserRepository
+participant NotificationMapper
+database Database
+
+Client -> AuthFilter: GET /api/notifications?page={page}&size={size}&unreadOnly={unreadOnly}
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> NotificationController: forward request with currentUserId
+activate NotificationController
+
+NotificationController -> GetNotificationsService: getNotifications(currentUserId, pageable, unreadOnly)
+activate GetNotificationsService
+
+alt unreadOnly == true
+    GetNotificationsService -> NotificationRepository: findUnreadByUserId(currentUserId, pageable)
+    NotificationRepository -> Database: SELECT * FROM notifications\nWHERE user_id = ? AND is_read = false\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+else unreadOnly == false
+    GetNotificationsService -> NotificationRepository: findByUserId(currentUserId, pageable)
+    NotificationRepository -> Database: SELECT * FROM notifications\nWHERE user_id = ?\nORDER BY created_at DESC\nLIMIT ? OFFSET ?
+end
+
+Database --> NotificationRepository: notification rows
+NotificationRepository --> GetNotificationsService: Page<Notification>
+
+loop for each notification
+    GetNotificationsService -> UserRepository: findById(notification.actorId)
+    UserRepository -> Database: SELECT * FROM users WHERE id = ?
+    Database --> UserRepository: user row
+    UserRepository --> GetNotificationsService: Optional<User>
+
+    GetNotificationsService -> NotificationMapper: toNotificationResponse(notification, actor)
+    NotificationMapper --> GetNotificationsService: NotificationResponse
+end
+
+GetNotificationsService --> NotificationController: Page<NotificationResponse>
+deactivate GetNotificationsService
+
+NotificationController --> Client: 200 OK(response)
+deactivate NotificationController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title PUT /api/notifications/{notificationId}/read - Mark Notification as Read
+
+actor Client
+participant AuthFilter
+participant NotificationController
+participant MarkNotificationReadService
+participant NotificationRepository
+database Database
+
+Client -> AuthFilter: PUT /api/notifications/{notificationId}/read
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> NotificationController: forward request with currentUserId
+activate NotificationController
+
+NotificationController -> MarkNotificationReadService: markAsRead(notificationId, currentUserId)
+activate MarkNotificationReadService
+
+MarkNotificationReadService -> NotificationRepository: findById(notificationId)
+NotificationRepository -> Database: SELECT * FROM notifications WHERE id = ?
+Database --> NotificationRepository: notification row
+NotificationRepository --> MarkNotificationReadService: Optional<Notification>
+
+alt Notification not found
+    MarkNotificationReadService --> NotificationController: NotificationNotFoundException
+    NotificationController --> Client: 404 Not Found
+else Notification found
+    MarkNotificationReadService -> MarkNotificationReadService: check ownership\n(notification.userId == currentUserId)
+
+    alt Not owner
+        MarkNotificationReadService --> NotificationController: ForbiddenException
+        NotificationController --> Client: 403 Forbidden
+    else Owner
+        MarkNotificationReadService -> MarkNotificationReadService: update Notification entity\n(isRead = true)
+
+        MarkNotificationReadService -> NotificationRepository: save(notification)
+        NotificationRepository -> Database: UPDATE notifications SET is_read = true\nWHERE id = ?
+        Database --> NotificationRepository: updated notification
+        NotificationRepository --> MarkNotificationReadService: Notification
+
+        MarkNotificationReadService --> NotificationController: NotificationResponse
+        deactivate MarkNotificationReadService
+
+        NotificationController --> Client: 200 OK(response)
+        deactivate NotificationController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title PUT /api/notifications/read-all - Mark All Notifications as Read
+
+actor Client
+participant AuthFilter
+participant NotificationController
+participant MarkAllNotificationsReadService
+participant NotificationRepository
+database Database
+
+Client -> AuthFilter: PUT /api/notifications/read-all
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> NotificationController: forward request with currentUserId
+activate NotificationController
+
+NotificationController -> MarkAllNotificationsReadService: markAllAsRead(currentUserId)
+activate MarkAllNotificationsReadService
+
+MarkAllNotificationsReadService -> NotificationRepository: markAllAsReadByUserId(currentUserId)
+NotificationRepository -> Database: UPDATE notifications SET is_read = true\nWHERE user_id = ? AND is_read = false
+Database --> NotificationRepository: updated count
+NotificationRepository --> MarkAllNotificationsReadService: int
+
+MarkAllNotificationsReadService --> NotificationController: MarkAllReadResponse(count)
+deactivate MarkAllNotificationsReadService
+
+NotificationController --> Client: 200 OK(response)
+deactivate NotificationController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title DELETE /api/notifications/{notificationId} - Delete Notification
+
+actor Client
+participant AuthFilter
+participant NotificationController
+participant DeleteNotificationService
+participant NotificationRepository
+database Database
+
+Client -> AuthFilter: DELETE /api/notifications/{notificationId}
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> NotificationController: forward request with currentUserId
+activate NotificationController
+
+NotificationController -> DeleteNotificationService: deleteNotification(notificationId, currentUserId)
+activate DeleteNotificationService
+
+DeleteNotificationService -> NotificationRepository: findById(notificationId)
+NotificationRepository -> Database: SELECT * FROM notifications WHERE id = ?
+Database --> NotificationRepository: notification row
+NotificationRepository --> DeleteNotificationService: Optional<Notification>
+
+alt Notification not found
+    DeleteNotificationService --> NotificationController: NotificationNotFoundException
+    NotificationController --> Client: 404 Not Found
+else Notification found
+    DeleteNotificationService -> DeleteNotificationService: check ownership\n(notification.userId == currentUserId)
+
+    alt Not owner
+        DeleteNotificationService --> NotificationController: ForbiddenException
+        NotificationController --> Client: 403 Forbidden
+    else Owner
+        DeleteNotificationService -> NotificationRepository: delete(notification)
+        NotificationRepository -> Database: DELETE FROM notifications WHERE id = ?
+        Database --> NotificationRepository: void
+
+        DeleteNotificationService --> NotificationController: void
+        deactivate DeleteNotificationService
+
+        NotificationController --> Client: 204 No Content
+        deactivate NotificationController
+    end
+end
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml
+
+@startuml
+title GET /api/notifications/unread-count - Get Unread Notification Count
+
+actor Client
+participant AuthFilter
+participant NotificationController
+participant GetUnreadCountService
+participant NotificationRepository
+database Database
+
+Client -> AuthFilter: GET /api/notifications/unread-count
+AuthFilter -> AuthFilter: validate JWT
+AuthFilter -> NotificationController: forward request with currentUserId
+activate NotificationController
+
+NotificationController -> GetUnreadCountService: getUnreadCount(currentUserId)
+activate GetUnreadCountService
+
+GetUnreadCountService -> NotificationRepository: countUnreadByUserId(currentUserId)
+NotificationRepository -> Database: SELECT COUNT(*) FROM notifications\nWHERE user_id = ? AND is_read = false
+Database --> NotificationRepository: count
+NotificationRepository --> GetUnreadCountService: long
+
+GetUnreadCountService --> NotificationController: UnreadCountResponse(count)
+deactivate GetUnreadCountService
+
+NotificationController --> Client: 200 OK(response)
+deactivate NotificationController
+
+alt Unauthorized
+    AuthFilter --> Client: 401 Unauthorized
+end
+
+@enduml

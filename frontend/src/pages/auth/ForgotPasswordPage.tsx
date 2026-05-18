@@ -28,7 +28,7 @@ export default function ForgotPasswordPage() {
     const trimmedEmail = email.trim();
 
     if (!trimmedEmail) {
-      toast.error("Please enter your email address.");
+      toast.error("Vui lòng nhập địa chỉ email của bạn.");
       return;
     }
 
@@ -38,16 +38,16 @@ export default function ForgotPasswordPage() {
     if (result.ok) {
       sessionStorage.setItem("pendingResetEmail", trimmedEmail);
       sessionStorage.removeItem("pendingResetVerified");
-      toast.success("OTP sent!", { description: "Please check your email inbox for the reset code." });
+      toast.success("Đã gửi mã OTP!", { description: "Vui lòng kiểm tra hộp thư đến để nhận mã khôi phục." });
       navigate(`${PATHS.RESET_PASSWORD}?email=${encodeURIComponent(trimmedEmail)}`);
     } else {
-      toast.error("Failed to send reset code.", { description: result.message });
+      toast.error("Gửi mã khôi phục thất bại.", { description: result.message });
     }
     setIsSubmitting(false);
   };
 
   return (
-    <div className="min-h-screen w-full relative flex items-center justify-center font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
+    <div className="min-h-screen w-full relative flex items-center justify-center font-sans bg-white dark:bg-slate-950 transition-colors duration-500 overflow-hidden">
       <InteractiveBackground />
 
       {/* Decorative Glows */}
@@ -64,7 +64,7 @@ export default function ForgotPasswordPage() {
         </Link>
         <Link to={PATHS.LOGIN} className="flex items-center gap-2 text-sm font-bold text-gray-600 dark:text-slate-400 hover:text-blue-600 transition-colors group">
           <ChevronLeft className="w-4 h-4 group-hover:-translate-x-1 transition-transform" />
-          Back to Login
+          Quay lại Đăng nhập
         </Link>
       </nav>
 
@@ -79,15 +79,15 @@ export default function ForgotPasswordPage() {
             <div className="w-16 h-16 bg-blue-50 dark:bg-blue-900/20 rounded-2xl flex items-center justify-center mx-auto mb-6">
               <KeyRound className="w-8 h-8 text-blue-600 dark:text-blue-400" />
             </div>
-            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Forgot Password?</h1>
+            <h1 className="text-4xl font-bold text-gray-900 dark:text-white mb-3 tracking-tight">Quên Mật khẩu?</h1>
             <p className="text-gray-500 dark:text-slate-400 font-medium max-w-sm mx-auto">
-              No worries, it happens. Enter your email and we'll send you a reset code.
+              Không sao cả. Nhập email của bạn và chúng tôi sẽ gửi mã khôi phục.
             </p>
           </div>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             <div className="space-y-2">
-              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Email Address</Label>
+              <Label htmlFor="email" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Địa chỉ Email</Label>
               <div className="relative group">
                 <Mail className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
@@ -107,9 +107,9 @@ export default function ForgotPasswordPage() {
               disabled={isSubmitting}
               className="w-full py-7 bg-blue-600 hover:bg-blue-700 text-white rounded-2xl font-bold text-lg shadow-xl shadow-blue-500/20 dark:shadow-none transition-all flex items-center justify-center gap-2 group"
             >
-              {isSubmitting ? "Sending Code..." : (
+              {isSubmitting ? "Đang gửi mã..." : (
                 <>
-                  Send Reset Code <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
+                  Gửi mã Khôi phục <ArrowRight className="w-5 h-5 group-hover:translate-x-1 transition-transform" />
                 </>
               )}
             </Button>
@@ -118,7 +118,7 @@ export default function ForgotPasswordPage() {
 
         {/* Footer info */}
         <p className="text-center mt-10 text-[10px] text-gray-400 font-bold tracking-[0.3em] uppercase opacity-60">
-          Encrypted Reset Protocol Active
+          Giao thức khôi phục bảo mật đang hoạt động
         </p>
       </motion.div>
     </div>

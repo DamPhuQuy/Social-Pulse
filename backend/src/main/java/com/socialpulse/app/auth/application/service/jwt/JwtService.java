@@ -42,8 +42,13 @@ public class JwtService implements JwtUseCase {
         Map<String, Object> extraClaims = new HashMap<>();
 
         extraClaims.put("userId", userDetails.getId());
-        extraClaims.put("roles", userDetails.user().getRoles().stream()
+        extraClaims.put("roles", userDetails.user().getRoles() == null ? java.util.List.of() : userDetails.user().getRoles().stream()
+                .filter(java.util.Objects::nonNull)
                 .map(role -> role.getName())
+                .filter(java.util.Objects::nonNull)
+                .toList());
+        extraClaims.put("permissions", userDetails.getAuthorities().stream()
+                .map(GrantedAuthority::getAuthority)
                 .toList());
         extraClaims.put("permissions", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

@@ -1,0 +1,1 @@
+ALTER TABLE posts ALTER COLUMN image_url TYPE TEXT;

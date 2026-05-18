@@ -1,0 +1,83 @@
+@startuml Social-Pulse Overview
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+skinparam nodesep 50
+skinparam ranksep 40
+skinparam class {
+    FontSize 11
+    AttributeFontSize 10
+}
+
+title Social-Pulse Domain - Overview
+
+' Classes without fields for compact view
+class User
+class UserProfile
+class Role
+class Permission
+class Post
+class PostReactions
+class Comment
+class CommentReaction
+class RefreshToken
+class Otp
+class Bookmark
+class Follow
+class Notification
+class Report
+class FeedItem
+class CandidatePost
+
+' Enums
+enum ReactionType
+enum UserStatus
+enum VerificationStatus
+enum UserGender
+enum PostType
+enum Privacy
+enum NotificationType
+enum NotificationResourceType
+enum ReportStatus
+enum ReportTargetType
+enum Source
+
+' === Core Relationships ===
+User "1" *-- "1" UserProfile
+User "1" *-- "*" Role
+Role "1" *-- "*" Permission
+
+User "1" -- "*" Post
+User "1" -- "*" Comment
+User "1" -- "*" Bookmark
+User "1" -- "*" Follow
+User "1" -- "*" RefreshToken
+User "1" -- "*" Notification
+User "1" -- "*" Report
+
+Post "1" -- "*" PostReactions
+Post "1" -- "*" Comment
+Post "1" -- "*" Bookmark
+
+Comment "1" -- "*" CommentReaction
+Comment "1" -- "*" Comment : replies
+
+CandidatePost --> Post
+
+' === Enum Dependencies ===
+User ..> UserStatus
+User ..> VerificationStatus
+UserProfile ..> UserGender
+Post ..> PostType
+Post ..> Privacy
+PostReactions ..> ReactionType
+CommentReaction ..> ReactionType
+Notification ..> NotificationType
+Notification ..> NotificationResourceType
+Report ..> ReportStatus
+Report ..> ReportTargetType
+FeedItem ..> Source
+CandidatePost ..> Source
+
+@enduml
