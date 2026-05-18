@@ -54,6 +54,7 @@ class PushshiftTrainingPipeline:
         summary = self._build_summary(
             arguments, scan_result.scan_stats, interaction_stats,
             dataset.feature_stats, len(split.train_rows), len(split.validation_rows), model.metrics,
+            model.model_dump.get("feature_importances"),
         )
         artifact = self._build_artifact(trained_at, summary, model.model_dump)
 
@@ -67,8 +68,9 @@ class PushshiftTrainingPipeline:
     def _build_summary(
         arguments: TrainingArguments, scan_stats: dict, interaction_stats: dict,
         feature_stats: dict, train_rows: int, validation_rows: int, metrics: Metrics,
+        feature_importances: dict | None = None,
     ) -> dict:
-        return {
+        summary = {
             "scan_stats": scan_stats,
             "interaction_stats": interaction_stats,
             "feature_stats": feature_stats,
@@ -89,11 +91,13 @@ class PushshiftTrainingPipeline:
                 "n_estimators": arguments.n_estimators,
                 "max_depth": arguments.max_depth,
                 "min_samples_leaf": arguments.min_samples_leaf,
-                "max_thresholds": arguments.max_thresholds,
                 "learning_rate": arguments.learning_rate,
                 "seed": arguments.seed,
             },
         }
+        if feature_importances:
+            summary["feature_importances"] = feature_importances
+        return summary
 
     @staticmethod
     def _build_artifact(trained_at: str, summary: dict, model_dump: dict) -> dict:

@@ -5,6 +5,7 @@ description = "Social Pulse AI Pipeline - LightGBM feed ranking"
 requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26.0",
+    "scikit-learn>=1.5.0",
     "zstandard>=0.22.0",
     "fastapi>=0.115.0",
     "uvicorn>=0.32.0",

@@ -1,7 +1,7 @@
 """Feature engineering: builds training rows with interaction features."""
 from __future__ import annotations
 
-import hashlib
+import math
 
 from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from .scanner import PushshiftDatasetScanner
@@ -12,6 +12,7 @@ from .types import (
 _SECONDS_PER_HOUR = 3600.0
 _SECONDS_PER_DAY = 86400.0
 _SECONDS_PER_YEAR = 365.0 * _SECONDS_PER_DAY
+_VALIDATION_RATIO = 0.2
 
 
 class PushshiftFeatureEngineering:
@@ -42,25 +43,31 @@ class PushshiftFeatureEngineering:
                 interaction_feats = self._compute_interaction_features(
                     timestamps, record.created_utc, viewer_total_interactions.get(viewer, 1)
                 )
-                rows.append(TrainingRow(record.post_id, self._merge(base, interaction_feats), _log1p(popularity)))
+                rows.append(TrainingRow(record.post_id, self._merge(base, interaction_feats), _log1p(popularity), record.created_utc))
 
             # Negative rows
             negative_viewers = self._find_negative_viewers(interactions, record.author, negative_samples_per_post)
             zero_interaction = [0.0, 0.0, LightGbmFeatureSchema.DEFAULT_LAST_INTERACTION_HOURS, 0.0]
             for _ in negative_viewers:
-                rows.append(TrainingRow(record.post_id, self._merge(base, zero_interaction), 0.0))
+                rows.append(TrainingRow(record.post_id, self._merge(base, zero_interaction), 0.0, record.created_utc))
 
             # Fallback
             if not author_interactors and not negative_viewers:
-                rows.append(TrainingRow(record.post_id, self._merge(base, zero_interaction), _log1p(popularity)))
+                rows.append(TrainingRow(record.post_id, self._merge(base, zero_interaction), _log1p(popularity), record.created_utc))
+
+        # Validate features
+        self._validate_rows(rows)
 
         return TrainingDataset(rows, {"total_training_rows": len(rows), "reference_utc": reference_utc})
 
     def split_rows(self, rows: list[TrainingRow]) -> DatasetSplit:
-        train, val = [], []
-        for row in rows:
-            (val if self._bucket_for_post_id(row.post_id) == 0 else train).append(row)
-        return DatasetSplit(train, val)
+        """Temporal split: oldest 80% for training, newest 20% for validation.
+
+        This prevents temporal data leakage — the model never trains on future data.
+        """
+        sorted_rows = sorted(rows, key=lambda r: r.created_utc)
+        split_idx = int(len(sorted_rows) * (1 - _VALIDATION_RATIO))
+        return DatasetSplit(sorted_rows[:split_idx], sorted_rows[split_idx:])
 
     # ─── Private ──────────────────────────────────────────────────────────
 
@@ -136,12 +143,16 @@ class PushshiftFeatureEngineering:
         return negatives
 
     @staticmethod
-    def _bucket_for_post_id(post_id: str) -> int:
-        hashed = hashlib.md5(post_id.encode("utf-8")).digest()
-        value = (hashed[0] << 24) | (hashed[1] << 16) | (hashed[2] << 8) | hashed[3]
-        return value % 5
+    def _validate_rows(rows: list[TrainingRow]) -> None:
+        """Validate that feature vectors have no NaN/Inf values."""
+        for i, row in enumerate(rows):
+            for j, val in enumerate(row.features):
+                if math.isnan(val) or math.isinf(val):
+                    feature_name = LightGbmFeatureSchema.FEATURE_ORDER[j] if j < len(LightGbmFeatureSchema.FEATURE_ORDER) else f"col_{j}"
+                    raise ValueError(
+                        f"Invalid value in row {i}, feature '{feature_name}': {val}"
+                    )
 
 
 def _log1p(x: float) -> float:
-    import math
     return math.log1p(x)

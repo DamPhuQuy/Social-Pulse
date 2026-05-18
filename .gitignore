@@ -44,3 +44,5 @@ build/
 .bloop
 .kiro
 .jqwik-database
+
+__pycache__

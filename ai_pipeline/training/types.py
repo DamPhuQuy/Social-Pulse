@@ -51,6 +51,7 @@ class TrainingRow:
     post_id: str
     features: list[float]
     label: float
+    created_utc: float = 0.0
 
 
 @dataclass(frozen=True)

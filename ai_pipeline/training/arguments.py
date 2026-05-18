@@ -18,7 +18,6 @@ class TrainingArguments:
     n_estimators: int = 200
     max_depth: int = 3
     min_samples_leaf: int = 64
-    max_thresholds: int = 16
     learning_rate: float = 0.18
     early_stopping_rounds: int = 10
     seed: int = 42
@@ -66,7 +65,6 @@ class TrainingArguments:
             n_estimators=int_val("n-estimators", 200),
             max_depth=int_val("max-depth", 3),
             min_samples_leaf=int_val("min-samples-leaf", 64),
-            max_thresholds=int_val("max-thresholds", 16),
             learning_rate=float_val("learning-rate", 0.18),
             early_stopping_rounds=int_val("early-stopping-rounds", 10),
             seed=int_val("seed", 42),
@@ -79,6 +77,6 @@ class TrainingArguments:
             raise ValueError(f"Comments archive not found: {self.comments_path}")
         if any(v <= 0 for v in [
             self.n_estimators, self.max_depth,
-            self.min_samples_leaf, self.max_thresholds, self.learning_rate,
+            self.min_samples_leaf, self.learning_rate,
         ]):
             raise ValueError("Training arguments must be positive.")

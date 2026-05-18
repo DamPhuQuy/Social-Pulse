@@ -32,6 +32,7 @@ def main(args: list[str] | None = None) -> None:
         "trained_at": result.trained_at,
         "train_rmse": js.round6(result.metrics.train_rmse),
         "validation_rmse": js.round6(result.metrics.validation_rmse),
+        "validation_ndcg_k": js.round6(result.metrics.validation_ndcg_k),
         "rows": {"train": result.train_rows, "validation": result.validation_rows},
     }
     print(js.to_pretty_json(output))
