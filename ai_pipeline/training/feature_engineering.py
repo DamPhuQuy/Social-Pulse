@@ -2,6 +2,9 @@
 from __future__ import annotations
 
 import math
+from dataclasses import dataclass, field
+
+import numpy as np
 
 from ai_pipeline.shared.schema import LightGbmFeatureSchema
 from .scanner import PushshiftDatasetScanner
@@ -13,6 +16,23 @@ _SECONDS_PER_HOUR = 3600.0
 _SECONDS_PER_DAY = 86400.0
 _SECONDS_PER_YEAR = 365.0 * _SECONDS_PER_DAY
 _VALIDATION_RATIO = 0.2
+
+# Percentile for outlier capping (winsorization)
+_OUTLIER_PERCENTILE = 99.0
+
+# Features that should be log1p-transformed (highly skewed count distributions)
+_LOG_TRANSFORM_FEATURES = {
+    "upvote_count", "downvote_count", "comment_count",
+    "share_count", "view_count", "popularity",
+    "interaction_count_7d", "interaction_count_30d",
+}
+
+# Features that should be capped at a percentile (outlier-prone)
+_CAP_FEATURES = {
+    "content_length", "post_age_hours", "hot_score",
+    "author_seniority", "author_post_count", "author_engagement_rate",
+    "hours_since_last_interaction",
+}
 
 
 class PushshiftFeatureEngineering:
@@ -55,10 +75,16 @@ class PushshiftFeatureEngineering:
             if not author_interactors and not negative_viewers:
                 rows.append(TrainingRow(record.post_id, self._merge(base, zero_interaction), _log1p(popularity), record.created_utc))
 
-        # Validate features
+        # Preprocessing: outlier capping + log transform
+        rows = self._preprocess_features(rows)
+
+        # Validate
         self._validate_rows(rows)
 
-        return TrainingDataset(rows, {"total_training_rows": len(rows), "reference_utc": reference_utc})
+        # Compute distribution stats for monitoring
+        feature_stats = self._compute_feature_stats(rows)
+
+        return TrainingDataset(rows, feature_stats)
 
     def split_rows(self, rows: list[TrainingRow]) -> DatasetSplit:
         """Temporal split: oldest 80% for training, newest 20% for validation.
@@ -69,7 +95,70 @@ class PushshiftFeatureEngineering:
         split_idx = int(len(sorted_rows) * (1 - _VALIDATION_RATIO))
         return DatasetSplit(sorted_rows[:split_idx], sorted_rows[split_idx:])
 
-    # ─── Private ──────────────────────────────────────────────────────────
+    # ─── Preprocessing ────────────────────────────────────────────────────
+
+    def _preprocess_features(self, rows: list[TrainingRow]) -> list[TrainingRow]:
+        """Apply outlier capping and log-transform to skewed features."""
+        if not rows:
+            return rows
+
+        feature_names = LightGbmFeatureSchema.FEATURE_ORDER
+        n_features = len(feature_names)
+        matrix = np.array([r.features for r in rows])
+
+        # Step 1: Outlier capping (winsorize at 99th percentile)
+        for i, name in enumerate(feature_names):
+            if name in _CAP_FEATURES:
+                cap = float(np.percentile(matrix[:, i], _OUTLIER_PERCENTILE))
+                if cap > 0:
+                    matrix[:, i] = np.minimum(matrix[:, i], cap)
+
+        # Step 2: Log-transform skewed count features
+        for i, name in enumerate(feature_names):
+            if name in _LOG_TRANSFORM_FEATURES:
+                matrix[:, i] = np.log1p(np.maximum(matrix[:, i], 0.0))
+
+        # Rebuild rows with preprocessed features
+        return [
+            TrainingRow(r.post_id, matrix[idx].tolist(), r.label, r.created_utc)
+            for idx, r in enumerate(rows)
+        ]
+
+    @staticmethod
+    def _compute_feature_stats(rows: list[TrainingRow]) -> dict:
+        """Compute distribution statistics for data quality monitoring."""
+        if not rows:
+            return {"total_training_rows": 0}
+
+        feature_names = LightGbmFeatureSchema.FEATURE_ORDER
+        matrix = np.array([r.features for r in rows])
+        labels = np.array([r.label for r in rows])
+
+        stats: dict = {
+            "total_training_rows": len(rows),
+            "label_stats": {
+                "mean": float(labels.mean()),
+                "std": float(labels.std()),
+                "min": float(labels.min()),
+                "max": float(labels.max()),
+                "zero_ratio": float((labels == 0).sum() / len(labels)),
+            },
+            "feature_stats": {},
+        }
+
+        for i, name in enumerate(feature_names):
+            col = matrix[:, i]
+            stats["feature_stats"][name] = {
+                "mean": round(float(col.mean()), 4),
+                "std": round(float(col.std()), 4),
+                "min": round(float(col.min()), 4),
+                "max": round(float(col.max()), 4),
+                "zero_ratio": round(float((col == 0).sum() / len(col)), 4),
+            }
+
+        return stats
+
+    # ─── Feature Construction ─────────────────────────────────────────────
 
     def _build_base_features(self, record: SubmissionRecord, aggregate: AuthorAggregate, reference_utc: float) -> list[float]:
         author_seniority = 0.0

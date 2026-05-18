@@ -1,10 +1,18 @@
 """Feature vectorizer: converts structured features into the model's feature map."""
 from __future__ import annotations
 
+import math
 from dataclasses import dataclass
 from typing import Any
 
 from ai_pipeline.shared.schema import LightGbmFeatureSchema
+
+# Must match the log-transform set in training/feature_engineering.py
+_LOG_TRANSFORM_FEATURES = {
+    "upvote_count", "downvote_count", "comment_count",
+    "share_count", "view_count", "popularity",
+    "interaction_count_7d", "interaction_count_30d",
+}
 
 
 @dataclass
@@ -86,6 +94,11 @@ class LightGbmFeatureVectorizer:
         v["share_count"] = share
         v["view_count"] = view
         v["popularity"] = _safe(pf.popularity if pf else None, up + cmt + share)
+
+        # Apply same log-transform as training preprocessing to avoid train-serve skew
+        for key in _LOG_TRANSFORM_FEATURES:
+            v[key] = math.log1p(max(v[key], 0.0))
+
         return v
 
 
