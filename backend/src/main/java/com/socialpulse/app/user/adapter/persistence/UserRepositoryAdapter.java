@@ -81,6 +81,12 @@ public class UserRepositoryAdapter implements UserRepository {
     }
 
     @Override
+    public Page<User> findAll(Pageable pageable) {
+        return jpaUserRepository.findAll(pageable)
+                .map(userPersistenceMapper::toDomain);
+    }
+
+    @Override
     public long countAll() {
         return jpaUserRepository.count();
     }

@@ -29,6 +29,8 @@ public interface UserRepository {
 
     Page<User> searchByQuery(String query, Pageable pageable);
 
+    Page<User> findAll(Pageable pageable);
+
     long countAll();
     long countByCreatedAtAfter(LocalDateTime since);
     Map<String, Long> countByStatus();
