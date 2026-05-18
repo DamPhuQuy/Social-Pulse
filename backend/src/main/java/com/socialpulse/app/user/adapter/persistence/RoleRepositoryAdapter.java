@@ -1,12 +1,13 @@
 package com.socialpulse.app.user.adapter.persistence;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
 import com.socialpulse.app.user.domain.model.Role;
 import com.socialpulse.app.user.domain.repository.RoleRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
-import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 public class RoleRepositoryAdapter implements RoleRepository {

@@ -1,87 +1,14 @@
 -- ============================================================
--- ROLES & PERMISSIONS
+-- ROLES
+-- Permissions and role-permission mappings are managed by
+-- PermissionSyncService at application startup (code-first).
 -- ============================================================
-
-INSERT INTO permissions (name, description) VALUES
-    ('post:read',          'Read posts'),
-    ('post:create',        'Create posts'),
-    ('post:update',        'Update own posts'),
-    ('post:delete',        'Delete own posts'),
-    ('post:react',         'React to posts'),
-    ('post:manage',        'Manage any post'),
-    ('comment:read',       'Read comments'),
-    ('comment:create',     'Create comments'),
-    ('comment:update',     'Update own comments'),
-    ('comment:delete',     'Delete own comments'),
-    ('comment:react',      'React to comments'),
-    ('comment:manage',     'Manage any comment'),
-    ('user:create',        'Create own profile'),
-    ('user:read',          'View user profiles'),
-    ('user:update',        'Update own profile'),
-    ('user:delete',        'Delete own account'),
-    ('user:manage',        'Manage all users'),
-    ('user:moderate',      'Moderate users'),
-    ('follow:read',        'Read follow graph'),
-    ('follow:create',      'Follow users'),
-    ('follow:delete',      'Unfollow users'),
-    ('feed:read',          'Read personalized feed'),
-    ('report:create',      'Create reports'),
-    ('report:manage',      'Manage reports and moderation queue'),
-    ('discovery:read',     'Read discovery and search results'),
-    ('discovery:write',    'Write and save search history'),
-    ('discovery:delete',   'Delete search history'),
-    ('bookmark:create',    'Create bookmarks'),
-    ('bookmark:delete',    'Delete bookmarks'),
-    ('bookmark:read',      'Read bookmarks'),
-    ('notification:read',  'Read notifications'),
-    ('notification:update','Mark notifications as read'),
-    ('topic:manage',       'Create, update, delete topics'),
-    ('admin:access',       'Access admin endpoints')
-ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description;
 
 INSERT INTO roles (name, description) VALUES
     ('GUEST', 'Guest user with read-only access'),
     ('USER',  'Regular authenticated user'),
     ('ADMIN', 'Administrator with full access')
 ON CONFLICT (name) DO UPDATE SET description = EXCLUDED.description;
-
--- GUEST permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name IN (
-    'post:read'
-) WHERE r.name = 'GUEST'
-ON CONFLICT DO NOTHING;
-
--- USER permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name IN (
-    'post:read', 'post:create', 'post:update', 'post:delete', 'post:react',
-    'comment:read', 'comment:create', 'comment:update', 'comment:delete', 'comment:react',
-    'user:create', 'user:read', 'user:update', 'user:delete',
-    'follow:read', 'follow:create', 'follow:delete',
-    'feed:read',
-    'report:create',
-    'discovery:read', 'discovery:write', 'discovery:delete',
-    'bookmark:create', 'bookmark:delete', 'bookmark:read',
-    'notification:read', 'notification:update'
-) WHERE r.name = 'USER'
-ON CONFLICT DO NOTHING;
-
--- ADMIN permissions
-INSERT INTO role_permissions (role_id, permission_id)
-SELECT r.id, p.id FROM roles r JOIN permissions p ON p.name IN (
-    'post:read', 'post:create', 'post:update', 'post:delete', 'post:react', 'post:manage',
-    'comment:read', 'comment:create', 'comment:update', 'comment:delete', 'comment:react', 'comment:manage',
-    'user:create', 'user:read', 'user:update', 'user:delete', 'user:manage', 'user:moderate',
-    'follow:read', 'follow:create', 'follow:delete',
-    'feed:read',
-    'report:create', 'report:manage',
-    'discovery:read', 'discovery:write', 'discovery:delete',
-    'bookmark:create', 'bookmark:delete', 'bookmark:read',
-    'notification:read', 'notification:update',
-    'topic:manage', 'admin:access'
-) WHERE r.name = 'ADMIN'
-ON CONFLICT DO NOTHING;
 
 -- ============================================================
 -- TOPICS

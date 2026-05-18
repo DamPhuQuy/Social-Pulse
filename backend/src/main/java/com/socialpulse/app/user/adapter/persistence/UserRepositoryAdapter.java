@@ -10,8 +10,8 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 
-import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
+import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 

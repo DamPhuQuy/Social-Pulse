@@ -2,8 +2,8 @@ package com.socialpulse.app.user.adapter.persistence;
 
 import java.util.Optional;
 
-import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.model.UserProfile;
+import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 
