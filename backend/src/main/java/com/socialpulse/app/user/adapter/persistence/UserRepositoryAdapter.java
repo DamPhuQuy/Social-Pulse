@@ -1,6 +1,8 @@
 package com.socialpulse.app.user.adapter.persistence;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 import java.util.stream.Collectors;
@@ -76,6 +78,24 @@ public class UserRepositoryAdapter implements UserRepository {
     public Page<User> searchByQuery(String query, Pageable pageable) {
         return jpaUserRepository.searchByQuery(query, pageable)
                 .map(userPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public long countAll() {
+        return jpaUserRepository.count();
+    }
+
+    @Override
+    public long countByCreatedAtAfter(LocalDateTime since) {
+        return jpaUserRepository.countByCreatedAtAfter(since);
+    }
+
+    @Override
+    public Map<String, Long> countByStatus() {
+        return jpaUserRepository.countGroupByStatus().stream()
+                .collect(java.util.stream.Collectors.toMap(
+                        row -> row[0].toString(),
+                        row -> (Long) row[1]));
     }
 }
 

@@ -3,13 +3,9 @@ package com.socialpulse.app.report.application.service;
 import java.util.List;
 import java.util.stream.Collectors;
 
-import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
-import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.report.application.dto.response.ReportResponse;
-import com.socialpulse.app.report.domain.enums.ReportTargetType;
-import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 import lombok.extern.slf4j.Slf4j;

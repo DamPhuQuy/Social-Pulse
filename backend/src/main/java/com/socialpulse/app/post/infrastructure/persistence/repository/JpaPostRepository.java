@@ -89,4 +89,8 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
             ORDER BY p.createdAt DESC
             """)
     List<PostEntity> findRecentPublicActiveSince(@Param("since") LocalDateTime since);
+
+    long countByCreatedAtAfter(LocalDateTime since);
+    long countByToxicTrue();
+    long countByDeletedAtAfter(LocalDateTime since);
 }

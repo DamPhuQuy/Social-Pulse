@@ -120,7 +120,6 @@ public class UserController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
     }
-    }
 
     @PutMapping("/me/topics")
     @Operation(

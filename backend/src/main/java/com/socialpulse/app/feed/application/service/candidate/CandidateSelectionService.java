@@ -35,13 +35,20 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
     @Override
     public List<CandidatePost> selectCandidates(Long userId) {
         List<CandidatePost> candidates = collectCandidates(userId, LocalDateTime.now().minusDays(LOOKBACK_DAYS));
-
-        // Extend lookback window if not enough candidates
         if (candidates.size() < MIN_CANDIDATES) {
             candidates = collectCandidates(userId, LocalDateTime.now().minusDays(EXTENDED_LOOKBACK_DAYS));
         }
-
         return candidates;
+    }
+
+    @Override
+    public List<CandidatePost> selectCandidatesByTopic(String topicSlug) {
+        List<Post> posts = feedRepository.findByTopicSlug(topicSlug,
+                LocalDateTime.now().minusDays(EXTENDED_LOOKBACK_DAYS),
+                PageRequest.of(0, RECENT_COUNT + POPULAR_COUNT));
+        return posts.stream()
+                .map(post -> CandidatePost.builder().post(post).source(Source.TOPIC).build())
+                .toList();
     }
 
     private List<CandidatePost> collectCandidates(Long userId, LocalDateTime since) {

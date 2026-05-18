@@ -132,4 +132,24 @@ public class PostRepositoryAdapter implements PostRepository {
                 .map(postPersistenceMapper::toDomain)
                 .toList();
     }
+
+    @Override
+    public long countAll() {
+        return jpaPostRepository.count();
+    }
+
+    @Override
+    public long countByCreatedAtAfter(LocalDateTime since) {
+        return jpaPostRepository.countByCreatedAtAfter(since);
+    }
+
+    @Override
+    public long countToxic() {
+        return jpaPostRepository.countByToxicTrue();
+    }
+
+    @Override
+    public long countDeletedAfter(LocalDateTime since) {
+        return jpaPostRepository.countByDeletedAtAfter(since);
+    }
 }
