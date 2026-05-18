@@ -12,6 +12,7 @@ import com.socialpulse.app.user.adapter.persistence.RoleRepositoryAdapter;
 import com.socialpulse.app.user.adapter.persistence.UserProfileRepositoryAdapter;
 import com.socialpulse.app.user.adapter.persistence.UserRepositoryAdapter;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
+import com.socialpulse.app.user.application.service.ChangePasswordService;
 import com.socialpulse.app.user.application.service.CreateUserProfileService;
 import com.socialpulse.app.user.application.service.CreateUserService;
 import com.socialpulse.app.user.application.service.DeleteUserProfileService;
@@ -20,6 +21,7 @@ import com.socialpulse.app.user.application.service.UpdateUserProfileService;
 import com.socialpulse.app.user.application.service.UpdateUserTopicsService;
 import com.socialpulse.app.user.application.service.UserProfileResponseAssembler;
 import com.socialpulse.app.user.application.service.UserRoleService;
+import com.socialpulse.app.user.application.usecase.ChangePasswordUseCase;
 import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
@@ -116,5 +118,12 @@ public class UserConfig {
             TopicRepository topicRepository,
             TopicPersistenceMapper topicMapper) {
         return new UpdateUserTopicsService(userRepository, topicRepository, topicMapper);
+    }
+
+    @Bean
+    public ChangePasswordUseCase changePasswordUseCase(
+            UserRepository userRepository,
+            AppPasswordEncoder appPasswordEncoder) {
+        return new ChangePasswordService(userRepository, appPasswordEncoder);
     }
 }
