@@ -39,6 +39,7 @@ public class UserController {
     private final CreateUserProfileUseCase createUserProfileUseCase;
     private final UpdateUserProfileUseCase updateUserProfileUseCase;
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
     private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
     private final ChangePasswordUseCase changePasswordUseCase;
 
@@ -46,12 +47,13 @@ public class UserController {
                           CreateUserProfileUseCase createUserProfileUseCase,
                           UpdateUserProfileUseCase updateUserProfileUseCase,
                           DeleteUserProfileUseCase deleteUserProfileUseCase,
-                          UpdateUserTopicsUseCase updateUserTopicsUseCase,
-                          ChangePasswordUseCase changePasswordUseCase) {
+                          ChangePasswordUseCase changePasswordUseCase,
+                          UpdateUserTopicsUseCase updateUserTopicsUseCase) {
         this.getUserProfileUseCase = getUserProfileUseCase;
         this.createUserProfileUseCase = createUserProfileUseCase;
         this.updateUserProfileUseCase = updateUserProfileUseCase;
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
+        this.changePasswordUseCase = changePasswordUseCase;
         this.updateUserTopicsUseCase = updateUserTopicsUseCase;
         this.changePasswordUseCase = changePasswordUseCase;
     }
@@ -124,7 +126,7 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
-    }
+    }    
 
     @PutMapping("/me/topics")
     @Operation(summary = "Update user topics")
@@ -137,11 +139,26 @@ public class UserController {
 
     @PutMapping("/me/password")
     @PreAuthorize("hasAuthority('user:update')")
-    @Operation(summary = "Change password", description = "Change password for the current authenticated user")
+    @Operation(
+            summary = "Change password",
+            description = "Change password for current authenticated user",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+                    @ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
     public ResponseEntity<ApiResponse<Void>> changePassword(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestBody @Valid ChangePasswordRequest request) {
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
         changePasswordUseCase.changePassword(currentUser.getId(), request);
-        return ResponseEntity.ok(ApiResponse.<Void>builder().message("Password changed successfully").build());
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Password changed successfully")
+                        .build()
+        );
     }
 }
