@@ -1,12 +1,13 @@
 package com.socialpulse.app.user.adapter.persistence;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Component;
+
 import com.socialpulse.app.user.domain.model.Permission;
 import com.socialpulse.app.user.domain.repository.PermissionRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.PermissionPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaPermissionRepository;
-import org.springframework.stereotype.Component;
-
-import java.util.Optional;
 
 @Component
 public class PermissionRepositoryAdapter implements PermissionRepository {
@@ -23,5 +24,12 @@ public class PermissionRepositoryAdapter implements PermissionRepository {
     public Optional<Permission> findByName(String name) {
         return jpaPermissionRepository.findByName(name)
                 .map(permissionPersistenceMapper::toDomain);
+    }
+
+    @Override
+    public Permission save(Permission permission) {
+        return permissionPersistenceMapper.toDomain(
+                jpaPermissionRepository.save(permissionPersistenceMapper.toEntity(permission))
+        );
     }
 }

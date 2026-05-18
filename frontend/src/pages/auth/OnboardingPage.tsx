@@ -24,7 +24,7 @@ const OnboardingPage: React.FC = () => {
   }, [isDark]);
 
   return (
-    <div className="min-h-screen w-full relative overflow-x-hidden font-['Outfit'] bg-white dark:bg-slate-950 transition-colors duration-500 selection:bg-blue-100">
+    <div className="min-h-screen w-full relative overflow-x-hidden font-sans bg-white dark:bg-slate-950 transition-colors duration-500 selection:bg-blue-100">
       {/* Social Pulse Background */}
       <InteractiveBackground />
 
@@ -44,19 +44,24 @@ const OnboardingPage: React.FC = () => {
         </motion.div>
 
         <div className="hidden md:flex absolute left-1/2 -translate-x-1/2 items-center gap-10 text-sm font-medium text-gray-600 dark:text-slate-400">
-          {['About', 'Terms', 'Privacy', 'Contact'].map((item) => (
+          {[
+            { id: 'about', label: 'Giới thiệu' },
+            { id: 'terms', label: 'Điều khoản' },
+            { id: 'privacy', label: 'Bảo mật' },
+            { id: 'contact', label: 'Liên hệ' }
+          ].map((item) => (
             <a
-              key={item}
-              href={`#${item.toLowerCase()}`}
+              key={item.id}
+              href={`#${item.id}`}
               onClick={(e) => {
-                if (item === 'About') {
+                if (item.id === 'about') {
                   e.preventDefault();
                   navigate(PATHS.ONBOARDING);
                 }
               }}
               className="hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
             >
-              {item}
+              {item.label}
             </a>
           ))}
         </div>
@@ -77,7 +82,7 @@ const OnboardingPage: React.FC = () => {
             onClick={() => navigate(PATHS.REGISTER)}
             className="flex items-center gap-2 px-8 py-2.5 rounded-full bg-blue-600 hover:bg-blue-700 transition-all font-bold text-white text-sm shadow-xl shadow-blue-500/30"
           >
-            Join the Pulse <Share2 className="w-4 h-4" />
+            Tham gia ngay <Share2 className="w-4 h-4" />
           </motion.button>
         </div>
       </nav>
@@ -96,16 +101,16 @@ const OnboardingPage: React.FC = () => {
             transition={{ duration: 2, repeat: Infinity }}
             className="inline-flex items-center px-4 py-1.5 rounded-full bg-blue-50 dark:bg-blue-900/20 text-blue-600 dark:text-blue-400 border border-blue-100 dark:border-blue-900/30 mb-10"
           >
-            <span className="text-sm font-bold tracking-wide uppercase">WHERE YOUR NETWORK MOVES</span>
+            <span className="text-sm font-bold tracking-wide uppercase">NƠI KẾT NỐI MỌI NHỊP ĐẬP</span>
           </motion.div>
 
-          <h1 className="text-6xl md:text-8xl lg:text-[6.5rem] font-bold text-gray-900 dark:text-white leading-[0.95] mb-12 tracking-wide">
-            Feel the <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500">ripple</span> <br />
-            Control the <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wide">pulse</span>
+          <h1 className="text-5xl md:text-7xl lg:text-[5.5rem] font-bold text-gray-900 dark:text-white leading-[1.1] mb-12 tracking-tight">
+            Cảm nhận sự <span className="text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-cyan-500 whitespace-nowrap">lan tỏa</span> <br className="hidden md:block" />
+            Kiểm soát <span className="text-transparent bg-clip-text bg-gradient-to-r from-purple-600 to-pink-500 tracking-wide whitespace-nowrap">nhịp đập</span>
           </h1>
 
           <p className="text-xl md:text-2xl text-gray-500 dark:text-slate-400 max-w-4xl mx-auto mb-12 leading-relaxed">
-            Experience a network that adapts to you. Your vibe, perfectly amplified.
+            Trải nghiệm một mạng lưới thích ứng với bạn. Cảm xúc của bạn, được khuếch đại hoàn hảo.
           </p>
 
           <motion.div
@@ -120,14 +125,14 @@ const OnboardingPage: React.FC = () => {
               onClick={() => navigate(PATHS.HOME)}
               className="px-12 py-5 bg-gray-900 dark:bg-white text-white dark:text-slate-900 rounded-full font-bold text-xl transition-all shadow-2xl shadow-black/20"
             >
-              Start Exploring
+              Khám phá ngay
             </motion.button>
 
             <button
               onClick={() => navigate(PATHS.LOGIN)}
               className="flex items-center gap-2 px-10 py-5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-800 hover:bg-gray-50 dark:hover:bg-slate-800 text-gray-900 dark:text-white rounded-full font-bold text-xl transition-all shadow-sm group"
             >
-              Log in <LogIn className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
+              Đăng nhập <LogIn className="w-5 h-5 text-blue-600 group-hover:translate-x-1 transition-transform" />
             </button>
           </motion.div>
         </motion.div>
@@ -136,7 +141,7 @@ const OnboardingPage: React.FC = () => {
 
       <footer className="fixed bottom-8 w-full flex justify-center z-10 pointer-events-none">
         <p className="text-gray-400 dark:text-slate-600 text-[10px] font-bold tracking-[0.3em] uppercase opacity-60">
-          © 2026 SocialPulse. All rights reserved.
+          © 2026 SocialPulse. Bảo lưu mọi quyền.
         </p>
       </footer>
 

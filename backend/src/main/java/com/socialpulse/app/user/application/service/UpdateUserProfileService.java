@@ -31,6 +31,15 @@ public class UpdateUserProfileService implements UpdateUserProfileUseCase {
         var user = userRepository.findById(userId)
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
 
+        // Change username if requested
+        if (request.getUsername() != null && !request.getUsername().equals(user.getUsername())) {
+            if (userRepository.existsByUsername(request.getUsername())) {
+                throw new AppException(UserCode.USERNAME_ALREADY_TAKEN);
+            }
+            user.changeUsername(request.getUsername());
+            userRepository.save(user);
+        }
+
         UserProfile existingProfile = userProfileRepository.findByUserId(userId)
                 .orElseThrow(() -> new AppException(UserCode.USER_PROFILE_NOT_FOUND));
 

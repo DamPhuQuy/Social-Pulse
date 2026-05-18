@@ -57,6 +57,9 @@ public class CreateUserService implements CreateUserUseCase {
         String encodedPassword = passwordEncode.encode(request.getRawPassword());
         User user = userMapper.toUser(request, normalizedEmail, encodedPassword);
         user.applyDefaultState();
+        user.setProfile(UserProfile.builder()
+                .displayName(user.getUsername())
+                .build());
 
         userRoleService.assignDefaultRole(user);
 

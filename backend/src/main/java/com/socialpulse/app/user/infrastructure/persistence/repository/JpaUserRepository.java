@@ -1,5 +1,6 @@
 package com.socialpulse.app.user.infrastructure.persistence.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 import java.util.Set;
@@ -34,4 +35,9 @@ public interface JpaUserRepository extends JpaRepository<UserEntity, Long> {
 			ORDER BY u.username ASC
 			""")
 	Page<UserEntity> searchByQuery(@Param("query") String query, Pageable pageable);
+
+	long countByCreatedAtAfter(LocalDateTime since);
+
+	@Query("SELECT u.status, COUNT(u) FROM UserEntity u GROUP BY u.status")
+	List<Object[]> countGroupByStatus();
 }

@@ -1,7 +1,8 @@
 package com.socialpulse.app.user.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -14,13 +15,17 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.application.dto.request.ChangePasswordRequest;
+import com.socialpulse.app.user.application.dto.request.UpdateUserTopicsRequest;
 import com.socialpulse.app.user.application.dto.request.UserProfileMutationRequest;
 import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
+import com.socialpulse.app.user.application.usecase.ChangePasswordUseCase;
 import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,19 +40,25 @@ public class UserController {
     private final CreateUserProfileUseCase createUserProfileUseCase;
     private final UpdateUserProfileUseCase updateUserProfileUseCase;
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
+    private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
 
     public UserController(GetUserProfileUseCase getUserProfileUseCase,
                           CreateUserProfileUseCase createUserProfileUseCase,
                           UpdateUserProfileUseCase updateUserProfileUseCase,
-                          DeleteUserProfileUseCase deleteUserProfileUseCase) {
+                          DeleteUserProfileUseCase deleteUserProfileUseCase,
+                          ChangePasswordUseCase changePasswordUseCase,
+                          UpdateUserTopicsUseCase updateUserTopicsUseCase) {
         this.getUserProfileUseCase = getUserProfileUseCase;
         this.createUserProfileUseCase = createUserProfileUseCase;
         this.updateUserProfileUseCase = updateUserProfileUseCase;
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
+        this.changePasswordUseCase = changePasswordUseCase;
+        this.updateUserTopicsUseCase = updateUserTopicsUseCase;
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAuthority('user:read')")
+    @RequiresPermission.UserRead
     @Operation(
             summary = "Get my profile",
             description = "Return profile of current authenticated user",
@@ -65,7 +76,7 @@ public class UserController {
     }
 
     @PostMapping("/profile")
-    @PreAuthorize("hasAuthority('user:create')")
+    @RequiresPermission.UserCreate
     @Operation(summary = "Create my profile", description = "Create a profile for the current authenticated user")
     public ResponseEntity<ApiResponse<UserViewProfileResponse>> createProfile(
             @AuthenticationPrincipal CustomUserDetails currentUser,
@@ -77,7 +88,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasAuthority('user:update')")
+    @RequiresPermission.UserUpdate
     @Operation(summary = "Update my profile", description = "Update the profile of the current authenticated user")
     public ResponseEntity<ApiResponse<UserViewProfileResponse>> updateProfile(
             @AuthenticationPrincipal CustomUserDetails currentUser,
@@ -89,7 +100,7 @@ public class UserController {
     }
 
     @DeleteMapping("/profile")
-    @PreAuthorize("hasAuthority('user:delete')")
+    @RequiresPermission.UserDelete
     @Operation(summary = "Delete my profile", description = "Delete the profile of the current authenticated user")
     public ResponseEntity<ApiResponse<Void>> deleteProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
         deleteUserProfileUseCase.deleteProfile(currentUser.getId());
@@ -99,7 +110,7 @@ public class UserController {
     }
 
     @GetMapping("/profile/{username}")
-    @PreAuthorize("hasAuthority('user:read')")
+    @RequiresPermission.UserRead
     @Operation(
             summary = "Get user profile by username",
             description = "Return public profile by username",
@@ -114,5 +125,40 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
+    }
+
+    @PutMapping("/me/topics")
+    @RequiresPermission.UserUpdate
+    @Operation(summary = "Update user topics")
+    public ResponseEntity<ApiResponse<Void>> updateTopics(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody @Valid UpdateUserTopicsRequest request) {
+        updateUserTopicsUseCase.updateTopics(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.<Void>builder().message("Topics updated successfully").build());
+    }
+
+    @PutMapping("/me/password")
+    @RequiresPermission.UserUpdate
+    @Operation(
+            summary = "Change password",
+            description = "Change password for current authenticated user",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password changed successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        changePasswordUseCase.changePassword(currentUser.getId(), request);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Password changed successfully")
+                        .build()
+        );
     }
 }

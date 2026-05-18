@@ -18,23 +18,23 @@ public class CloudinaryConfig {
 
     @Bean
     public Cloudinary cloudinary() {
+        if (!isBlank(cloudinaryProperties.getCloudName())
+                && !isBlank(cloudinaryProperties.getApiKey())
+                && !isBlank(cloudinaryProperties.getApiSecret())) {
+            Map<String, String> config = new HashMap<>();
+            config.put("cloud_name", cloudinaryProperties.getCloudName());
+            config.put("api_key", cloudinaryProperties.getApiKey());
+            config.put("api_secret", cloudinaryProperties.getApiSecret());
+            config.put("secure", "true");
+            return new Cloudinary(config);
+        }
+
         if (!isBlank(cloudinaryProperties.getUrl())) {
             return new Cloudinary(cloudinaryProperties.getUrl());
         }
 
-        if (isBlank(cloudinaryProperties.getCloudName())
-                || isBlank(cloudinaryProperties.getApiKey())
-                || isBlank(cloudinaryProperties.getApiSecret())) {
-            throw new IllegalStateException("Cloudinary is not configured. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.");
-        }
-
-        Map<String, String> config = new HashMap<>();
-        config.put("cloud_name", cloudinaryProperties.getCloudName());
-        config.put("api_key", cloudinaryProperties.getApiKey());
-        config.put("api_secret", cloudinaryProperties.getApiSecret());
-        config.put("secure", "true");
-
-        return new Cloudinary(config);
+        throw new IllegalStateException(
+                "Cloudinary is not configured. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.");
     }
 
     private boolean isBlank(String value) {

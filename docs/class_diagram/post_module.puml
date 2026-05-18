@@ -1,0 +1,60 @@
+@startuml Post Module
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title Post Module - Domain Model
+
+enum PostType {
+    ORIGINAL
+    SHARE
+}
+
+enum Privacy {
+    PUBLIC
+    PRIVATE
+}
+
+enum ReactionType {
+    UPVOTE
+    DOWNVOTE
+}
+
+class Post {
+    - id: Long
+    - userId: Long
+    - content: String
+    - imageUrl: Text
+    - imagePublicId: String
+    - parentPostId: Long
+    - topicId: Long
+    - type: PostType
+    - privacy: Privacy
+    - upvoteCount: Long
+    - downvoteCount: Long
+    - cmtCount: Long
+    - viewCount: Long
+    - shareCount: Long
+    - hotScore: Double
+    - toxic: boolean
+    - toxicScore: Double
+    - createdAt: LocalDateTime
+    - updatedAt: LocalDateTime
+    - deletedAt: LocalDateTime
+}
+
+class PostReactions {
+    - id: Long
+    - userId: Long
+    - postId: Long
+    - reactionType: ReactionType
+    - createdAt: LocalDateTime
+}
+
+Post "1" -- "*" PostReactions
+Post ..> PostType
+Post ..> Privacy
+PostReactions ..> ReactionType
+
+@enduml

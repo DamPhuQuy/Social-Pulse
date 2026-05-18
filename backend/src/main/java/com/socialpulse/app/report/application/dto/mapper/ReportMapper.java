@@ -19,5 +19,8 @@ public interface ReportMapper {
     @Mapping(target = "createdAt", ignore = true)
     Report toReport(CreateReportRequest request, Long reporterId);
 
+    @Mapping(target = "targetContent", ignore = true)
+    @Mapping(target = "targetOwnerId", ignore = true)
+    @Mapping(target = "targetOwnerUsername", ignore = true)
     ReportResponse toResponse(Report report);
 }

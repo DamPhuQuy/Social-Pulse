@@ -25,6 +25,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostReactionRepository;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -80,9 +81,10 @@ public class PostConfig {
                                              PostReactionsRepository postReactionsRepository,
                                              UserRepository userRepository,
                                              PostMapper postMapper,
-                                             NotificationCommandService notificationCommandService) {
+                                             NotificationCommandService notificationCommandService,
+                                             UserInteractionRepository userInteractionRepository) {
         return new ReactPostService(postRepository, postReactionsRepository, userRepository,
-                postMapper, notificationCommandService);
+                postMapper, notificationCommandService, userInteractionRepository);
     }
 
     @Bean

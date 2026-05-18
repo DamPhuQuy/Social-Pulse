@@ -15,10 +15,14 @@ import com.socialpulse.app.report.domain.repository.ReportRepository;
 public class GetReportsService implements GetReportsUseCase {
     private final ReportRepository reportRepository;
     private final ReportMapper reportMapper;
+    private final ReportResponseEnricher reportResponseEnricher;
 
-    public GetReportsService(ReportRepository reportRepository, ReportMapper reportMapper) {
+    public GetReportsService(ReportRepository reportRepository,
+                             ReportMapper reportMapper,
+                             ReportResponseEnricher reportResponseEnricher) {
         this.reportRepository = reportRepository;
         this.reportMapper = reportMapper;
+        this.reportResponseEnricher = reportResponseEnricher;
     }
 
     @Override
@@ -30,6 +34,9 @@ public class GetReportsService implements GetReportsUseCase {
         List<ReportResponse> items = reportPage.getContent().stream()
                 .map(reportMapper::toResponse)
                 .toList();
+
+        // Enrich each report with the actual target content
+        items = reportResponseEnricher.enrich(items);
 
         return PageResponse.<ReportResponse>builder()
                 .items(items)

@@ -24,6 +24,7 @@ import com.socialpulse.app.comment.application.service.ValidateParentCommentServ
 import com.socialpulse.app.comment.infrastructure.persistence.mapper.CommentPersistenceMapper;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentReactionRepository;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentRepository;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
@@ -60,9 +61,11 @@ public class CommentConfig {
 												 ValidateParentCommentUseCase validateParentCommentUseCase,
 												 CommentResponseAssembler commentResponseAssembler,
 												 CommentMapper commentMapper,
-												 NotificationCommandService notificationCommandService) {
+												 NotificationCommandService notificationCommandService,
+												 UserInteractionRepository userInteractionRepository) {
 		return new CreateCommentService(commentRepositoryPort, postRepositoryPort, userRepositoryPort,
-				validateParentCommentUseCase, commentResponseAssembler, commentMapper, notificationCommandService);
+				validateParentCommentUseCase, commentResponseAssembler, commentMapper,
+				notificationCommandService, userInteractionRepository);
 	}
 
 	@Bean

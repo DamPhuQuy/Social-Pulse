@@ -26,6 +26,7 @@ public class FeedRepositoryAdapter implements FeedRepository {
             .imageUrl(rs.getString("image_url"))
             .imagePublicId(rs.getString("image_public_id"))
             .parentPostId(rs.getObject("parent_post_id", Long.class))
+            .topicId(rs.getObject("topic_id", Long.class))
             .type(PostType.valueOf(rs.getString("type")))
             .privacy(Privacy.valueOf(rs.getString("privacy")))
             .upvoteCount(rs.getLong("upvote_count"))
@@ -119,5 +120,21 @@ public class FeedRepositoryAdapter implements FeedRepository {
         }
 
         return jdbcTemplate.query(sql, postRowMapper, params);
+    }
+
+    @Override
+    public List<Post> findByTopicSlug(String topicSlug, LocalDateTime since, Pageable pageable) {
+        String sql = """
+            SELECT p.* FROM posts p
+            INNER JOIN topics t ON p.topic_id = t.id
+            WHERE t.slug = ?
+              AND p.deleted_at IS NULL
+              AND p.privacy = 'PUBLIC'
+              AND p.toxic = false
+              AND p.created_at >= ?
+            ORDER BY p.hot_score DESC, p.created_at DESC
+            LIMIT ?
+            """;
+        return jdbcTemplate.query(sql, postRowMapper, topicSlug, since, pageable.getPageSize());
     }
 }

@@ -4,6 +4,8 @@ import java.time.LocalDateTime;
 import java.util.HashSet;
 import java.util.Set;
 
+import com.socialpulse.app.topic.domain.model.Topic;
+
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
 
@@ -25,12 +27,18 @@ public class User {
 	private UserStatus status;
 	@Builder.Default
 	private Set<Role> roles = new HashSet<>();
+	@Builder.Default
+	private Set<Topic> topics = new HashSet<>();
 	private VerificationStatus verification;
 	private boolean isLocked;
 	private int failedLoginAttempts;
 	private LocalDateTime lastLoginAt;
 	private LocalDateTime createdAt;
 	private LocalDateTime updatedAt;
+	
+	public void setProfile(UserProfile profile) {
+		this.profile = profile;
+	}
 
 	public void applyDefaultState() {
 		if (this.roles == null || this.roles.isEmpty()) {
@@ -80,7 +88,24 @@ public class User {
 		if (newPasswordHash == null || newPasswordHash.isBlank()) {
 			throw new IllegalArgumentException("newPasswordHash must not be blank");
 		}
-
 		this.passwordHash = newPasswordHash;
+	}
+
+	public void changeUsername(String newUsername) {
+		if (newUsername == null || newUsername.isBlank()) {
+			throw new IllegalArgumentException("newUsername must not be blank");
+		}
+		this.username = newUsername;
+	}
+
+	public void updateTopics(Set<Topic> newTopics) {
+		if (this.topics == null) {
+			this.topics = new HashSet<>();
+		} else {
+			this.topics.clear();
+		}
+		if (newTopics != null) {
+			this.topics.addAll(newTopics);
+		}
 	}
 }

@@ -1,0 +1,6 @@
+data/*.zst
+.venv
+__pycache__
+*.pyc
+*.pyo
+.git

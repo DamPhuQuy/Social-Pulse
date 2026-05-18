@@ -27,4 +27,7 @@ public class PostUpdateRequest {
 
     @NotNull(message = "Privacy setting must not be null")
     private Privacy privacy;
+
+    @NotNull(message = "Topic ID is required")
+    private Long topicId;
 }

@@ -88,9 +88,14 @@ public class CreatePostService implements CreatePostUseCase {
                 .privacy(request.getPrivacy())
                 .parentPostId(parentPostId)
                 .type(request.getParentPostId() == null ? PostType.ORIGINAL : PostType.SHARE)
+                .topicId(request.getTopicId())
                 .build();
 
         Post savedPost = postRepository.save(post);
+
+        // CRITICAL FIX: Invalidate the user's feed cache so their newly created post
+        // will be fetched immediately on the next feed request!
+        redisTemplate.delete("user:feed:" + currentUser.getId());
 
         return postMapper.toPostCreationResponse(savedPost);
     }

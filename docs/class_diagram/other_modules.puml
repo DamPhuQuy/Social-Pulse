@@ -1,0 +1,153 @@
+@startuml Other Modules
+
+skinparam classAttributeIconSize 0
+skinparam packageStyle rectangle
+skinparam shadowing false
+
+title Bookmark, Follow, Notification, Report, Feed, Chat - Domain Models
+
+' === Bookmark ===
+package "bookmark.domain" {
+    class Bookmark {
+        - id: Long
+        - userId: Long
+        - postId: Long
+        - createdAt: LocalDateTime
+    }
+}
+
+' === Follow ===
+package "follow.domain" {
+    class Follow {
+        - id: Long
+        - followerId: Long
+        - followingId: Long
+        - createdAt: LocalDateTime
+    }
+}
+
+' === Notification ===
+package "notification.domain" {
+    enum NotificationType {
+        FOLLOWED_YOU
+        POST_REACTED
+        COMMENTED_ON_POST
+        REPLIED_TO_COMMENT
+        COMMENT_REACTED
+    }
+
+    enum NotificationResourceType {
+        USER
+        POST
+        COMMENT
+    }
+
+    class Notification {
+        - id: Long
+        - recipientId: Long
+        - actorId: Long
+        - type: NotificationType
+        - resourceType: NotificationResourceType
+        - resourceId: Long
+        - message: String
+        - createdAt: LocalDateTime
+        - readAt: LocalDateTime
+    }
+}
+
+' === Report ===
+package "report.domain" {
+    enum ReportStatus {
+        PENDING
+        RESOLVED
+        REJECTED
+    }
+
+    enum ReportTargetType {
+        POST
+        COMMENT
+        USER
+    }
+
+    enum ReviewAction {
+        REJECT
+        DELETE_CONTENT
+        BAN_USER
+        DELETE_CONTENT_AND_BAN_USER
+    }
+
+    class Report {
+        - id: Long
+        - reporterId: Long
+        - targetType: ReportTargetType
+        - targetId: Long
+        - reason: String
+        - status: ReportStatus
+        - createdAt: LocalDateTime
+        + markResolved()
+        + markRejected()
+    }
+}
+
+' === Feed ===
+package "feed.domain" {
+    enum Source {
+        RECENT
+        FOLLOWING
+        POPULAR
+        RANDOM
+        TOPIC
+    }
+
+    class FeedItem {
+        - postId: Long
+        - userId: Long
+        - aiScore: Double
+        - source: Source
+        - rankedAt: LocalDateTime
+    }
+
+    class CandidatePost {
+        - post: Post
+        - source: Source
+    }
+
+    class UserInteraction {
+        - id: Long
+        - viewerId: Long
+        - authorId: Long
+        - interactionType: String
+        - createdAt: LocalDateTime
+    }
+}
+
+' === Chat ===
+package "chat.domain" {
+    class Conversation {
+        - id: Long
+        - participant1Id: Long
+        - participant2Id: Long
+        - createdAt: LocalDateTime
+        - lastMessageAt: LocalDateTime
+    }
+
+    class Message {
+        - id: Long
+        - conversationId: Long
+        - senderId: Long
+        - content: String
+        - timestamp: LocalDateTime
+        - status: String
+    }
+}
+
+' Relationships
+Notification ..> NotificationType
+Notification ..> NotificationResourceType
+Report ..> ReportStatus
+Report ..> ReportTargetType
+FeedItem ..> Source
+CandidatePost ..> Source
+Conversation "1" -- "*" Message
+
+@enduml

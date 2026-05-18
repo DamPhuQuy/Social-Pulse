@@ -45,4 +45,9 @@ public interface PostRepository {
     Page<Post> findPublicActiveByMention(String mention, Pageable pageable);
 
     List<Post> findRecentPublicActiveSince(LocalDateTime since);
+
+    long countAll();
+    long countByCreatedAtAfter(LocalDateTime since);
+    long countToxic();
+    long countDeletedAfter(LocalDateTime since);
 }
