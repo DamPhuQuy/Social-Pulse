@@ -41,6 +41,7 @@ public class UserController {
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
     private final ChangePasswordUseCase changePasswordUseCase;
     private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
 
     public UserController(GetUserProfileUseCase getUserProfileUseCase,
                           CreateUserProfileUseCase createUserProfileUseCase,
@@ -54,6 +55,7 @@ public class UserController {
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
         this.changePasswordUseCase = changePasswordUseCase;
         this.updateUserTopicsUseCase = updateUserTopicsUseCase;
+        this.changePasswordUseCase = changePasswordUseCase;
     }
 
     @GetMapping("/profile")
@@ -124,42 +126,39 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
-    }
-
-    @PutMapping("/change-password")
-    @PreAuthorize("hasAuthority('user:update')")
-    @Operation(
-            summary = "Change password",
-            description = "Change password for authenticated user",
-            responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password changed successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
-            }
-    )
-    public ResponseEntity<ApiResponse<Void>> changePassword(
-            @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestBody @Valid ChangePasswordRequest request) {
-        changePasswordUseCase.changePassword(currentUser.getId(), request);
-        return ResponseEntity.ok(ApiResponse.<Void>builder()
-                .message("Password changed successfully")
-                .build());
-    }
+    }    
 
     @PutMapping("/me/topics")
-    @Operation(
-            summary = "Update user topics",
-            description = "Update the topics that the current user is interested in",
-            responses = {
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Topics updated successfully"),
-                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
-            }
-    )
+    @Operation(summary = "Update user topics")
     public ResponseEntity<ApiResponse<Void>> updateTopics(
             @AuthenticationPrincipal CustomUserDetails currentUser,
             @RequestBody UpdateUserTopicsRequest request) {
         updateUserTopicsUseCase.updateTopics(currentUser.getId(), request);
         return ResponseEntity.ok(ApiResponse.<Void>builder().message("Topics updated successfully").build());
+    }
+
+    @PutMapping("/me/password")
+    @PreAuthorize("hasAuthority('user:update')")
+    @Operation(
+            summary = "Change password",
+            description = "Change password for current authenticated user",
+            responses = {
+                    @ApiResponse(responseCode = "200", description = "Password changed successfully"),
+                    @ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
+                    @ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody @Valid ChangePasswordRequest request
+    ) {
+        changePasswordUseCase.changePassword(currentUser.getId(), request);
+
+        return ResponseEntity.ok(
+                ApiResponse.<Void>builder()
+                        .message("Password changed successfully")
+                        .build()
+        );
     }
 }

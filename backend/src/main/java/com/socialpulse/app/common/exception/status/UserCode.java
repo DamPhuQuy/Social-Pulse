@@ -8,6 +8,8 @@ public enum UserCode implements AppCode {
     USER_NOT_FOUND(404, "User not found"),
     USER_PROFILE_ALREADY_EXISTS(400, "User profile already exists"),
     USER_PROFILE_NOT_FOUND(404, "User profile not found"),
+    USERNAME_ALREADY_TAKEN(400, "Username is already taken"),
+    INVALID_PASSWORD(400, "Current password is incorrect"),
     CANNOT_FOLLOW_YOURSELF(400, "Cannot follow yourself"),
     ALREADY_FOLLOWING(400, "Already following this user"),
     NOT_FOLLOWING(400, "Not following this user");

@@ -86,6 +86,35 @@ public class FeedRankingService implements RankFeedUseCase {
         return all.subList(start, Math.min(start + size, all.size()));
     }
 
+    @Override
+    public List<FeedItem> getPaginatedFeed(Long userId, int page, int size, String topicSlug) {
+        List<CandidatePost> candidates = selectCandidates.selectCandidatesByTopic(topicSlug);
+        if (candidates.isEmpty()) return List.of();
+
+        List<RankingResponse> scores = resolveScores(userId, candidates);
+        Map<Long, CandidatePost> candidateMap = candidates.stream()
+                .collect(Collectors.toMap(c -> c.getPost().getId(), c -> c));
+
+        List<FeedItem> ranked = scores.stream()
+                .map(score -> {
+                    CandidatePost candidate = candidateMap.get(score.getPostId());
+                    double boosted = scoreBoost.boost(score.getScore() != null ? score.getScore() : 0.0, userId, candidate);
+                    return FeedItem.builder()
+                            .postId(score.getPostId())
+                            .userId(userId)
+                            .aiScore(boosted)
+                            .source(candidate.getSource())
+                            .rankedAt(LocalDateTime.now())
+                            .build();
+                })
+                .sorted(Comparator.comparing(FeedItem::getAiScore).reversed())
+                .toList();
+
+        int start = page * size;
+        if (start >= ranked.size()) return List.of();
+        return ranked.subList(start, Math.min(start + size, ranked.size()));
+    }
+
     private List<RankingResponse> resolveScores(Long userId, List<CandidatePost> candidates) {
         List<RankingFeatures> features = extractFeatures.extractFeatures(userId, candidates);
         if (!features.isEmpty()) {

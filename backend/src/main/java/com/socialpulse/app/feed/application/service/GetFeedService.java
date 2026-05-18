@@ -36,24 +36,29 @@ public class GetFeedService implements GetFeedUseCase {
     public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
         Long userId = currentUser.getId();
 
-        // Pull-to-refresh (page 0): invalidate the cache to ensure fresh posts are fetched,
-        // and seen posts are filtered out by CandidateSelectionService.
         if (page == 0) {
             cacheFeedUseCase.invalidateFeed(userId);
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
-
-        // Mark these items as seen so they won't appear in future feed generations
-        if (!feedItems.isEmpty()) {
-            String[] postIds = feedItems.stream()
-                .map(item -> String.valueOf(item.getPostId()))
-                .toArray(String[]::new);
-            String seenKey = "user:seen:" + userId;
-            redisTemplate.opsForSet().add(seenKey, postIds);
-            redisTemplate.expire(seenKey, Duration.ofDays(7)); // Keep seen history for 7 days
-        }
-
+        markSeen(userId, feedItems);
         return feedItemResponseAssembler.assemble(feedItems, userId);
+    }
+
+    @Override
+    public List<FeedItemResponse> getFeed(int page, int size, String topicSlug, CustomUserDetails currentUser) {
+        Long userId = currentUser.getId();
+        List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
+        return feedItemResponseAssembler.assemble(feedItems, userId);
+    }
+
+    private void markSeen(Long userId, List<FeedItem> feedItems) {
+        if (feedItems.isEmpty()) return;
+        String[] postIds = feedItems.stream()
+            .map(item -> String.valueOf(item.getPostId()))
+            .toArray(String[]::new);
+        String seenKey = "user:seen:" + userId;
+        redisTemplate.opsForSet().add(seenKey, postIds);
+        redisTemplate.expire(seenKey, Duration.ofDays(7));
     }
 }

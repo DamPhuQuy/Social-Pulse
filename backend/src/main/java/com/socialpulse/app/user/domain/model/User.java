@@ -88,8 +88,14 @@ public class User {
 		if (newPasswordHash == null || newPasswordHash.isBlank()) {
 			throw new IllegalArgumentException("newPasswordHash must not be blank");
 		}
-
 		this.passwordHash = newPasswordHash;
+	}
+
+	public void changeUsername(String newUsername) {
+		if (newUsername == null || newUsername.isBlank()) {
+			throw new IllegalArgumentException("newUsername must not be blank");
+		}
+		this.username = newUsername;
 	}
 
 	public void updateTopics(Set<Topic> newTopics) {

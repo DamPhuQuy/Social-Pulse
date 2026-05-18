@@ -4,5 +4,6 @@ public enum Source {
     RECENT,
     FOLLOWING,
     POPULAR,
-    RANDOM
+    RANDOM,
+    TOPIC
 }

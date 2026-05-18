@@ -1,0 +1,124 @@
+@startuml
+title Moderate Content - Review Comment
+
+actor Admin
+participant ReportController
+participant ReviewReportService
+participant ReportRepository
+participant CommentRepository
+participant PostRepository
+participant UserRepository
+database Database
+
+Admin -> ReportController: POST /api/reports/{reportId}/review\n{action: DELETE_CONTENT | BAN_USER | DELETE_CONTENT_AND_BAN_USER | REJECT}
+activate ReportController
+
+ReportController -> ReviewReportService: reviewReport(reportId, request)
+activate ReviewReportService
+
+ReviewReportService -> ReportRepository: findById(reportId)
+ReportRepository -> Database: SELECT * FROM reports WHERE id = ?
+Database --> ReportRepository: report row (targetType = COMMENT)
+ReportRepository --> ReviewReportService: Optional<Report>
+
+alt Report not found
+    ReviewReportService --> ReportController: AppException(REPORT_NOT_FOUND)
+    ReportController --> Admin: 404 Not Found
+else Report found
+    ReviewReportService -> ReviewReportService: check report.status == PENDING
+    alt Status != PENDING
+        ReviewReportService --> ReportController: AppException(REPORT_STATUS_UPDATE_NOT_ALLOWED)
+        ReportController --> Admin: 400 Bad Request
+    else Status == PENDING
+        alt action == REJECT
+            ReviewReportService -> ReviewReportService: report.markRejected()
+
+        else action == DELETE_CONTENT
+            ReviewReportService -> CommentRepository: findById(report.targetId)
+            CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+            Database --> CommentRepository: comment row
+            CommentRepository --> ReviewReportService: Optional<Comment>
+
+            ReviewReportService -> ReviewReportService: comment.markDeleted()
+            ReviewReportService -> CommentRepository: save(comment)
+            CommentRepository -> Database: UPDATE comments SET deleted = true WHERE id = ?
+            Database --> CommentRepository: ok
+
+            ReviewReportService -> PostRepository: findById(comment.postId)
+            PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+            Database --> PostRepository: post row
+            PostRepository --> ReviewReportService: Post
+
+            ReviewReportService -> ReviewReportService: post.decrementCommentCount()
+            ReviewReportService -> PostRepository: save(post)
+            PostRepository -> Database: UPDATE posts SET cmt_count = cmt_count - 1 WHERE id = ?
+            Database --> PostRepository: ok
+
+            ReviewReportService -> ReviewReportService: report.markResolved()
+
+        else action == BAN_USER
+            ReviewReportService -> CommentRepository: findById(report.targetId)
+            CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+            Database --> CommentRepository: comment row
+            CommentRepository --> ReviewReportService: comment.userId
+
+            ReviewReportService -> UserRepository: findById(comment.userId)
+            UserRepository -> Database: SELECT * FROM users WHERE id = ?
+            Database --> UserRepository: user row
+            UserRepository --> ReviewReportService: User
+
+            ReviewReportService -> ReviewReportService: user.lockAccount()
+            ReviewReportService -> UserRepository: save(user)
+            UserRepository -> Database: UPDATE users SET status = 'LOCKED',\nis_locked = true WHERE id = ?
+            Database --> UserRepository: ok
+
+            ReviewReportService -> ReviewReportService: report.markResolved()
+
+        else action == DELETE_CONTENT_AND_BAN_USER
+            ReviewReportService -> CommentRepository: findById(report.targetId)
+            CommentRepository -> Database: SELECT * FROM comments WHERE id = ?
+            Database --> CommentRepository: comment row
+            CommentRepository --> ReviewReportService: Comment
+
+            ReviewReportService -> ReviewReportService: comment.markDeleted()
+            ReviewReportService -> CommentRepository: save(comment)
+            CommentRepository -> Database: UPDATE comments SET deleted = true WHERE id = ?
+            Database --> CommentRepository: ok
+
+            ReviewReportService -> PostRepository: findById(comment.postId)
+            PostRepository -> Database: SELECT * FROM posts WHERE id = ?
+            Database --> PostRepository: post
+            PostRepository --> ReviewReportService: Post
+
+            ReviewReportService -> ReviewReportService: post.decrementCommentCount()
+            ReviewReportService -> PostRepository: save(post)
+            PostRepository -> Database: UPDATE posts SET cmt_count = cmt_count - 1 WHERE id = ?
+            Database --> PostRepository: ok
+
+            ReviewReportService -> UserRepository: findById(comment.userId)
+            UserRepository -> Database: SELECT * FROM users WHERE id = ?
+            Database --> UserRepository: user row
+            UserRepository --> ReviewReportService: User
+
+            ReviewReportService -> ReviewReportService: user.lockAccount()
+            ReviewReportService -> UserRepository: save(user)
+            UserRepository -> Database: UPDATE users SET status = 'LOCKED' WHERE id = ?
+            Database --> UserRepository: ok
+
+            ReviewReportService -> ReviewReportService: report.markResolved()
+        end
+
+        ReviewReportService -> ReportRepository: save(report)
+        ReportRepository -> Database: UPDATE reports SET status = ? WHERE id = ?
+        Database --> ReportRepository: updated report
+        ReportRepository --> ReviewReportService: Report
+
+        ReviewReportService --> ReportController: ReportResponse
+        deactivate ReviewReportService
+
+        ReportController --> Admin: 200 OK (reviewed report)
+        deactivate ReportController
+    end
+end
+
+@enduml
