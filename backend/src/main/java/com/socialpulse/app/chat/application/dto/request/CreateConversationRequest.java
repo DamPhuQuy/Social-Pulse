@@ -1,3 +1,6 @@
 package com.socialpulse.app.chat.application.dto.request;
 
-public record CreateConversationRequest(Long participantId) {}
+import jakarta.validation.constraints.NotNull;
+
+public record CreateConversationRequest(
+        @NotNull(message = "Participant ID must not be null") Long participantId) {}

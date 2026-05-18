@@ -128,10 +128,11 @@ public class UserController {
     }
 
     @PutMapping("/me/topics")
+    @RequiresPermission.UserUpdate
     @Operation(summary = "Update user topics")
     public ResponseEntity<ApiResponse<Void>> updateTopics(
             @AuthenticationPrincipal CustomUserDetails currentUser,
-            @RequestBody UpdateUserTopicsRequest request) {
+            @RequestBody @Valid UpdateUserTopicsRequest request) {
         updateUserTopicsUseCase.updateTopics(currentUser.getId(), request);
         return ResponseEntity.ok(ApiResponse.<Void>builder().message("Topics updated successfully").build());
     }

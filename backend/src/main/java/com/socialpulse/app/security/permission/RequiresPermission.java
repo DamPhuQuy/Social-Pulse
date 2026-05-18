@@ -210,6 +210,16 @@ public @interface RequiresPermission {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('chat:read')")
+    @interface ChatRead {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('chat:create')")
+    @interface ChatCreate {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('topic:manage')")
     @interface TopicManage {}
 
@@ -217,4 +227,9 @@ public @interface RequiresPermission {
     @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('admin:access')")
     @interface AdminAccess {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasRole('ADMIN')")
+    @interface AdminAccessRole {}
 }

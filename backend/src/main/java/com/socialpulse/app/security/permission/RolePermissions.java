@@ -4,6 +4,8 @@ import static com.socialpulse.app.security.permission.AppPermission.ADMIN_ACCESS
 import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_CREATE;
 import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_DELETE;
 import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_READ;
+import static com.socialpulse.app.security.permission.AppPermission.CHAT_CREATE;
+import static com.socialpulse.app.security.permission.AppPermission.CHAT_READ;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_CREATE;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_DELETE;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_MANAGE;
@@ -60,7 +62,8 @@ public final class RolePermissions {
             REPORT_CREATE,
             DISCOVERY_READ, DISCOVERY_WRITE, DISCOVERY_DELETE,
             BOOKMARK_CREATE, BOOKMARK_DELETE, BOOKMARK_READ,
-            NOTIFICATION_READ, NOTIFICATION_UPDATE
+            NOTIFICATION_READ, NOTIFICATION_UPDATE,
+            CHAT_READ, CHAT_CREATE
     );
 
     protected static final Set<AppPermission> ADMIN = EnumSet.copyOf(USER);

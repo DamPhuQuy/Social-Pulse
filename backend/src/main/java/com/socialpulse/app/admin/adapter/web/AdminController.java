@@ -1,7 +1,5 @@
 package com.socialpulse.app.admin.adapter.web;
 
-import com.socialpulse.app.security.permission.RequiresPermission;
-
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -9,7 +7,6 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -27,7 +24,9 @@ import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.security.permission.RequiresPermission;
 import com.socialpulse.app.user.application.service.UserRoleService;
+import com.socialpulse.app.user.domain.model.Role;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
@@ -37,7 +36,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@RequiresPermission.AdminAccess
+@RequiresPermission.AdminAccessRole
 @Tag(name = "Admin", description = "Admin management APIs")
 public class AdminController {
     private final GetSystemMetricsUseCase getSystemMetricsUseCase;
@@ -55,6 +54,7 @@ public class AdminController {
     // ── Metrics ──────────────────────────────────────────────────────────────
 
     @GetMapping("/metrics")
+    @RequiresPermission.AdminAccess
     @Operation(summary = "View system metrics", description = "period: LAST_7_DAYS | LAST_30_DAYS | LAST_90_DAYS | ALL_TIME")
     public ResponseEntity<ApiResponse<SystemMetricsResponse>> getMetrics(
             @RequestParam(defaultValue = "LAST_30_DAYS") String period) {
@@ -64,6 +64,7 @@ public class AdminController {
     }
 
     @GetMapping("/metrics/export")
+    @RequiresPermission.AdminAccess
     @Operation(summary = "Export statistical report as CSV")
     public ResponseEntity<byte[]> exportCsv(
             @RequestParam(defaultValue = "LAST_30_DAYS") String period) {
@@ -144,10 +145,10 @@ public class AdminController {
 
     private AdminUserResponse toAdminUserResponse(User user) {
         var roles = user.getRoles().stream()
-                .map(r -> r.getName())
+                .map(Role::getName)
                 .collect(java.util.stream.Collectors.toSet());
         String displayName = user.getProfile() != null ? user.getProfile().getDisplayName() : null;
-        String avatarUrl   = user.getProfile() != null ? user.getProfile().getAvatarUrl()   : null;
+        String avatarUrl = user.getProfile() != null ? user.getProfile().getAvatarUrl()   : null;
         return AdminUserResponse.builder()
                 .id(user.getId())
                 .username(user.getUsername())

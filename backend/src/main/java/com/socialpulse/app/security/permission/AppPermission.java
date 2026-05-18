@@ -57,6 +57,10 @@ public enum AppPermission {
     NOTIFICATION_READ("notification:read", "Read notifications"),
     NOTIFICATION_UPDATE("notification:update", "Mark notifications as read"),
 
+    // Chat
+    CHAT_READ("chat:read", "Read chat conversations and messages"),
+    CHAT_CREATE("chat:create", "Create conversations and send messages"),
+
     // Topic & Admin
     TOPIC_MANAGE("topic:manage", "Create, update, delete topics"),
     ADMIN_ACCESS("admin:access", "Access admin endpoints");

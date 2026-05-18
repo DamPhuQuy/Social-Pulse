@@ -21,8 +21,10 @@ import com.socialpulse.app.chat.application.usecase.CreateConversationUseCase;
 import com.socialpulse.app.chat.application.usecase.GetConversationsUseCase;
 import com.socialpulse.app.chat.application.usecase.GetMessageHistoryUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
+import com.socialpulse.app.security.permission.RequiresPermission;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 
 @RestController
@@ -35,8 +37,9 @@ public class ChatController {
     private final GetMessageHistoryUseCase getMessageHistoryUseCase;
 
     @PostMapping("/conversations")
+    @RequiresPermission.ChatCreate
     public ResponseEntity<ApiResponse<ConversationResponse>> createConversation(
-            @RequestBody CreateConversationRequest request,
+            @RequestBody @Valid CreateConversationRequest request,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         ConversationResponse response = createConversationUseCase.createConversation(request, currentUser);
         return ResponseEntity.status(HttpStatus.CREATED)
@@ -47,6 +50,7 @@ public class ChatController {
     }
 
     @GetMapping("/conversations")
+    @RequiresPermission.ChatRead
     public ResponseEntity<ApiResponse<List<ConversationListResponse>>> getConversations(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -58,6 +62,7 @@ public class ChatController {
     }
 
     @GetMapping("/conversations/{conversationId}/messages")
+    @RequiresPermission.ChatRead
     public ResponseEntity<ApiResponse<MessageHistoryResponse>> getMessages(
             @PathVariable Long conversationId,
             @RequestParam(required = false) String cursor,
