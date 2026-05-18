@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.application.dto.request.UpdateUserTopicsRequest;
 import com.socialpulse.app.user.application.dto.request.UserProfileMutationRequest;
 import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
@@ -21,6 +22,7 @@ import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -35,15 +37,18 @@ public class UserController {
     private final CreateUserProfileUseCase createUserProfileUseCase;
     private final UpdateUserProfileUseCase updateUserProfileUseCase;
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
+    private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
 
     public UserController(GetUserProfileUseCase getUserProfileUseCase,
                           CreateUserProfileUseCase createUserProfileUseCase,
                           UpdateUserProfileUseCase updateUserProfileUseCase,
-                          DeleteUserProfileUseCase deleteUserProfileUseCase) {
+                          DeleteUserProfileUseCase deleteUserProfileUseCase,
+                          UpdateUserTopicsUseCase updateUserTopicsUseCase) {
         this.getUserProfileUseCase = getUserProfileUseCase;
         this.createUserProfileUseCase = createUserProfileUseCase;
         this.updateUserProfileUseCase = updateUserProfileUseCase;
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
+        this.updateUserTopicsUseCase = updateUserTopicsUseCase;
     }
 
     @GetMapping("/profile")
@@ -114,5 +119,22 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
+    }
+    }
+
+    @PutMapping("/me/topics")
+    @Operation(
+            summary = "Update user topics",
+            description = "Update the topics that the current user is interested in",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Topics updated successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> updateTopics(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody UpdateUserTopicsRequest request) {
+        updateUserTopicsUseCase.updateTopics(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.<Void>builder().message("Topics updated successfully").build());
     }
 }

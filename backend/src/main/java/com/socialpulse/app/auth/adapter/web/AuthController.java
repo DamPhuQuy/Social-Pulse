@@ -242,7 +242,10 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<UserAuthorizedResponse>> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
-                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.user());
+        if (user == null || user.user() == null) {
+            throw new com.socialpulse.app.common.exception.AppException(com.socialpulse.app.common.exception.status.AuthCode.INVALID_TOKEN);
+        }
+        UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.user());
 
         return ResponseEntity.ok(ApiResponse.<UserAuthorizedResponse>builder()
                 .code(200)

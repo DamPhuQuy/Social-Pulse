@@ -12,7 +12,9 @@ import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserProfileEntity;
 import org.mapstruct.Named;
 
-@Mapper(componentModel = "spring", uses = RolePersistenceMapper.class)
+import com.socialpulse.app.topic.infrastructure.persistence.mapper.TopicPersistenceMapper;
+
+@Mapper(componentModel = "spring", uses = {RolePersistenceMapper.class, TopicPersistenceMapper.class})
 public interface UserPersistenceMapper {
 
     @Mapping(target = "isLocked", expression = "java(entity.isLocked())")

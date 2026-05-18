@@ -88,6 +88,7 @@ public class CreatePostService implements CreatePostUseCase {
                 .privacy(request.getPrivacy())
                 .parentPostId(parentPostId)
                 .type(request.getParentPostId() == null ? PostType.ORIGINAL : PostType.SHARE)
+                .topicId(request.getTopicId())
                 .build();
 
         Post savedPost = postRepository.save(post);

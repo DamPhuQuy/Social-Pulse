@@ -6,11 +6,16 @@ import org.springframework.context.annotation.Configuration;
 import com.socialpulse.app.report.adapter.persistence.ReportRepositoryAdapter;
 import com.socialpulse.app.report.application.dto.mapper.ReportMapper;
 import com.socialpulse.app.report.application.service.CreateReportService;
+import com.socialpulse.app.report.application.service.GetReportDetailService;
 import com.socialpulse.app.report.application.service.GetReportsService;
+import com.socialpulse.app.report.application.service.ReportResponseEnricher;
 import com.socialpulse.app.report.application.service.ReportTargetValidator;
+import com.socialpulse.app.report.application.service.ReviewReportService;
 import com.socialpulse.app.report.application.service.UpdateReportStatusService;
 import com.socialpulse.app.report.application.usecase.CreateReportUseCase;
+import com.socialpulse.app.report.application.usecase.GetReportDetailUseCase;
 import com.socialpulse.app.report.application.usecase.GetReportsUseCase;
+import com.socialpulse.app.report.application.usecase.ReviewReportUseCase;
 import com.socialpulse.app.report.application.usecase.UpdateReportStatusUseCase;
 import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.infrastructure.persistence.mapper.ReportPersistenceMapper;
@@ -24,7 +29,7 @@ public class ReportConfig {
 
 	@Bean
 	public ReportRepository reportRepositoryPort(JpaReportRepository jpaReportRepository,
-									 ReportPersistenceMapper reportPersistenceMapper) {
+								 ReportPersistenceMapper reportPersistenceMapper) {
 		return new ReportRepositoryAdapter(jpaReportRepository, reportPersistenceMapper);
 	}
 
@@ -43,9 +48,24 @@ public class ReportConfig {
 	}
 
 	@Bean
+	public ReportResponseEnricher reportResponseEnricher(PostRepository postRepository,
+														 CommentRepository commentRepository,
+														 UserRepository userRepository) {
+		return new ReportResponseEnricher(postRepository, commentRepository, userRepository);
+	}
+
+	@Bean
 	public GetReportsUseCase getReportsUseCase(ReportRepository reportRepositoryPort,
-											   ReportMapper reportMapper) {
-		return new GetReportsService(reportRepositoryPort, reportMapper);
+											   ReportMapper reportMapper,
+											   ReportResponseEnricher reportResponseEnricher) {
+		return new GetReportsService(reportRepositoryPort, reportMapper, reportResponseEnricher);
+	}
+
+	@Bean
+	public GetReportDetailUseCase getReportDetailUseCase(ReportRepository reportRepositoryPort,
+														 ReportMapper reportMapper,
+														 ReportResponseEnricher reportResponseEnricher) {
+		return new GetReportDetailService(reportRepositoryPort, reportMapper, reportResponseEnricher);
 	}
 
 	@Bean
@@ -53,5 +73,14 @@ public class ReportConfig {
 		return new UpdateReportStatusService(reportRepositoryPort);
 	}
 
+	@Bean
+	public ReviewReportUseCase reviewReportUseCase(ReportRepository reportRepositoryPort,
+												   PostRepository postRepository,
+												   CommentRepository commentRepository,
+												   UserRepository userRepository,
+												   ReportMapper reportMapper,
+												   ReportResponseEnricher reportResponseEnricher) {
+		return new ReviewReportService(reportRepositoryPort, postRepository,
+				commentRepository, userRepository, reportMapper, reportResponseEnricher);
+	}
 }
-
