@@ -1,7 +1,8 @@
 package com.socialpulse.app.user.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -57,7 +58,7 @@ public class UserController {
     }
 
     @GetMapping("/profile")
-    @PreAuthorize("hasAuthority('user:read')")
+    @RequiresPermission.UserRead
     @Operation(
             summary = "Get my profile",
             description = "Return profile of current authenticated user",
@@ -75,7 +76,7 @@ public class UserController {
     }
 
     @PostMapping("/profile")
-    @PreAuthorize("hasAuthority('user:create')")
+    @RequiresPermission.UserCreate
     @Operation(summary = "Create my profile", description = "Create a profile for the current authenticated user")
     public ResponseEntity<ApiResponse<UserViewProfileResponse>> createProfile(
             @AuthenticationPrincipal CustomUserDetails currentUser,
@@ -87,7 +88,7 @@ public class UserController {
     }
 
     @PutMapping("/profile")
-    @PreAuthorize("hasAuthority('user:update')")
+    @RequiresPermission.UserUpdate
     @Operation(summary = "Update my profile", description = "Update the profile of the current authenticated user")
     public ResponseEntity<ApiResponse<UserViewProfileResponse>> updateProfile(
             @AuthenticationPrincipal CustomUserDetails currentUser,
@@ -99,7 +100,7 @@ public class UserController {
     }
 
     @DeleteMapping("/profile")
-    @PreAuthorize("hasAuthority('user:delete')")
+    @RequiresPermission.UserDelete
     @Operation(summary = "Delete my profile", description = "Delete the profile of the current authenticated user")
     public ResponseEntity<ApiResponse<Void>> deleteProfile(@AuthenticationPrincipal CustomUserDetails currentUser) {
         deleteUserProfileUseCase.deleteProfile(currentUser.getId());
@@ -109,7 +110,7 @@ public class UserController {
     }
 
     @GetMapping("/profile/{username}")
-    @PreAuthorize("hasAuthority('user:read')")
+    @RequiresPermission.UserRead
     @Operation(
             summary = "Get user profile by username",
             description = "Return public profile by username",
@@ -136,7 +137,7 @@ public class UserController {
     }
 
     @PutMapping("/me/password")
-    @PreAuthorize("hasAuthority('user:update')")
+    @RequiresPermission.UserUpdate
     @Operation(
             summary = "Change password",
             description = "Change password for current authenticated user",

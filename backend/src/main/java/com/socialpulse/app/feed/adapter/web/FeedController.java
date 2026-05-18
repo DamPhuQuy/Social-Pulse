@@ -3,8 +3,9 @@ package com.socialpulse.app.feed.adapter.web;
 import java.util.List;
 
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,7 +30,7 @@ public class FeedController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('feed:read')")
+    @RequiresPermission.FeedRead
     @Operation(summary = "Get feed", description = "Get personalized home feed or topic feed when topicSlug is provided")
     public ResponseEntity<ApiResponse<List<FeedItemResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,

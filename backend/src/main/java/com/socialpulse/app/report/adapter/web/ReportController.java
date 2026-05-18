@@ -1,9 +1,10 @@
 package com.socialpulse.app.report.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -62,7 +63,7 @@ public class ReportController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('report:create')")
+    @RequiresPermission.ReportCreate
     @Operation(summary = "Submit a report", description = "User submits a report on a post, comment, or user")
     public ResponseEntity<ApiResponse<ReportResponse>> submitReport(
         @RequestBody @Valid CreateReportRequest request,
@@ -76,7 +77,7 @@ public class ReportController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('report:manage')")
+    @RequiresPermission.ReportManage
     @Operation(summary = "Get all reports", description = "Admin retrieves paginated list of reports with target content")
     public ResponseEntity<ApiResponse<PageResponse<ReportResponse>>> getReports(
             @RequestParam(required = false) ReportStatus status,
@@ -88,7 +89,7 @@ public class ReportController {
     }
 
     @GetMapping("/{reportId}")
-    @PreAuthorize("hasAuthority('report:manage')")
+    @RequiresPermission.ReportManage
     @Operation(summary = "Get report detail",
                description = "Admin retrieves a single report with the full target content (post/comment/user)")
     public ResponseEntity<ApiResponse<ReportResponse>> getReportDetail(
@@ -98,7 +99,7 @@ public class ReportController {
     }
 
     @PostMapping("/{reportId}/review")
-    @PreAuthorize("hasAuthority('report:manage')")
+    @RequiresPermission.ReportManage
     @Operation(summary = "Review and moderate a report",
                description = "Admin performs a moderation action: REJECT, DELETE_CONTENT, BAN_USER, or DELETE_CONTENT_AND_BAN_USER")
     public ResponseEntity<ApiResponse<ReportResponse>> reviewReport(
@@ -112,7 +113,7 @@ public class ReportController {
     }
 
     @PatchMapping("/{reportId}/status")
-    @PreAuthorize("hasAuthority('report:manage')")
+    @RequiresPermission.ReportManage
     @Operation(summary = "Update report status", description = "Admin manually updates the status of a report")
     public ResponseEntity<ApiResponse<ReportResponse>> updateReportStatus(
             @PathVariable Long reportId,

@@ -2,8 +2,9 @@ package com.socialpulse.app.topic.adapter.web;
 
 import java.util.List;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -38,7 +39,7 @@ public class TopicController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('topic:manage')")
+    @RequiresPermission.TopicManage
     @Operation(summary = "Create a topic (admin)")
     public ResponseEntity<ApiResponse<TopicResponse>> createTopic(@RequestBody @Valid TopicRequest request) {
         return ResponseEntity.ok(ApiResponse.<TopicResponse>builder()
@@ -48,7 +49,7 @@ public class TopicController {
     }
 
     @PutMapping("/{id}")
-    @PreAuthorize("hasAuthority('topic:manage')")
+    @RequiresPermission.TopicManage
     @Operation(summary = "Update a topic (admin)")
     public ResponseEntity<ApiResponse<TopicResponse>> updateTopic(
             @PathVariable Long id,
@@ -60,7 +61,7 @@ public class TopicController {
     }
 
     @DeleteMapping("/{id}")
-    @PreAuthorize("hasAuthority('topic:manage')")
+    @RequiresPermission.TopicManage
     @Operation(summary = "Delete a topic (admin)")
     public ResponseEntity<ApiResponse<Void>> deleteTopic(@PathVariable Long id) {
         topicService.deleteTopic(id);

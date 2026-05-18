@@ -1,20 +1,17 @@
 package com.socialpulse.app.security.permission;
 
-import java.lang.annotation.ElementType;
-import java.lang.annotation.Retention;
-import java.lang.annotation.RetentionPolicy;
-import java.lang.annotation.Target;
-
 import org.springframework.security.access.prepost.PreAuthorize;
+
+import java.lang.annotation.*;
 
 /**
  * Type-safe {@code @PreAuthorize} meta-annotations.
  * Usage: replace {@code @PreAuthorize("hasAuthority('post:read')")}
  *        with    {@code @RequiresPermission.PostRead}
- *
- * Adding a new permission = add one entry in AppPermission + one annotation here.
  */
 public @interface RequiresPermission {
+
+    // ── Post ──────────────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
@@ -38,8 +35,27 @@ public @interface RequiresPermission {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('post:react')")
+    @interface PostReact {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('post:manage')")
     @interface PostManage {}
+
+    /** Owner can delete their own post; admin can delete any post. */
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAnyAuthority('post:delete', 'post:manage')")
+    @interface PostDeleteOrManage {}
+
+    /** Owner can update their own post; admin can update any post. */
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAnyAuthority('post:update', 'post:manage')")
+    @interface PostUpdateOrManage {}
+
+    // ── Comment ───────────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
@@ -53,8 +69,30 @@ public @interface RequiresPermission {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('comment:update')")
+    @interface CommentUpdate {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('comment:react')")
+    @interface CommentReact {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('comment:manage')")
     @interface CommentManage {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAnyAuthority('comment:update', 'comment:manage')")
+    @interface CommentUpdateOrManage {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAnyAuthority('comment:delete', 'comment:manage')")
+    @interface CommentDeleteOrManage {}
+
+    // ── User ──────────────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
@@ -83,18 +121,46 @@ public @interface RequiresPermission {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('admin:access')")
-    @interface AdminAccess {}
+    @PreAuthorize("hasAuthority('user:moderate')")
+    @interface UserModerate {}
+
+    // ── Follow ────────────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('follow:read')")
+    @interface FollowRead {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('follow:create')")
+    @interface FollowCreate {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('follow:delete')")
+    @interface FollowDelete {}
+
+    // ── Feed ──────────────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('feed:read')")
+    @interface FeedRead {}
+
+    // ── Report ────────────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('report:create')")
+    @interface ReportCreate {}
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('report:manage')")
     @interface ReportManage {}
 
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('topic:manage')")
-    @interface TopicManage {}
+    // ── Discovery ─────────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
@@ -103,11 +169,52 @@ public @interface RequiresPermission {
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('discovery:write')")
+    @interface DiscoveryWrite {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('discovery:delete')")
+    @interface DiscoveryDelete {}
+
+    // ── Bookmark ──────────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('bookmark:read')")
     @interface BookmarkRead {}
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('bookmark:create')")
+    @interface BookmarkCreate {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('bookmark:delete')")
+    @interface BookmarkDelete {}
+
+    // ── Notification ──────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('notification:read')")
     @interface NotificationRead {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('notification:update')")
+    @interface NotificationUpdate {}
+
+    // ── Topic & Admin ─────────────────────────────────────────────────────────
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('topic:manage')")
+    @interface TopicManage {}
+
+    @Target({ElementType.METHOD, ElementType.TYPE})
+    @Retention(RetentionPolicy.RUNTIME)
+    @PreAuthorize("hasAuthority('admin:access')")
+    @interface AdminAccess {}
 }

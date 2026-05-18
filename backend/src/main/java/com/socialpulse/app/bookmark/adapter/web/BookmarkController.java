@@ -1,7 +1,8 @@
 package com.socialpulse.app.bookmark.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -40,7 +41,7 @@ public class BookmarkController {
     }
 
     @PostMapping("/{postId}")
-    @PreAuthorize("hasAuthority('bookmark:create')")
+    @RequiresPermission.BookmarkCreate
     public ResponseEntity<ApiResponse<BookmarkResponse>> createBookmark(
             @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -50,7 +51,7 @@ public class BookmarkController {
     }
 
     @DeleteMapping("/{postId}")
-    @PreAuthorize("hasAuthority('bookmark:delete')")
+    @RequiresPermission.BookmarkDelete
     public ResponseEntity<ApiResponse<Void>> deleteBookmark(
             @PathVariable Long postId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -59,7 +60,7 @@ public class BookmarkController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('bookmark:read')")
+    @RequiresPermission.BookmarkRead
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getBookmarks(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,

@@ -2,8 +2,9 @@ package com.socialpulse.app.discovery.adapter.web;
 
 import java.util.List;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -72,7 +73,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/users")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<PageResponse<SearchUserResponse>>> searchUsers(
             @RequestParam("q") String query,
             @RequestParam(defaultValue = "0") int page,
@@ -83,7 +84,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/posts")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> searchPosts(
             @RequestParam("q") String query,
             @RequestParam(defaultValue = "0") int page,
@@ -94,7 +95,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/hashtags/trending")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<List<TrendingHashtagResponse>>> getTrendingHashtags(
             @RequestParam(defaultValue = "7") int days,
             @RequestParam(defaultValue = "10") int limit) {
@@ -104,7 +105,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/hashtags/{hashtag}/posts")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getPostsByHashtag(
             @PathVariable String hashtag,
             @RequestParam(defaultValue = "0") int page,
@@ -115,7 +116,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/mentions/{username}/posts")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getPostsByMention(
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
@@ -126,7 +127,7 @@ public class DiscoveryController {
     }
 
     @PostMapping("/history")
-    @PreAuthorize("hasAuthority('discovery:write')")
+    @RequiresPermission.DiscoveryWrite
     @Operation(
             summary = "Save search history",
             description = "Save a search keyword to user's search history. Automatically handles duplicates and 20-item limit with FIFO.",
@@ -146,7 +147,7 @@ public class DiscoveryController {
     }
 
     @GetMapping("/history")
-    @PreAuthorize("hasAuthority('discovery:read')")
+    @RequiresPermission.DiscoveryRead
     @Operation(
             summary = "Get search history",
             description = "Retrieve user's search history ordered by most recent first (updated_at DESC)",
@@ -163,7 +164,7 @@ public class DiscoveryController {
     }
 
     @DeleteMapping("/history/{id}")
-    @PreAuthorize("hasAuthority('discovery:delete')")
+    @RequiresPermission.DiscoveryDelete
     @Operation(
             summary = "Delete a search history item",
             description = "Delete a specific search history item by ID",
@@ -183,7 +184,7 @@ public class DiscoveryController {
     }
 
     @DeleteMapping("/history")
-    @PreAuthorize("hasAuthority('discovery:delete')")
+    @RequiresPermission.DiscoveryDelete
     @Operation(
             summary = "Clear all search history",
             description = "Delete all search history for the authenticated user",

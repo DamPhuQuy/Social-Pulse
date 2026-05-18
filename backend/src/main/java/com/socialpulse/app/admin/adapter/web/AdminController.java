@@ -1,5 +1,7 @@
 package com.socialpulse.app.admin.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.domain.Sort;
@@ -7,7 +9,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -35,7 +37,7 @@ import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@PreAuthorize("hasAuthority('admin:access')")
+@RequiresPermission.AdminAccess
 @Tag(name = "Admin", description = "Admin management APIs")
 public class AdminController {
     private final GetSystemMetricsUseCase getSystemMetricsUseCase;
@@ -76,7 +78,7 @@ public class AdminController {
     // ── User management ───────────────────────────────────────────────────────
 
     @GetMapping("/users")
-    @PreAuthorize("hasAuthority('user:manage')")
+    @RequiresPermission.UserManage
     @Operation(summary = "View account list", description = "List all users with pagination. Use 'query' param to search/filter by username or display name.")
     public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> getUsers(
             @RequestParam(required = false) String query,
@@ -99,7 +101,7 @@ public class AdminController {
     }
 
     @GetMapping("/users/{userId}")
-    @PreAuthorize("hasAuthority('user:manage')")
+    @RequiresPermission.UserManage
     @Operation(summary = "View detail account")
     public ResponseEntity<ApiResponse<AdminUserResponse>> getUserDetail(@PathVariable Long userId) {
         User user = userRepository.findById(userId)
@@ -110,7 +112,7 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{userId}/ban")
-    @PreAuthorize("hasAuthority('user:moderate')")
+    @RequiresPermission.UserModerate
     @Operation(summary = "Ban or unban a user", description = "ban=true to ban, ban=false to unban")
     public ResponseEntity<ApiResponse<Void>> banUser(
             @PathVariable Long userId,
@@ -128,7 +130,7 @@ public class AdminController {
     }
 
     @PatchMapping("/users/{userId}/role")
-    @PreAuthorize("hasAuthority('user:manage')")
+    @RequiresPermission.UserManage
     @Operation(summary = "Change user roles", description = "Replace user's roles with the provided set")
     public ResponseEntity<ApiResponse<Void>> changeRole(
             @PathVariable Long userId,

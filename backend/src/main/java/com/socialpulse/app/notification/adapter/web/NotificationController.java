@@ -1,7 +1,8 @@
 package com.socialpulse.app.notification.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
@@ -43,7 +44,7 @@ public class NotificationController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('notification:read')")
+    @RequiresPermission.NotificationRead
     public ResponseEntity<ApiResponse<PageResponse<NotificationResponse>>> getNotifications(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
@@ -54,7 +55,7 @@ public class NotificationController {
     }
 
     @GetMapping("/unread-count")
-    @PreAuthorize("hasAuthority('notification:read')")
+    @RequiresPermission.NotificationRead
     public ResponseEntity<ApiResponse<NotificationUnreadCountResponse>> getUnreadCount(
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<NotificationUnreadCountResponse>builder()
@@ -63,7 +64,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/{notificationId}/read")
-    @PreAuthorize("hasAuthority('notification:update')")
+    @RequiresPermission.NotificationUpdate
     public ResponseEntity<ApiResponse<NotificationResponse>> markRead(
             @PathVariable Long notificationId,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
@@ -73,7 +74,7 @@ public class NotificationController {
     }
 
     @PatchMapping("/read-all")
-    @PreAuthorize("hasAuthority('notification:update')")
+    @RequiresPermission.NotificationUpdate
     public ResponseEntity<ApiResponse<Void>> markAllRead(
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         markAllNotificationsReadUseCase.markAllRead(currentUser);
