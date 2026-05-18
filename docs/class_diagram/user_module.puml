@@ -30,12 +30,17 @@ class User {
     - passwordHash: String
     - status: UserStatus
     - roles: Set<Role>
+    - topics: Set<Topic>
     - verification: VerificationStatus
     - isLocked: boolean
     - failedLoginAttempts: int
     - lastLoginAt: LocalDateTime
     - createdAt: LocalDateTime
     - updatedAt: LocalDateTime
+    + changeUsername(newUsername: String)
+    + changePassword(newPasswordHash: String)
+    + lockAccount()
+    + activeAccount()
 }
 
 class UserProfile {
@@ -66,8 +71,17 @@ class Permission {
     - updatedAt: LocalDateTime
 }
 
+class Topic {
+    - id: Long
+    - name: String
+    - slug: String
+    - createdAt: LocalDateTime
+    - updatedAt: LocalDateTime
+}
+
 User "1" *-- "1" UserProfile
 User "1" *-- "*" Role
+User "1" -- "*" Topic : subscribes
 Role "1" *-- "*" Permission
 User ..> UserStatus
 User ..> VerificationStatus
