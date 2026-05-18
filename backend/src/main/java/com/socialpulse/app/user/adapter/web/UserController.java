@@ -39,7 +39,6 @@ public class UserController {
     private final CreateUserProfileUseCase createUserProfileUseCase;
     private final UpdateUserProfileUseCase updateUserProfileUseCase;
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
-    private final ChangePasswordUseCase changePasswordUseCase;
     private final UpdateUserTopicsUseCase updateUserTopicsUseCase;
     private final ChangePasswordUseCase changePasswordUseCase;
 
@@ -55,7 +54,6 @@ public class UserController {
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
         this.changePasswordUseCase = changePasswordUseCase;
         this.updateUserTopicsUseCase = updateUserTopicsUseCase;
-        this.changePasswordUseCase = changePasswordUseCase;
     }
 
     @GetMapping("/profile")
@@ -126,7 +124,7 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
-    }    
+    }
 
     @PutMapping("/me/topics")
     @Operation(summary = "Update user topics")
@@ -143,10 +141,10 @@ public class UserController {
             summary = "Change password",
             description = "Change password for current authenticated user",
             responses = {
-                    @ApiResponse(responseCode = "200", description = "Password changed successfully"),
-                    @ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
-                    @ApiResponse(responseCode = "401", description = "Unauthorized"),
-                    @ApiResponse(responseCode = "404", description = "User not found")
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password changed successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
             }
     )
     public ResponseEntity<ApiResponse<Void>> changePassword(
