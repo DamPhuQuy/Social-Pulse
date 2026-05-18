@@ -14,9 +14,11 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.application.dto.request.ChangePasswordRequest;
 import com.socialpulse.app.user.application.dto.request.UserProfileMutationRequest;
 import com.socialpulse.app.user.application.dto.request.UserViewProfileRequest;
 import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse;
+import com.socialpulse.app.user.application.usecase.ChangePasswordUseCase;
 import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
@@ -35,15 +37,18 @@ public class UserController {
     private final CreateUserProfileUseCase createUserProfileUseCase;
     private final UpdateUserProfileUseCase updateUserProfileUseCase;
     private final DeleteUserProfileUseCase deleteUserProfileUseCase;
+    private final ChangePasswordUseCase changePasswordUseCase;
 
     public UserController(GetUserProfileUseCase getUserProfileUseCase,
                           CreateUserProfileUseCase createUserProfileUseCase,
                           UpdateUserProfileUseCase updateUserProfileUseCase,
-                          DeleteUserProfileUseCase deleteUserProfileUseCase) {
+                          DeleteUserProfileUseCase deleteUserProfileUseCase,
+                          ChangePasswordUseCase changePasswordUseCase) {
         this.getUserProfileUseCase = getUserProfileUseCase;
         this.createUserProfileUseCase = createUserProfileUseCase;
         this.updateUserProfileUseCase = updateUserProfileUseCase;
         this.deleteUserProfileUseCase = deleteUserProfileUseCase;
+        this.changePasswordUseCase = changePasswordUseCase;
     }
 
     @GetMapping("/profile")
@@ -114,5 +119,26 @@ public class UserController {
             @PathVariable String username,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
+    }
+
+    @PutMapping("/change-password")
+    @PreAuthorize("hasAuthority('user:update')")
+    @Operation(
+            summary = "Change password",
+            description = "Change password for authenticated user",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Password changed successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "400", description = "Validation failed or incorrect current password"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User not found")
+            }
+    )
+    public ResponseEntity<ApiResponse<Void>> changePassword(
+            @AuthenticationPrincipal CustomUserDetails currentUser,
+            @RequestBody @Valid ChangePasswordRequest request) {
+        changePasswordUseCase.changePassword(currentUser.getId(), request);
+        return ResponseEntity.ok(ApiResponse.<Void>builder()
+                .message("Password changed successfully")
+                .build());
     }
 }

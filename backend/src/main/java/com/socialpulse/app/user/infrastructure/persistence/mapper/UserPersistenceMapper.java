@@ -23,6 +23,7 @@ public interface UserPersistenceMapper {
     @Mapping(target = "profile", ignore = true)
     UserEntity toEntity(User user);
 
+    @Mapping(target = "id", ignore = true)
     @Mapping(target = "user", source = "id", qualifiedByName = "userIdToUserEntity")
     UserProfileEntity toEntity(UserProfile userProfile);
 

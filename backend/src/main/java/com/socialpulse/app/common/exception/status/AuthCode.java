@@ -5,6 +5,8 @@ import lombok.Getter;
 @Getter
 public enum AuthCode implements AppCode {
     PASSWORD_NOT_MATCH(400, "Passwords do not match"),
+    INCORRECT_CURRENT_PASSWORD(400, "Current password is incorrect"),
+    NEW_PASSWORD_SAME_AS_OLD(400, "New password must be different from current password"),
 
     INVALID_CREDENTIALS(404, "Invalid username or password"),
     ACCOUNT_LOCKED(423, "Account is locked"),
