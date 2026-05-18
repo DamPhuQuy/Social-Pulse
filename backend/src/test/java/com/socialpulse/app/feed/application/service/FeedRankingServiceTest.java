@@ -18,6 +18,7 @@ import com.socialpulse.app.feed.application.dto.features.core.RankingFeatures;
 import com.socialpulse.app.feed.application.dto.response.RankingResponse;
 import com.socialpulse.app.feed.application.service.ranking.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.ranking.FeedRankingService;
+import com.socialpulse.app.feed.application.service.ranking.ScoreBoostService;
 import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
@@ -81,6 +82,7 @@ class FeedRankingServiceTest {
                 predictRankingUseCase,
                 cacheFeedUseCase,
                 new FallbackRankingService("v1"),
+                new ScoreBoostService(),
                 "v1");
 
         List<FeedItem> rankedFeed = service.getRankedFeed(42L);
@@ -121,6 +123,7 @@ class FeedRankingServiceTest {
                 predictRankingUseCase,
                 cacheFeedUseCase,
                 new FallbackRankingService("v1"),
+                new ScoreBoostService(),
                 "v1");
 
         var rankedFeed = service.getRankedFeed(42L);
