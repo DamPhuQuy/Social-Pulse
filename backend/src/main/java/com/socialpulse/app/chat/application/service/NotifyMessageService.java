@@ -11,7 +11,7 @@ import com.socialpulse.app.chat.domain.event.MessagePersistedEvent;
 import com.socialpulse.app.chat.domain.model.Message;
 import com.socialpulse.app.chat.domain.model.MessageStatus;
 import com.socialpulse.app.chat.domain.repository.MessageRepository;
-import com.socialpulse.app.chat.infrastructure.websocket.WebSocketSessionManager;
+import com.socialpulse.app.common.websocket.WebSocketSessionManager;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;

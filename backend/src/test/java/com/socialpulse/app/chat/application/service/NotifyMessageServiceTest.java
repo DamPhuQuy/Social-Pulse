@@ -23,7 +23,7 @@ import com.socialpulse.app.chat.domain.event.MessagePersistedEvent;
 import com.socialpulse.app.chat.domain.model.Message;
 import com.socialpulse.app.chat.domain.model.MessageStatus;
 import com.socialpulse.app.chat.domain.repository.MessageRepository;
-import com.socialpulse.app.chat.infrastructure.websocket.WebSocketSessionManager;
+import com.socialpulse.app.common.websocket.WebSocketSessionManager;
 
 @ExtendWith(MockitoExtension.class)
 class NotifyMessageServiceTest {

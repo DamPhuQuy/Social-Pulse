@@ -8,12 +8,17 @@ import java.util.concurrent.TimeUnit;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.springframework.context.event.EventListener;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.messaging.simp.SimpMessagingTemplate;
+import org.springframework.messaging.simp.stomp.StompHeaderAccessor;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.stereotype.Service;
+import org.springframework.web.socket.messaging.SessionConnectedEvent;
 
 import com.socialpulse.app.chat.domain.model.Conversation;
 import com.socialpulse.app.chat.domain.repository.ConversationRepository;
+import com.socialpulse.app.security.user.CustomUserDetails;
 
 import jakarta.annotation.PreDestroy;
 
@@ -51,6 +56,18 @@ public class ReconnectionService {
         this.redisTemplate = redisTemplate;
         this.messagingTemplate = messagingTemplate;
         this.scheduler = new ScheduledThreadPoolExecutor(2);
+    }
+
+    /**
+     * Listens for WebSocket session connections and triggers reconnection delivery.
+     */
+    @EventListener
+    public void onSessionConnected(SessionConnectedEvent event) {
+        StompHeaderAccessor accessor = StompHeaderAccessor.wrap(event.getMessage());
+        if (accessor.getUser() instanceof UsernamePasswordAuthenticationToken authToken
+                && authToken.getPrincipal() instanceof CustomUserDetails userDetails) {
+            scheduleReconnectionDelivery(userDetails.getId(), userDetails.getUsername());
+        }
     }
 
     /**

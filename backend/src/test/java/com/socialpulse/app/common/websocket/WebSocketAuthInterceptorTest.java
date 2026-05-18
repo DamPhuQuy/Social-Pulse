@@ -1,4 +1,4 @@
-package com.socialpulse.app.chat.infrastructure.websocket;
+package com.socialpulse.app.common.websocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNotNull;

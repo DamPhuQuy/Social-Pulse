@@ -1,4 +1,4 @@
-package com.socialpulse.app.chat.infrastructure.websocket;
+package com.socialpulse.app.common.websocket;
 
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -28,26 +28,21 @@ class WebSocketEventListenerTest {
     private WebSocketSessionManager sessionManager;
 
     @Mock
-    private ReconnectionService reconnectionService;
-
-    @Mock
     private CustomUserDetails customUserDetails;
 
     private WebSocketEventListener eventListener;
 
     @BeforeEach
     void setUp() {
-        eventListener = new WebSocketEventListener(sessionManager, reconnectionService);
+        eventListener = new WebSocketEventListener(sessionManager);
     }
 
     @Test
     void handleSessionConnected_registersSessionViaSessionManager() {
         Long userId = 42L;
         String sessionId = "session-123";
-        String username = "user@example.com";
 
         when(customUserDetails.getId()).thenReturn(userId);
-        when(customUserDetails.getUsername()).thenReturn(username);
 
         UsernamePasswordAuthenticationToken authToken =
                 new UsernamePasswordAuthenticationToken(customUserDetails, null, List.of());
@@ -58,7 +53,6 @@ class WebSocketEventListenerTest {
         eventListener.handleSessionConnected(event);
 
         verify(sessionManager).registerSession(userId, sessionId);
-        verify(reconnectionService).scheduleReconnectionDelivery(userId, username);
     }
 
     @Test
@@ -75,7 +69,7 @@ class WebSocketEventListenerTest {
     }
 
     @Test
-    void handleSessionDisconnect_removesSessionAndChecksOnlineStatus() {
+    void handleSessionDisconnect_removesSession() {
         Long userId = 42L;
         String sessionId = "session-123";
 
@@ -91,27 +85,6 @@ class WebSocketEventListenerTest {
         eventListener.handleSessionDisconnect(event);
 
         verify(sessionManager).removeSession(sessionId);
-        verify(sessionManager).isUserOnline(userId);
-    }
-
-    @Test
-    void handleSessionDisconnect_userStillOnlineWithOtherSessions() {
-        Long userId = 42L;
-        String sessionId = "session-123";
-
-        when(customUserDetails.getId()).thenReturn(userId);
-        when(sessionManager.isUserOnline(userId)).thenReturn(true);
-
-        UsernamePasswordAuthenticationToken authToken =
-                new UsernamePasswordAuthenticationToken(customUserDetails, null, List.of());
-
-        Message<byte[]> message = createMessageWithUserAndSession(authToken, sessionId);
-        SessionDisconnectEvent event = new SessionDisconnectEvent(this, message, sessionId, null);
-
-        eventListener.handleSessionDisconnect(event);
-
-        verify(sessionManager).removeSession(sessionId);
-        verify(sessionManager).isUserOnline(userId);
     }
 
     @Test
@@ -126,10 +99,6 @@ class WebSocketEventListenerTest {
         verify(sessionManager).removeSession(sessionId);
     }
 
-    /**
-     * Creates a Spring Message with the given user principal and session ID in headers,
-     * simulating what Spring WebSocket provides in session events.
-     */
     private Message<byte[]> createMessageWithUserAndSession(
             UsernamePasswordAuthenticationToken authToken, String sessionId) {
         Map<String, Object> headers = new java.util.HashMap<>();

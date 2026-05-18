@@ -1,4 +1,4 @@
-package com.socialpulse.app.chat.infrastructure.websocket;
+package com.socialpulse.app.common.websocket;
 
 import org.springframework.messaging.Message;
 import org.springframework.messaging.MessageChannel;
@@ -20,8 +20,6 @@ import io.jsonwebtoken.security.SignatureException;
 
 /**
  * Intercepts STOMP CONNECT frames to authenticate WebSocket connections via JWT.
- * Extracts the token from the "Authorization" header (Bearer prefix) or "token" header,
- * validates it, and sets the authenticated user principal on the STOMP session.
  */
 @Component
 public class WebSocketAuthInterceptor implements ChannelInterceptor {
@@ -43,32 +41,23 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         }
 
         String token = resolveToken(accessor);
-
         if (token == null || token.isBlank()) {
             throw new MessageDeliveryException("Authentication failed: Missing JWT token");
         }
 
         try {
             String email = jwtUseCase.extractEmail(token);
-
             if (email == null) {
                 throw new MessageDeliveryException("Authentication failed: Malformed JWT token");
             }
 
             UserDetails userDetails = userDetailsService.loadUserByUsername(email);
-
             if (!jwtUseCase.isTokenValid(token, userDetails)) {
                 throw new MessageDeliveryException("Authentication failed: Invalid JWT token");
             }
 
-            UsernamePasswordAuthenticationToken authToken =
-                    new UsernamePasswordAuthenticationToken(
-                            userDetails,
-                            null,
-                            userDetails.getAuthorities()
-                    );
-
-            accessor.setUser(authToken);
+            accessor.setUser(new UsernamePasswordAuthenticationToken(
+                    userDetails, null, userDetails.getAuthorities()));
 
         } catch (ExpiredJwtException e) {
             throw new MessageDeliveryException("Authentication failed: Expired JWT token");
@@ -85,16 +74,11 @@ public class WebSocketAuthInterceptor implements ChannelInterceptor {
         return message;
     }
 
-    /**
-     * Resolves the JWT token from STOMP headers.
-     * Checks "Authorization" header with "Bearer " prefix first, then falls back to "token" header.
-     */
     private String resolveToken(StompHeaderAccessor accessor) {
         String authHeader = accessor.getFirstNativeHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7).trim();
         }
-
         return accessor.getFirstNativeHeader("token");
     }
 }

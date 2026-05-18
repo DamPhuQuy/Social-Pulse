@@ -14,7 +14,7 @@ import com.socialpulse.app.chat.domain.exception.UnauthorizedChatAccessException
 import com.socialpulse.app.chat.domain.model.Conversation;
 import com.socialpulse.app.chat.domain.repository.ConversationRepository;
 import com.socialpulse.app.chat.domain.repository.MessageRepository;
-import com.socialpulse.app.chat.infrastructure.websocket.WebSocketSessionManager;
+import com.socialpulse.app.common.websocket.WebSocketSessionManager;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;

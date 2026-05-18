@@ -1,4 +1,4 @@
-package com.socialpulse.app.chat.infrastructure.websocket;
+package com.socialpulse.app.common.websocket;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
@@ -19,8 +19,6 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.SetOperations;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
-
-import com.socialpulse.app.chat.domain.exception.MaxSessionsExceededException;
 
 @ExtendWith(MockitoExtension.class)
 class WebSocketSessionManagerTest {
@@ -64,7 +62,7 @@ class WebSocketSessionManagerTest {
         when(redisTemplate.opsForSet()).thenReturn(setOperations);
         when(setOperations.size("ws:sessions:1")).thenReturn(5L);
 
-        assertThrows(MaxSessionsExceededException.class,
+        assertThrows(MaxWebSocketSessionsException.class,
                 () -> sessionManager.registerSession(userId, sessionId));
     }
 
