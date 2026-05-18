@@ -48,6 +48,7 @@ class FeedRankingServiceTest {
                 CandidatePost.builder()
                         .post(Post.builder()
                                 .id(100L)
+                                .userId(10L)
                                 .hotScore(10.0)
                                 .cmtCount(20L)
                                 .shareCount(5L)
@@ -59,6 +60,7 @@ class FeedRankingServiceTest {
                 CandidatePost.builder()
                         .post(Post.builder()
                                 .id(200L)
+                                .userId(20L)
                                 .hotScore(1.0)
                                 .cmtCount(1L)
                                 .shareCount(0L)
@@ -98,11 +100,11 @@ class FeedRankingServiceTest {
     void usesPredictedScoresWhenPredictionSetIsValid() {
         List<CandidatePost> candidates = List.of(
                 CandidatePost.builder()
-                        .post(Post.builder().id(100L).createdAt(LocalDateTime.now().minusHours(3)).build())
+                        .post(Post.builder().id(100L).userId(10L).createdAt(LocalDateTime.now().minusHours(3)).build())
                         .source(Source.RECENT)
                         .build(),
                 CandidatePost.builder()
-                        .post(Post.builder().id(200L).createdAt(LocalDateTime.now().minusHours(3)).build())
+                        .post(Post.builder().id(200L).userId(20L).createdAt(LocalDateTime.now().minusHours(3)).build())
                         .source(Source.POPULAR)
                         .build());
         List<RankingFeatures> features = List.of(
