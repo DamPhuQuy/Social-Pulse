@@ -1,6 +1,8 @@
 package com.socialpulse.app.post.infrastructure.persistence.entity;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 import org.hibernate.annotations.SQLDelete;
 
@@ -9,6 +11,8 @@ import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 
 import jakarta.persistence.Column;
+import jakarta.persistence.CollectionTable;
+import jakarta.persistence.ElementCollection;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
@@ -19,6 +23,7 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Index;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
+import jakarta.persistence.OrderColumn;
 import jakarta.persistence.PrePersist;
 import jakarta.persistence.PreUpdate;
 import jakarta.persistence.Table;
@@ -56,6 +61,13 @@ public class PostEntity {
     private String imageUrl;
     
     private String imagePublicId;
+
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "post_topics", joinColumns = @JoinColumn(name = "post_id"))
+    @OrderColumn(name = "topic_order")
+    @Column(name = "topic_slug", nullable = false, length = 80)
+    @Builder.Default
+    private List<String> topicSlugs = new ArrayList<>();
 
     @Column(name = "parent_post_id")
     private Long parentPostId;

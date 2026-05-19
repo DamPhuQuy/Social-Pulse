@@ -108,9 +108,14 @@ public class CommentController {
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getTopLevelComments(
             @PathVariable Long postId,
             @RequestParam(defaultValue = "0") Long lastId,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
 
-        List<CommentResponse> responses = getTopLevelCommentsUseCase.getTopLevelComments(postId, lastId, limit);
+        List<CommentResponse> responses = getTopLevelCommentsUseCase.getTopLevelComments(
+                postId,
+                lastId,
+                limit,
+                currentUser.getId());
 
         return ResponseEntity.ok(ApiResponse.<List<CommentResponse>>builder()
                 .code(200)
@@ -126,9 +131,15 @@ public class CommentController {
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @RequestParam(defaultValue = "0") Long lastId,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "10") int limit,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
 
-        List<CommentResponse> responses = getCommentRepliesUseCase.getReplies(postId, commentId, lastId, limit);
+        List<CommentResponse> responses = getCommentRepliesUseCase.getReplies(
+                postId,
+                commentId,
+                lastId,
+                limit,
+                currentUser.getId());
 
         return ResponseEntity.ok(ApiResponse.<List<CommentResponse>>builder()
                 .code(200)

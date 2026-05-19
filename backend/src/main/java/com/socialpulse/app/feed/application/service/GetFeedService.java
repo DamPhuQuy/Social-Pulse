@@ -16,6 +16,8 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 
 @Service
 public class GetFeedService implements GetFeedUseCase {
+    private static final String SEEN_POSTS_PREFIX = "user:seen:";
+
     private final RankFeedUseCase rankFeedUseCase;
     private final FeedItemResponseAssembler feedItemResponseAssembler;
     private final CacheFeedUseCase cacheFeedUseCase;
@@ -38,17 +40,27 @@ public class GetFeedService implements GetFeedUseCase {
 
         if (page == 0) {
             cacheFeedUseCase.invalidateFeed(userId);
+            redisTemplate.delete(getSeenPostsKey(userId));
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
         markSeen(userId, feedItems);
+
         return feedItemResponseAssembler.assemble(feedItems, userId);
     }
 
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, String topicSlug, CustomUserDetails currentUser) {
         Long userId = currentUser.getId();
+
+        if (page == 0) {
+            cacheFeedUseCase.invalidateFeed(userId);
+            redisTemplate.delete(getSeenPostsKey(userId));
+        }
+
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
+        markSeen(userId, feedItems);
+
         return feedItemResponseAssembler.assemble(feedItems, userId);
     }
 
@@ -57,8 +69,12 @@ public class GetFeedService implements GetFeedUseCase {
         String[] postIds = feedItems.stream()
             .map(item -> String.valueOf(item.getPostId()))
             .toArray(String[]::new);
-        String seenKey = "user:seen:" + userId;
+        String seenKey = getSeenPostsKey(userId);
         redisTemplate.opsForSet().add(seenKey, postIds);
         redisTemplate.expire(seenKey, Duration.ofDays(7));
+    }
+
+    private String getSeenPostsKey(Long userId) {
+        return SEEN_POSTS_PREFIX + userId;
     }
 }

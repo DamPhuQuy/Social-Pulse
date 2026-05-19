@@ -21,6 +21,7 @@ import com.socialpulse.app.comment.application.service.GetCommentRepliesService;
 import com.socialpulse.app.comment.application.service.ReactCommentService;
 import com.socialpulse.app.comment.application.service.UpdateCommentService;
 import com.socialpulse.app.comment.application.service.ValidateParentCommentService;
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 import com.socialpulse.app.comment.infrastructure.persistence.mapper.CommentPersistenceMapper;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentReactionRepository;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentRepository;
@@ -62,36 +63,42 @@ public class CommentConfig {
 												 CommentResponseAssembler commentResponseAssembler,
 												 CommentMapper commentMapper,
 												 NotificationCommandService notificationCommandService,
+												 SseEmitterRegistry sseEmitterRegistry,
 												 UserInteractionRepository userInteractionRepository) {
 		return new CreateCommentService(commentRepositoryPort, postRepositoryPort, userRepositoryPort,
 				validateParentCommentUseCase, commentResponseAssembler, commentMapper,
-				notificationCommandService, userInteractionRepository);
+				notificationCommandService, sseEmitterRegistry, userInteractionRepository);
 	}
 
 	@Bean
 	public com.socialpulse.app.comment.application.usecase.GetTopLevelCommentsUseCase getTopLevelCommentsUseCase(
 			CommentRepository commentRepositoryPort,
+			PostRepository postRepositoryPort,
 			CommentResponseAssembler commentResponseAssembler) {
 		return new com.socialpulse.app.comment.application.service.GetTopLevelCommentsService(
-				commentRepositoryPort, commentResponseAssembler);
+				commentRepositoryPort, postRepositoryPort, commentResponseAssembler);
 	}
 
 	@Bean
 	public GetCommentRepliesUseCase getCommentRepliesUseCase(
 			CommentRepository commentRepositoryPort,
+			PostRepository postRepositoryPort,
 			CommentResponseAssembler commentResponseAssembler) {
-		return new GetCommentRepliesService(commentRepositoryPort, commentResponseAssembler);
+		return new GetCommentRepliesService(commentRepositoryPort, postRepositoryPort, commentResponseAssembler);
 	}
 
 	@Bean
 	public ReactCommentUseCase reactCommentUseCase(
 			CommentRepository commentRepositoryPort,
+			PostRepository postRepositoryPort,
 			CommentReactionRepository commentReactionRepository,
 			UserRepository userRepositoryPort,
 			CommentMapper commentMapper,
-			NotificationCommandService notificationCommandService) {
+			NotificationCommandService notificationCommandService,
+												 SseEmitterRegistry sseEmitterRegistry) {
 		return new ReactCommentService(
 				commentRepositoryPort,
+				postRepositoryPort,
 				commentReactionRepository,
 				userRepositoryPort,
 				commentMapper,
@@ -100,9 +107,10 @@ public class CommentConfig {
 
 	@Bean
 	public UpdateCommentUseCase updateCommentUseCase(CommentRepository commentRepositoryPort,
+													 PostRepository postRepositoryPort,
 													 UserRepository userRepositoryPort,
 													 CommentResponseAssembler commentResponseAssembler) {
-		return new UpdateCommentService(commentRepositoryPort, userRepositoryPort, commentResponseAssembler);
+		return new UpdateCommentService(commentRepositoryPort, postRepositoryPort, userRepositoryPort, commentResponseAssembler);
 	}
 
 	@Bean

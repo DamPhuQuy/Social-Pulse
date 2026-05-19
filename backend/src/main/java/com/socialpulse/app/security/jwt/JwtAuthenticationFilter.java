@@ -79,12 +79,17 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     /**
      * Chỉ đọc Access Token từ Authorization: Bearer header.
-     * Cookie Refresh Token không được đọc ở đây.
+     * Hỗ trợ đọc từ query parameter 'token' cho kết nối SSE.
      */
     private String resolveToken(HttpServletRequest request) {
         String authHeader = request.getHeader("Authorization");
         if (authHeader != null && authHeader.startsWith("Bearer ")) {
             return authHeader.substring(7).trim();
+        }
+        
+        String tokenParam = request.getParameter("token");
+        if (tokenParam != null && !tokenParam.isBlank()) {
+            return tokenParam.trim();
         }
         return null;
     }

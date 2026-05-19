@@ -1,41 +1,26 @@
 package com.socialpulse.app.notification.application.service;
 
-import java.util.List;
-
-import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
-import com.socialpulse.app.common.websocket.WebSocketSessionManager;
 import com.socialpulse.app.common.utils.ReactionType;
-import com.socialpulse.app.notification.application.dto.response.NotificationResponse;
 import com.socialpulse.app.notification.domain.enums.NotificationResourceType;
 import com.socialpulse.app.notification.domain.enums.NotificationType;
 import com.socialpulse.app.notification.domain.model.Notification;
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 
-import lombok.extern.slf4j.Slf4j;
-
-@Slf4j
 @Service
 public class NotificationCommandService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final SimpMessagingTemplate messagingTemplate;
-    private final WebSocketSessionManager sessionManager;
-    private final NotificationResponseAssembler responseAssembler;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
-    public NotificationCommandService(NotificationRepository notificationRepository,
-                                      UserRepository userRepository,
-                                      SimpMessagingTemplate messagingTemplate,
-                                      WebSocketSessionManager sessionManager,
-                                      NotificationResponseAssembler responseAssembler) {
+    public NotificationCommandService(NotificationRepository notificationRepository, UserRepository userRepository, SseEmitterRegistry sseEmitterRegistry) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
-        this.messagingTemplate = messagingTemplate;
-        this.sessionManager = sessionManager;
-        this.responseAssembler = responseAssembler;
+        this.sseEmitterRegistry = sseEmitterRegistry;
     }
 
     public void notifyFollow(Long actorId, Long recipientId) {
@@ -85,27 +70,8 @@ public class NotificationCommandService {
                 .message(actorUsername + " " + actionText)
                 .build());
 
-        pushToWebSocket(notification, recipientId);
-    }
-
-    private void pushToWebSocket(Notification notification, Long recipientId) {
-        if (!sessionManager.isUserOnline(recipientId)) {
-            return;
-        }
-        try {
-            String recipientUsername = userRepository.findById(recipientId)
-                    .map(User::getUsername)
-                    .orElse(null);
-            if (recipientUsername == null) {
-                return;
-            }
-            List<NotificationResponse> responses = responseAssembler.assemble(List.of(notification));
-            if (!responses.isEmpty()) {
-                messagingTemplate.convertAndSendToUser(recipientUsername, "/queue/notifications", responses.get(0));
-            }
-        } catch (Exception e) {
-            log.warn("Failed to push notification {} to user {}: {}", notification.getId(), recipientId, e.getMessage());
-        }
+        // Send realtime event
+        sseEmitterRegistry.sendToUser(recipientId, "notification", notification);
     }
 
     private String reactedMessage(ReactionType reactionType, String resourceLabel) {

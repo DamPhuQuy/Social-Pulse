@@ -1,7 +1,8 @@
 package com.socialpulse.app.post.adapter.web;
 
-import com.socialpulse.app.security.permission.RequiresPermission;
+import java.util.List;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -22,9 +23,11 @@ import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.application.dto.request.PostUpdateRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.application.dto.response.PostTopicResponse;
 import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.UserPostResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
+import com.socialpulse.app.post.application.service.PostTopicCatalog;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
 import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.EditPostUseCase;
@@ -113,6 +116,15 @@ public class PostController {
                 .build());
     }
 
+    @GetMapping("/topics")
+    @RequiresPermission.PostRead
+    @Operation(summary = "List post topics", description = "List selectable post topics used by create/edit post flows")
+    public ResponseEntity<ApiResponse<List<PostTopicResponse>>> getPostTopics() {
+        return ResponseEntity.ok(ApiResponse.<List<PostTopicResponse>>builder()
+                .data(PostTopicCatalog.all())
+                .build());
+    }
+
     @PostMapping("/react")
     @RequiresPermission.PostReact
     public ResponseEntity<ApiResponse<PostReactionResponse>> react(
@@ -139,5 +151,4 @@ public class PostController {
         PostUpdateResponse response = editPostUseCase.editPost(postId, request, currentUser);
         return ResponseEntity.ok(ApiResponse.<PostUpdateResponse>builder().data(response).message("Post updated successfully").build());
     }
-
 }

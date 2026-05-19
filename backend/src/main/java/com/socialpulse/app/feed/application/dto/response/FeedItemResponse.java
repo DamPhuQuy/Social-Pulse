@@ -1,9 +1,11 @@
 package com.socialpulse.app.feed.application.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.post.domain.enums.PostType;
+import com.socialpulse.app.post.domain.enums.Privacy;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -20,6 +22,7 @@ public class FeedItemResponse {
     private PostType type;
     private String content;
     private String imageUrl;
+    private List<String> topicSlugs;
     private Long userId;
     private String username;
     private String userAvatar;
@@ -32,5 +35,7 @@ public class FeedItemResponse {
     private Double aiScore;
     private String source;
     private LocalDateTime rankedAt;
+    private Privacy privacy;
     private LocalDateTime createdAt;
+    private LocalDateTime updatedAt;
 }

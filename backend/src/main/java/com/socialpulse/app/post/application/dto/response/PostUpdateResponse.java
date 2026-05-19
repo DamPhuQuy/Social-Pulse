@@ -1,6 +1,7 @@
 package com.socialpulse.app.post.application.dto.response;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
 import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.enums.Privacy;
@@ -22,6 +23,7 @@ public class PostUpdateResponse {
     private String content;
     private String imageUrl;
     private String imagePublicId;
+    private List<String> topicSlugs;
     private PostType type;
     private Privacy privacy;
     private LocalDateTime createdAt;
