@@ -28,4 +28,5 @@ public class PostUpdateResponse {
     private Privacy privacy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private Long topicId;
 }

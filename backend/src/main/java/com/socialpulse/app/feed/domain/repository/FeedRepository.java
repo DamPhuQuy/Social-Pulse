@@ -15,4 +15,6 @@ public interface FeedRepository {
     List<Post> findPopularPosts(LocalDateTime since, Pageable pageable);
 
     List<Post> findRandomPosts(List<Long> excludeIds, Pageable pageable);
+
+    List<Post> findByTopicSlug(String topicSlug, LocalDateTime since, Pageable pageable);
 }

@@ -3,8 +3,9 @@ package com.socialpulse.app.feed.adapter.web;
 import java.util.List;
 
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -29,33 +30,18 @@ public class FeedController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('feed:read')")
-    @Operation(
-            summary = "Get personalized feed",
-            description = "Get personalized feed for current user with pagination",
-            responses = {
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "200",
-                    description = "Feed retrieved successfully"
-                ),
-                @io.swagger.v3.oas.annotations.responses.ApiResponse(
-                    responseCode = "401",
-                    description = "Unauthorized"
-                )
-            }
-    )
+    @RequiresPermission.FeedRead
+    @Operation(summary = "Get feed", description = "Get personalized home feed or topic feed when topicSlug is provided")
     public ResponseEntity<ApiResponse<List<FeedItemResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
             @RequestParam(required = false) String topicSlug,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
-        List<FeedItemResponse> feed = getFeedUseCase.getFeed(page, size, currentUser, topicSlug);
+        List<FeedItemResponse> feed = topicSlug != null
+                ? getFeedUseCase.getFeed(page, size, topicSlug, currentUser)
+                : getFeedUseCase.getFeed(page, size, currentUser);
 
-        return ResponseEntity.ok(
-            ApiResponse.<List<FeedItemResponse>>builder()
-                .data(feed)
-                .build()
-        );
+        return ResponseEntity.ok(ApiResponse.<List<FeedItemResponse>>builder().data(feed).build());
     }
 }

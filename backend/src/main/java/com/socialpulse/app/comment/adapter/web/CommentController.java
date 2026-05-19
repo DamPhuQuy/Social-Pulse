@@ -1,7 +1,8 @@
 package com.socialpulse.app.comment.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -60,7 +61,7 @@ public class CommentController {
     }
 
     @PostMapping
-    @PreAuthorize("hasAuthority('comment:create')")
+    @RequiresPermission.CommentCreate
     @Operation(
         summary = "Create comment",
         description = "Create a comment on a post",
@@ -102,7 +103,7 @@ public class CommentController {
     }
 
     @GetMapping
-    @PreAuthorize("hasAuthority('comment:read')")
+    @RequiresPermission.CommentRead
     @Operation(summary = "Get top level comments", description = "Get top level comments for a post with offset and limit")
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getTopLevelComments(
             @PathVariable Long postId,
@@ -124,7 +125,7 @@ public class CommentController {
     }
 
     @GetMapping("/{commentId}/replies")
-    @PreAuthorize("hasAuthority('comment:read')")
+    @RequiresPermission.CommentRead
     @Operation(summary = "Get comment replies", description = "Get direct replies for a comment with offset and limit")
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getCommentReplies(
             @PathVariable Long postId,
@@ -148,7 +149,7 @@ public class CommentController {
     }
 
     @PostMapping("/{commentId}/react")
-    @PreAuthorize("hasAuthority('comment:react')")
+    @RequiresPermission.CommentReact
     @Operation(summary = "React to comment", description = "Create, update, or remove a reaction on a comment")
     public ResponseEntity<ApiResponse<CommentReactionResponse>> reactComment(
             @PathVariable Long postId,
@@ -166,7 +167,7 @@ public class CommentController {
     }
 
     @PutMapping("/{commentId}")
-    @PreAuthorize("hasAnyAuthority('comment:update', 'comment:manage')")
+    @RequiresPermission.CommentUpdateOrManage
     @Operation(
         summary = "Update comment",
         description = "Update a comment content",
@@ -213,7 +214,7 @@ public class CommentController {
     }
 
     @DeleteMapping("/{commentId}")
-    @PreAuthorize("hasAnyAuthority('comment:delete', 'comment:manage')")
+    @RequiresPermission.CommentDeleteOrManage
     @Operation(
         summary = "Delete comment",
         description = "Soft delete a comment (only owner can delete)",

@@ -1,8 +1,6 @@
 package com.socialpulse.app.post.domain.model;
 
 import java.time.LocalDateTime;
-import java.util.ArrayList;
-import java.util.List;
 
 import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.enums.Privacy;
@@ -22,9 +20,8 @@ public class Post {
 	private String content;
 	private String imageUrl;
 	private String imagePublicId;
-	@Builder.Default
-	private List<String> topicSlugs = new ArrayList<>();
 	private Long parentPostId;
+	private Long topicId;
 	private PostType type;
 	private Privacy privacy;
 	@Builder.Default
@@ -115,12 +112,12 @@ public class Post {
 		return this.privacy == Privacy.PRIVATE;
 	}
 
-	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy, List<String> topicSlugs) {
+	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy, Long topicId) {
 		this.content = content;
 		this.imageUrl = imageUrl;
 		this.imagePublicId = imagePublicId;
 		this.privacy = privacy;
-		this.topicSlugs = topicSlugs == null ? new ArrayList<>() : new ArrayList<>(topicSlugs);
+		this.topicId = topicId;
 	}
 }
 

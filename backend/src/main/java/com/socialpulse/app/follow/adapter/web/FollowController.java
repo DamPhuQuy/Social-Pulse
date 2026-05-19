@@ -1,8 +1,9 @@
 package com.socialpulse.app.follow.adapter.web;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.DeleteMapping;
@@ -56,7 +57,7 @@ public class FollowController {
     }
 
     @PostMapping("/{userId}")
-    @PreAuthorize("hasAuthority('follow:create')")
+    @RequiresPermission.FollowCreate
     @Operation(
         summary = "Follow a user",
         description = "Follow another user by their ID",
@@ -87,7 +88,7 @@ public class FollowController {
     }
 
     @DeleteMapping("/{userId}")
-    @PreAuthorize("hasAuthority('follow:delete')")
+    @RequiresPermission.FollowDelete
     @Operation(
         summary = "Unfollow a user",
         description = "Unfollow a user by their ID",
@@ -112,7 +113,7 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/followers")
-    @PreAuthorize("hasAuthority('follow:read')")
+    @RequiresPermission.FollowRead
     @Operation(summary = "Get followers", description = "Get paginated followers of a user")
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowers(
             @PathVariable Long userId,
@@ -124,7 +125,7 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/following")
-    @PreAuthorize("hasAuthority('follow:read')")
+    @RequiresPermission.FollowRead
     @Operation(summary = "Get following", description = "Get paginated users a user is following")
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowing(
             @PathVariable Long userId,
@@ -136,7 +137,7 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/status")
-    @PreAuthorize("hasAuthority('follow:read')")
+    @RequiresPermission.FollowRead
     @Operation(summary = "Get follow status", description = "Get whether current user follows the target user")
     public ResponseEntity<ApiResponse<FollowStatusResponse>> getFollowStatus(
             @PathVariable Long userId,
@@ -147,7 +148,7 @@ public class FollowController {
     }
 
     @GetMapping("/{userId}/counts")
-    @PreAuthorize("hasAuthority('follow:read')")
+    @RequiresPermission.FollowRead
     @Operation(summary = "Get follow counts", description = "Get follower and following counts of a user")
     public ResponseEntity<ApiResponse<FollowCountsResponse>> getFollowCounts(@PathVariable Long userId) {
         return ResponseEntity.ok(ApiResponse.<FollowCountsResponse>builder()

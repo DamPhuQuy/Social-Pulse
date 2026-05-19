@@ -1,8 +1,13 @@
 package com.socialpulse.app.notification.application.service;
 
+import java.util.List;
+
+import org.springframework.messaging.simp.SimpMessagingTemplate;
 import org.springframework.stereotype.Service;
 
+import com.socialpulse.app.common.websocket.WebSocketSessionManager;
 import com.socialpulse.app.common.utils.ReactionType;
+import com.socialpulse.app.notification.application.dto.response.NotificationResponse;
 import com.socialpulse.app.notification.domain.enums.NotificationResourceType;
 import com.socialpulse.app.notification.domain.enums.NotificationType;
 import com.socialpulse.app.notification.domain.model.Notification;
@@ -10,18 +15,27 @@ import com.socialpulse.app.notification.domain.repository.NotificationRepository
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
-import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
+import lombok.extern.slf4j.Slf4j;
 
+@Slf4j
 @Service
 public class NotificationCommandService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
-    private final SseEmitterRegistry sseEmitterRegistry;
+    private final SimpMessagingTemplate messagingTemplate;
+    private final WebSocketSessionManager sessionManager;
+    private final NotificationResponseAssembler responseAssembler;
 
-    public NotificationCommandService(NotificationRepository notificationRepository, UserRepository userRepository, SseEmitterRegistry sseEmitterRegistry) {
+    public NotificationCommandService(NotificationRepository notificationRepository,
+                                      UserRepository userRepository,
+                                      SimpMessagingTemplate messagingTemplate,
+                                      WebSocketSessionManager sessionManager,
+                                      NotificationResponseAssembler responseAssembler) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
-        this.sseEmitterRegistry = sseEmitterRegistry;
+        this.messagingTemplate = messagingTemplate;
+        this.sessionManager = sessionManager;
+        this.responseAssembler = responseAssembler;
     }
 
     public void notifyFollow(Long actorId, Long recipientId) {
@@ -59,9 +73,8 @@ public class NotificationCommandService {
             return;
         }
 
-        String actorUsername = userRepository.findById(actorId)
-                .map(User::getUsername)
-                .orElse("Someone");
+        User actor = userRepository.findById(actorId).orElse(null);
+        String actorUsername = actor != null ? actor.getUsername() : "Someone";
 
         Notification notification = notificationRepository.save(Notification.builder()
                 .recipientId(recipientId)
@@ -72,8 +85,27 @@ public class NotificationCommandService {
                 .message(actorUsername + " " + actionText)
                 .build());
 
-        // Send realtime event
-        sseEmitterRegistry.sendToUser(recipientId, "notification", notification);
+        pushToWebSocket(notification, recipientId);
+    }
+
+    private void pushToWebSocket(Notification notification, Long recipientId) {
+        if (!sessionManager.isUserOnline(recipientId)) {
+            return;
+        }
+        try {
+            String recipientUsername = userRepository.findById(recipientId)
+                    .map(User::getUsername)
+                    .orElse(null);
+            if (recipientUsername == null) {
+                return;
+            }
+            List<NotificationResponse> responses = responseAssembler.assemble(List.of(notification));
+            if (!responses.isEmpty()) {
+                messagingTemplate.convertAndSendToUser(recipientUsername, "/queue/notifications", responses.get(0));
+            }
+        } catch (Exception e) {
+            log.warn("Failed to push notification {} to user {}: {}", notification.getId(), recipientId, e.getMessage());
+        }
     }
 
     private String reactedMessage(ReactionType reactionType, String resourceLabel) {

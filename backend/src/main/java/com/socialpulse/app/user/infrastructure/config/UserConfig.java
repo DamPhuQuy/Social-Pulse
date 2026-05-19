@@ -1,33 +1,39 @@
 package com.socialpulse.app.user.infrastructure.config;
 
-import com.socialpulse.app.user.adapter.persistence.RoleRepositoryAdapter;
-import com.socialpulse.app.user.application.service.UserRoleService;
-import com.socialpulse.app.user.domain.repository.RoleRepository;
-import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
-import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import com.socialpulse.app.follow.domain.repository.FollowRepository;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.encoder.AppPasswordEncoder;
+import com.socialpulse.app.topic.infrastructure.persistence.mapper.TopicPersistenceMapper;
+import com.socialpulse.app.topic.infrastructure.persistence.repository.TopicRepository;
+import com.socialpulse.app.user.adapter.persistence.RoleRepositoryAdapter;
 import com.socialpulse.app.user.adapter.persistence.UserProfileRepositoryAdapter;
 import com.socialpulse.app.user.adapter.persistence.UserRepositoryAdapter;
 import com.socialpulse.app.user.application.dto.mapper.UserMapper;
+import com.socialpulse.app.user.application.service.ChangePasswordService;
 import com.socialpulse.app.user.application.service.CreateUserProfileService;
-import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
+import com.socialpulse.app.user.application.service.CreateUserService;
+import com.socialpulse.app.user.application.service.DeleteUserProfileService;
+import com.socialpulse.app.user.application.service.GetUserProfileService;
+import com.socialpulse.app.user.application.service.UpdateUserProfileService;
+import com.socialpulse.app.user.application.service.UpdateUserTopicsService;
+import com.socialpulse.app.user.application.service.UserProfileResponseAssembler;
+import com.socialpulse.app.user.application.service.UserRoleService;
+import com.socialpulse.app.user.application.usecase.ChangePasswordUseCase;
 import com.socialpulse.app.user.application.usecase.CreateUserProfileUseCase;
+import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
 import com.socialpulse.app.user.application.usecase.UpdateUserProfileUseCase;
-import com.socialpulse.app.user.application.service.DeleteUserProfileService;
-import com.socialpulse.app.follow.domain.repository.FollowRepository;
-import com.socialpulse.app.post.domain.repository.PostRepository;
+import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
+import com.socialpulse.app.user.domain.repository.RoleRepository;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
-import com.socialpulse.app.user.application.service.CreateUserService;
-import com.socialpulse.app.user.application.service.GetUserProfileService;
-import com.socialpulse.app.user.application.service.UserProfileResponseAssembler;
-import com.socialpulse.app.user.application.service.UpdateUserProfileService;
+import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
+import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserProfileRepository;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
@@ -104,5 +110,20 @@ public class UserConfig {
     @Bean
     public DeleteUserProfileUseCase deleteUserProfileUseCase(UserProfileRepository userProfileRepository) {
         return new DeleteUserProfileService(userProfileRepository);
+    }
+
+    @Bean
+    public UpdateUserTopicsUseCase updateUserTopicsUseCase(
+            UserRepository userRepository,
+            TopicRepository topicRepository,
+            TopicPersistenceMapper topicMapper) {
+        return new UpdateUserTopicsService(userRepository, topicRepository, topicMapper);
+    }
+
+    @Bean
+    public ChangePasswordUseCase changePasswordUseCase(
+            UserRepository userRepository,
+            AppPasswordEncoder appPasswordEncoder) {
+        return new ChangePasswordService(userRepository, appPasswordEncoder);
     }
 }

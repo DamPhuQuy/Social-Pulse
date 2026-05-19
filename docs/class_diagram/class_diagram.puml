@@ -46,12 +46,17 @@ package "user.domain" {
         - passwordHash: String
         - status: UserStatus
         - roles: Set<Role>
+        - topics: Set<Topic>
         - verification: VerificationStatus
         - isLocked: boolean
         - failedLoginAttempts: int
         - lastLoginAt: LocalDateTime
         - createdAt: LocalDateTime
         - updatedAt: LocalDateTime
+        + changeUsername(newUsername: String)
+        + changePassword(newPasswordHash: String)
+        + lockAccount()
+        + activeAccount()
     }
 
     class UserProfile {
@@ -81,6 +86,14 @@ package "user.domain" {
         - createdAt: LocalDateTime
         - updatedAt: LocalDateTime
     }
+
+    class Topic {
+        - id: Long
+        - name: String
+        - slug: String
+        - createdAt: LocalDateTime
+        - updatedAt: LocalDateTime
+    }
 }
 
 ' ==================== POST MODULE ====================
@@ -100,9 +113,10 @@ package "post.domain" {
         - id: Long
         - userId: Long
         - content: String
-        - imageUrl: String
+        - imageUrl: Text
         - imagePublicId: String
         - parentPostId: Long
+        - topicId: Long
         - type: PostType
         - privacy: Privacy
         - upvoteCount: Long
@@ -240,6 +254,13 @@ package "report.domain" {
         USER
     }
 
+    enum ReviewAction {
+        REJECT
+        DELETE_CONTENT
+        BAN_USER
+        DELETE_CONTENT_AND_BAN_USER
+    }
+
     class Report {
         - id: Long
         - reporterId: Long
@@ -248,6 +269,8 @@ package "report.domain" {
         - reason: String
         - status: ReportStatus
         - createdAt: LocalDateTime
+        + markResolved()
+        + markRejected()
     }
 }
 
@@ -259,6 +282,7 @@ package "feed.domain" {
         FOLLOWING
         POPULAR
         RANDOM
+        TOPIC
     }
 
     class FeedItem {
@@ -273,6 +297,35 @@ package "feed.domain" {
         - post: Post
         - source: Source
     }
+
+    class UserInteraction {
+        - id: Long
+        - viewerId: Long
+        - authorId: Long
+        - interactionType: String
+        - createdAt: LocalDateTime
+    }
+}
+
+' ==================== CHAT MODULE ====================
+
+package "chat.domain" {
+    class Conversation {
+        - id: Long
+        - participant1Id: Long
+        - participant2Id: Long
+        - createdAt: LocalDateTime
+        - lastMessageAt: LocalDateTime
+    }
+
+    class Message {
+        - id: Long
+        - conversationId: Long
+        - senderId: Long
+        - content: String
+        - timestamp: LocalDateTime
+        - status: String
+    }
 }
 
 ' ==================== RELATIONSHIPS ====================
@@ -280,6 +333,7 @@ package "feed.domain" {
 ' User internal
 User "1" *-right- "1" UserProfile
 User "1" -- "*" Role
+User "1" -- "*" Topic : subscribes
 Role "1" -- "*" Permission
 
 ' User -> other modules
@@ -297,6 +351,7 @@ User "1" -- "*" CommentReaction
 Post "1" -- "*" PostReactions
 Post "1" -- "*" Comment
 Post "1" -- "*" Bookmark
+Post "*" -- "1" Topic
 
 ' Comment relationships
 Comment "1" -- "*" CommentReaction
@@ -304,5 +359,8 @@ Comment "1" -- "*" Comment : replies
 
 ' Feed
 CandidatePost --> Post
+
+' Chat
+Conversation "1" -- "*" Message
 
 @enduml

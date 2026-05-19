@@ -42,3 +42,7 @@ build/
 *.zst
 .bsp/
 .bloop
+.kiro
+.jqwik-database
+
+__pycache__

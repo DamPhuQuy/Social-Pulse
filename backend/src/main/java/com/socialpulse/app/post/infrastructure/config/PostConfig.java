@@ -4,7 +4,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.post.adapter.persistence.PostReactionsRepositoryAdapter;
 import com.socialpulse.app.post.adapter.persistence.PostRepositoryAdapter;
 import com.socialpulse.app.post.application.dto.mapper.PostMapper;
@@ -26,7 +25,8 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostReactionRepository;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
-import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
+import com.socialpulse.app.notification.application.service.NotificationCommandService;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
@@ -67,13 +67,13 @@ public class PostConfig {
     }
 
     @Bean
-    public DeletePostUseCase deletePostUseCase(PostRepository postRepository, StringRedisTemplate redisTemplate) {
-        return new DeletePostService(postRepository, redisTemplate);
+    public DeletePostUseCase deletePostUseCase(PostRepository postRepository) {
+        return new DeletePostService(postRepository);
     }
 
     @Bean
-    public EditPostUseCase editPostUseCase(PostRepository postRepository, PostMapper postMapper, StringRedisTemplate redisTemplate) {
-        return new EditPostService(postRepository, postMapper, redisTemplate);
+    public EditPostUseCase editPostUseCase(PostRepository postRepository, PostMapper postMapper) {
+        return new EditPostService(postRepository, postMapper);
     }
 
     @Bean
@@ -82,9 +82,9 @@ public class PostConfig {
                                              UserRepository userRepository,
                                              PostMapper postMapper,
                                              NotificationCommandService notificationCommandService,
-                                             SseEmitterRegistry sseEmitterRegistry) {
+                                             UserInteractionRepository userInteractionRepository) {
         return new ReactPostService(postRepository, postReactionsRepository, userRepository,
-                postMapper, notificationCommandService, sseEmitterRegistry);
+                postMapper, notificationCommandService, userInteractionRepository);
     }
 
     @Bean

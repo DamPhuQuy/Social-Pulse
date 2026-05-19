@@ -3,32 +3,33 @@ package com.socialpulse.app.feed.infrastructure.config;
 import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import org.springframework.core.io.ResourceLoader;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.socialpulse.app.ai.inference.LightGbmFeatureVectorizer;
-import com.socialpulse.app.ai.inference.LightGbmRankingService;
-import com.socialpulse.app.ai.inference.config.LightGbmProperties;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
-import com.socialpulse.app.feed.application.service.CandidateSelectionService;
-import com.socialpulse.app.feed.application.service.FallbackRankingService;
-import com.socialpulse.app.feed.application.service.FeatureExtractionService;
-import com.socialpulse.app.feed.application.service.FeedCacheService;
-import com.socialpulse.app.feed.application.service.FeedRankingService;
-import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
-import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
-import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
-import com.socialpulse.app.block.JpaBlockRepository;
+import com.socialpulse.app.feed.adapter.persistence.UserInteractionRepositoryAdapter;
+import com.socialpulse.app.feed.application.service.cache.FeedCacheService;
+import com.socialpulse.app.feed.application.service.candidate.CandidateSelectionService;
+import com.socialpulse.app.feed.application.service.extraction.AuthorFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.FeatureExtractionService;
+import com.socialpulse.app.feed.application.service.extraction.InteractionFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.PostFeatureExtractor;
+import com.socialpulse.app.feed.application.service.ranking.FallbackRankingService;
+import com.socialpulse.app.feed.application.service.ranking.FeedRankingService;
+import com.socialpulse.app.feed.application.service.ranking.ScoreBoostService;
+import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Configuration
-@EnableConfigurationProperties(LightGbmProperties.class)
+@EnableConfigurationProperties(AiPipelineProperties.class)
 public class FeedConfig {
 
     @Bean
@@ -37,51 +38,56 @@ public class FeedConfig {
     }
 
     @Bean
-    public SelectCandidatesUseCase selectCandidatesUseCase(
-            FeedRepository feedRepository, 
-            StringRedisTemplate redisTemplate,
-            JpaBlockRepository blockRepository) {
-        return new CandidateSelectionService(feedRepository, redisTemplate, blockRepository);
+    public UserInteractionRepository userInteractionRepository(JdbcTemplate jdbcTemplate) {
+        return new UserInteractionRepositoryAdapter(jdbcTemplate);
+    }
+
+    @Bean
+    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
+        return new CandidateSelectionService(feedRepository, redisTemplate);
+    }
+
+    @Bean
+    public PostFeatureExtractor postFeatureExtractor() {
+        return new PostFeatureExtractor();
+    }
+
+    @Bean
+    public AuthorFeatureExtractor authorFeatureExtractor(StringRedisTemplate redisTemplate, ObjectMapper objectMapper) {
+        return new AuthorFeatureExtractor(redisTemplate, objectMapper);
+    }
+
+    @Bean
+    public InteractionFeatureExtractor interactionFeatureExtractor(UserInteractionRepository userInteractionRepository) {
+        return new InteractionFeatureExtractor(userInteractionRepository);
     }
 
     @Bean
     public ExtractFeaturesUseCase extractFeaturesUseCase(
-            StringRedisTemplate redisTemplate,
-            ObjectMapper objectMapper,
             UserRepository userRepository,
-            PostRepository postRepository) {
+            PostRepository postRepository,
+            UserInteractionRepository userInteractionRepository,
+            PostFeatureExtractor postFeatureExtractor,
+            AuthorFeatureExtractor authorFeatureExtractor,
+            InteractionFeatureExtractor interactionFeatureExtractor) {
         return new FeatureExtractionService(
-                redisTemplate, objectMapper,
-                userRepository,
-                postRepository);
+                userRepository, postRepository, userInteractionRepository,
+                postFeatureExtractor, authorFeatureExtractor, interactionFeatureExtractor);
     }
 
     @Bean
-    public LightGbmFeatureVectorizer lightGbmFeatureVectorizer() {
-        return new LightGbmFeatureVectorizer();
+    public PredictRankingUseCase predictRankingUseCase(AiPipelineProperties properties) {
+        return new AiPipelineRankingClient(properties.getBaseUrl(), properties.isEnabled());
     }
 
     @Bean
-    public LightGbmRankingService lightGbmRankingService(
-            LightGbmProperties lightGbmProperties,
-            ObjectMapper objectMapper,
-            ResourceLoader resourceLoader,
-            LightGbmFeatureVectorizer lightGbmFeatureVectorizer) {
-        return new LightGbmRankingService(
-                lightGbmProperties,
-                objectMapper,
-                resourceLoader,
-                lightGbmFeatureVectorizer);
+    public FallbackRankingService fallbackRankingService(AiPipelineProperties properties) {
+        return new FallbackRankingService(properties.getFeatureSchemaVersion());
     }
 
     @Bean
-    public PredictRankingUseCase predictRankingUseCase(LightGbmRankingService lightGbmRankingService) {
-        return lightGbmRankingService;
-    }
-
-    @Bean
-    public FallbackRankingService fallbackRankingService(LightGbmProperties lightGbmProperties) {
-        return new FallbackRankingService(lightGbmProperties.getFeatureSchemaVersion());
+    public ScoreBoostService scoreBoostService() {
+        return new ScoreBoostService();
     }
 
     @Bean
@@ -96,13 +102,11 @@ public class FeedConfig {
             PredictRankingUseCase predictRankingUseCase,
             CacheFeedUseCase cacheFeedUseCase,
             FallbackRankingService fallbackRankingService,
-            LightGbmProperties lightGbmProperties) {
+            ScoreBoostService scoreBoostService,
+            AiPipelineProperties properties) {
         return new FeedRankingService(
-                selectCandidatesUseCase,
-                extractFeaturesUseCase,
-                predictRankingUseCase,
-                cacheFeedUseCase,
-                fallbackRankingService,
-                lightGbmProperties.getFeatureSchemaVersion());
+                selectCandidatesUseCase, extractFeaturesUseCase, predictRankingUseCase,
+                cacheFeedUseCase, fallbackRankingService, scoreBoostService,
+                properties.getFeatureSchemaVersion());
     }
 }

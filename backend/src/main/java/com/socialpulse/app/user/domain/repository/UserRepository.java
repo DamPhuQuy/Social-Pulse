@@ -1,6 +1,8 @@
 package com.socialpulse.app.user.domain.repository;
 
+import java.time.LocalDateTime;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -26,5 +28,11 @@ public interface UserRepository {
     List<User> findByIds(Set<Long> ids);
 
     Page<User> searchByQuery(String query, Pageable pageable);
+
+    Page<User> findAll(Pageable pageable);
+
+    long countAll();
+    long countByCreatedAtAfter(LocalDateTime since);
+    Map<String, Long> countByStatus();
 }
 
