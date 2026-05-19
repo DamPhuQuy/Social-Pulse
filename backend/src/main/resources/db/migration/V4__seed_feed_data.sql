@@ -25,7 +25,7 @@ SELECT u.id, u.username,
        format('Active member since %s. Interests: %s.',
               to_char(u.created_at, 'Mon YYYY'),
               (ARRAY['tech','gaming','music','sports','food','travel','fashion','science','art','books'])[((u.id % 10) + 1)]),
-       DATE '1990-01-01' + (u.id % 10000),
+       DATE '1990-01-01' + (u.id % 10000)::INT,
        CASE WHEN u.id % 3 = 0 THEN 'MALE' WHEN u.id % 3 = 1 THEN 'FEMALE' ELSE 'OTHER' END,
        NULL, NULL, NOW()
 FROM users u
@@ -312,7 +312,7 @@ ON CONFLICT DO NOTHING;
 INSERT INTO bookmarks (user_id, post_id, created_at)
 SELECT u.id, p.id, p.created_at + INTERVAL '6 hours'
 FROM (
-    SELECT id, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
+    SELECT id, created_at, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
     FROM posts WHERE privacy = 'PUBLIC' AND deleted_at IS NULL
     LIMIT 500
 ) AS p

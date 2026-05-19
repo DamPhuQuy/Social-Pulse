@@ -155,7 +155,7 @@ WHERE c.id = stats.comment_id;
 INSERT INTO bookmarks (user_id, post_id, created_at)
 SELECT u.id, p.id, p.created_at + INTERVAL '1 day'
 FROM (
-    SELECT id, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
+    SELECT id, created_at, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
     FROM posts WHERE privacy = 'PUBLIC' AND deleted_at IS NULL
 ) AS p
 CROSS JOIN (

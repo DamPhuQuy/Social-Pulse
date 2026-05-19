@@ -9,6 +9,8 @@ spring:
     locations: classpath:db/migration
     clean-disabled: false
     repair-on-migrate: true
+    baseline-on-migrate: true
+    baseline-version: 0
   jpa:
     database: ${DB:postgresql}
     hibernate:
