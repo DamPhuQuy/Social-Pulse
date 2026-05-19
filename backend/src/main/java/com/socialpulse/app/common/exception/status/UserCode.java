@@ -10,7 +10,10 @@ public enum UserCode implements AppCode {
     USER_PROFILE_NOT_FOUND(404, "User profile not found"),
     CANNOT_FOLLOW_YOURSELF(400, "Cannot follow yourself"),
     ALREADY_FOLLOWING(400, "Already following this user"),
-    NOT_FOLLOWING(400, "Not following this user");
+    NOT_FOLLOWING(400, "Not following this user"),
+    CANNOT_BLOCK_YOURSELF(400, "Cannot block yourself"),
+    ALREADY_BLOCKED(400, "Already blocked this user"),
+    NOT_BLOCKED(400, "Not blocking this user");
 
     private final int code;
     private final String message;

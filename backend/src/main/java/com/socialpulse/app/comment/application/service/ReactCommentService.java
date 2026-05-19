@@ -12,14 +12,18 @@ import com.socialpulse.app.comment.domain.repository.CommentReactionRepository;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.CommentCode;
+import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.notification.application.service.NotificationCommandService;
+import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 public class ReactCommentService implements ReactCommentUseCase {
     private final CommentRepository commentRepository;
+    private final PostRepository postRepository;
     private final CommentReactionRepository commentReactionRepository;
     private final UserRepository userRepository;
     private final CommentMapper commentMapper;
@@ -27,11 +31,13 @@ public class ReactCommentService implements ReactCommentUseCase {
 
     public ReactCommentService(
             CommentRepository commentRepository,
+            PostRepository postRepository,
             CommentReactionRepository commentReactionRepository,
             UserRepository userRepository,
             CommentMapper commentMapper,
             NotificationCommandService notificationCommandService) {
         this.commentRepository = commentRepository;
+        this.postRepository = postRepository;
         this.commentReactionRepository = commentReactionRepository;
         this.userRepository = userRepository;
         this.commentMapper = commentMapper;
@@ -45,6 +51,10 @@ public class ReactCommentService implements ReactCommentUseCase {
             Long commentId,
             CommentReactionRequest request,
             CustomUserDetails currentUser) {
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
+        validatePostAccessible(post, currentUser);
+
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new AppException(CommentCode.COMMENT_NOT_FOUND));
 
@@ -110,6 +120,21 @@ public class ReactCommentService implements ReactCommentUseCase {
 
         if (reactionType == ReactionType.DOWNVOTE) {
             comment.decrementDownvoteCount();
+        }
+    }
+
+    private void validatePostAccessible(Post post, CustomUserDetails currentUser) {
+        if (post.getDeletedAt() != null) {
+            throw new AppException(PostCode.POST_NOT_FOUND);
+        }
+
+        boolean canAccess = post.isPublic()
+                || post.getUserId().equals(currentUser.getId())
+                || currentUser.getAuthorities().stream()
+                        .anyMatch(authority -> authority.getAuthority().equals("post:manage"));
+
+        if (!canAccess) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
     }
 }

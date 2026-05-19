@@ -2,6 +2,7 @@ package com.socialpulse.app.comment.application.dto.response;
 
 import java.time.LocalDateTime;
 
+import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.user.application.dto.response.UserSummary;
 
 import lombok.AllArgsConstructor;
@@ -22,4 +23,5 @@ public class CommentResponse {
     private Long upvoteCount;
     private Long downvoteCount;
     private int replyCount;
+    private ReactionType myReaction;
 }

@@ -22,6 +22,7 @@ import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.block.JpaBlockRepository;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
@@ -36,8 +37,11 @@ public class FeedConfig {
     }
 
     @Bean
-    public SelectCandidatesUseCase selectCandidatesUseCase(FeedRepository feedRepository, StringRedisTemplate redisTemplate) {
-        return new CandidateSelectionService(feedRepository, redisTemplate);
+    public SelectCandidatesUseCase selectCandidatesUseCase(
+            FeedRepository feedRepository, 
+            StringRedisTemplate redisTemplate,
+            JpaBlockRepository blockRepository) {
+        return new CandidateSelectionService(feedRepository, redisTemplate, blockRepository);
     }
 
     @Bean

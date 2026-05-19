@@ -6,7 +6,16 @@ import RegisterPage from "@/pages/auth/RegisterPage";
 import ResetPasswordOtpPage from "@/pages/auth/ResetPasswordOtpPage";
 import ResetPasswordPage from "@/pages/auth/ResetPasswordPage";
 import VerifyOtpPage from "@/pages/auth/VerifyOtpPage";
+import BookmarksPage from "@/pages/BookmarksPage";
+import DiscoveryPage from "@/pages/DiscoveryPage";
 import HomePage from "@/pages/HomePage";
+import NotificationsPage from "@/pages/NotificationsPage";
+import PostDetailPage from "@/pages/PostDetailPage";
+import ProfilePage from "@/pages/ProfilePage";
+import SettingsPage from "@/pages/SettingsPage";
+import AdminDashboard from "@/pages/AdminDashboard";
+import AiModelDashboard from "@/pages/AiModelDashboard";
+import RbacManagement from "@/pages/RbacManagement";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -53,6 +62,56 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.HOME,
     element: HomePage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.DISCOVERY,
+    element: DiscoveryPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.NOTIFICATIONS,
+    element: NotificationsPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.BOOKMARKS,
+    element: BookmarksPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.SETTINGS,
+    element: SettingsPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.POST_DETAIL,
+    element: PostDetailPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.PROFILE,
+    element: ProfilePage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.USER_PROFILE,
+    element: ProfilePage,
     isPrivate: false,
+  },
+  {
+    path: PATHS.ADMIN_REPORTS,
+    element: AdminDashboard,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.ADMIN_AI,
+    element: AiModelDashboard,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.ADMIN_RBAC,
+    element: RbacManagement,
+    isPrivate: true,
   },
 ];

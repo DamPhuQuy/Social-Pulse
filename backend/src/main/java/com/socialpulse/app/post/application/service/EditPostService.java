@@ -1,6 +1,7 @@
 package com.socialpulse.app.post.application.service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
@@ -16,10 +17,12 @@ public class EditPostService implements EditPostUseCase {
 
     private final PostRepository postRepository;
     private final PostMapper postMapper;
+    private final StringRedisTemplate redisTemplate;
 
-    public EditPostService(PostRepository postRepository, PostMapper postMapper) {
+    public EditPostService(PostRepository postRepository, PostMapper postMapper, StringRedisTemplate redisTemplate) {
         this.postRepository = postRepository;
         this.postMapper = postMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -36,9 +39,15 @@ public class EditPostService implements EditPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
-        post.update(request.getContent(), request.getImageUrl(), request.getImagePublicId(), request.getPrivacy());
+        post.update(
+                request.getContent(),
+                request.getImageUrl(),
+                request.getImagePublicId(),
+                request.getPrivacy(),
+                PostTopicCatalog.normalizeAndValidate(request.getTopicSlugs()));
 
         Post updatedPost = postRepository.save(post);
+        redisTemplate.delete("user:feed:" + currentUser.getId());
 
         return postMapper.toPostUpdateResponse(updatedPost);
     }

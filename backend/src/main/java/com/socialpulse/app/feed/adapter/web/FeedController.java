@@ -47,11 +47,10 @@ public class FeedController {
     public ResponseEntity<ApiResponse<List<FeedItemResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,
             @RequestParam(defaultValue = "20") int size,
+            @RequestParam(required = false) String topicSlug,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
-        List<FeedItemResponse> feed = getFeedUseCase.getFeed(page, size, currentUser);
-
-
+        List<FeedItemResponse> feed = getFeedUseCase.getFeed(page, size, currentUser, topicSlug);
 
         return ResponseEntity.ok(
             ApiResponse.<List<FeedItemResponse>>builder()

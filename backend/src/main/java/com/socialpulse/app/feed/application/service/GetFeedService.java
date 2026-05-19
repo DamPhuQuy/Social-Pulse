@@ -15,6 +15,8 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 
 @Service
 public class GetFeedService implements GetFeedUseCase {
+    private static final String SEEN_POSTS_PREFIX = "user:seen:";
+
     private final RankFeedUseCase rankFeedUseCase;
     private final FeedItemResponseAssembler feedItemResponseAssembler;
     private final CacheFeedUseCase cacheFeedUseCase;
@@ -32,27 +34,41 @@ public class GetFeedService implements GetFeedUseCase {
     }
 
     @Override
-    public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
+    public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser, String topicSlug) {
         Long userId = currentUser.getId();
-        
-        // Pull-to-refresh (page 0): invalidate the cache to ensure fresh posts are fetched,
-        // and seen posts are filtered out by CandidateSelectionService.
+
+        // A full refresh should rebuild the feed from scratch instead of permanently
+        // exhausting it with previous seen-history entries.
         if (page == 0) {
             cacheFeedUseCase.invalidateFeed(userId);
+            redisTemplate.delete(getSeenPostsKey(userId));
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
-        
-        // Mark these items as seen so they won't appear in future feed generations
+
+        // Keep seen history within the current feed session so pagination avoids duplicates.
         if (!feedItems.isEmpty()) {
             String[] postIds = feedItems.stream()
                 .map(item -> String.valueOf(item.getPostId()))
                 .toArray(String[]::new);
-            String seenKey = "user:seen:" + userId;
+            String seenKey = getSeenPostsKey(userId);
             redisTemplate.opsForSet().add(seenKey, postIds);
             redisTemplate.expire(seenKey, Duration.ofDays(7)); // Keep seen history for 7 days
         }
 
-        return feedItemResponseAssembler.assemble(feedItems, userId);
+        List<FeedItemResponse> assembled = feedItemResponseAssembler.assemble(feedItems, userId);
+
+        // If a topicSlug filter is requested, filter the assembled responses by that topic.
+        if (topicSlug != null && !topicSlug.isBlank()) {
+            assembled = assembled.stream()
+                .filter(item -> item.getTopicSlugs() != null && item.getTopicSlugs().contains(topicSlug))
+                .toList();
+        }
+
+        return assembled;
+    }
+
+    private String getSeenPostsKey(Long userId) {
+        return SEEN_POSTS_PREFIX + userId;
     }
 }

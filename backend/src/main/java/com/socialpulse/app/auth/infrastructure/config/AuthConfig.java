@@ -99,8 +99,8 @@ public class AuthConfig {
     }
 
     @Bean
-    public OtpUseCase otpUseCase(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
-        return new OtpService(otpStoragePort, emailPort, passwordEncoder);
+    public OtpUseCase otpUseCase(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder, org.springframework.core.env.Environment environment) {
+        return new OtpService(otpStoragePort, emailPort, passwordEncoder, environment);
     }
 
     @Bean

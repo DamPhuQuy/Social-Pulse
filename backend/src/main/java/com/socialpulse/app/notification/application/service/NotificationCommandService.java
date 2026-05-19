@@ -10,14 +10,18 @@ import com.socialpulse.app.notification.domain.repository.NotificationRepository
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
+
 @Service
 public class NotificationCommandService {
     private final NotificationRepository notificationRepository;
     private final UserRepository userRepository;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
-    public NotificationCommandService(NotificationRepository notificationRepository, UserRepository userRepository) {
+    public NotificationCommandService(NotificationRepository notificationRepository, UserRepository userRepository, SseEmitterRegistry sseEmitterRegistry) {
         this.notificationRepository = notificationRepository;
         this.userRepository = userRepository;
+        this.sseEmitterRegistry = sseEmitterRegistry;
     }
 
     public void notifyFollow(Long actorId, Long recipientId) {
@@ -59,7 +63,7 @@ public class NotificationCommandService {
                 .map(User::getUsername)
                 .orElse("Someone");
 
-        notificationRepository.save(Notification.builder()
+        Notification notification = notificationRepository.save(Notification.builder()
                 .recipientId(recipientId)
                 .actorId(actorId)
                 .type(type)
@@ -67,6 +71,9 @@ public class NotificationCommandService {
                 .resourceId(resourceId)
                 .message(actorUsername + " " + actionText)
                 .build());
+
+        // Send realtime event
+        sseEmitterRegistry.sendToUser(recipientId, "notification", notification);
     }
 
     private String reactedMessage(ReactionType reactionType, String resourceLabel) {

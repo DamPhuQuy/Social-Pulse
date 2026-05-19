@@ -1,5 +1,8 @@
 package com.socialpulse.app.post.application.service;
 
+import java.util.Map;
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
+
 import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.common.exception.AppException;
@@ -28,17 +31,20 @@ public class ReactPostService implements ReactPostUseCase {
     private final UserRepository userRepository;
     private final PostMapper postMapper;
     private final NotificationCommandService notificationCommandService;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
     public ReactPostService(PostRepository postRepository,
                             PostReactionsRepository postReactionsRepository,
                             UserRepository userRepository,
                             PostMapper postMapper,
-                            NotificationCommandService notificationCommandService) {
+                            NotificationCommandService notificationCommandService,
+                            SseEmitterRegistry sseEmitterRegistry) {
         this.postRepository = postRepository;
         this.postReactionsRepository = postReactionsRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
         this.notificationCommandService = notificationCommandService;
+        this.sseEmitterRegistry = sseEmitterRegistry;
     }
 
     @Override
@@ -47,6 +53,14 @@ public class ReactPostService implements ReactPostUseCase {
         log.info("User {} is reacting to post {} with type {}", currentUser.getId(), request.getPostId(), request.getReactionType());
         Post post = postRepository.findById(request.getPostId())
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
+
+        if (post.getDeletedAt() != null) {
+            throw new AppException(PostCode.POST_NOT_FOUND);
+        }
+
+        if (!canAccessPost(post, currentUser)) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+        }
 
         userRepository.findById(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
@@ -64,6 +78,7 @@ public class ReactPostService implements ReactPostUseCase {
             incrementReactionCount(post, targetReaction);
             postRepository.save(post);
             notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
+            broadcastPostStats(post);
 
             log.debug("New reaction saved for user {} on post {}", currentUser.getId(), post.getId());
             return postMapper.toPostReactionResponse(savedReaction);
@@ -73,6 +88,7 @@ public class ReactPostService implements ReactPostUseCase {
             postReactionsRepository.delete(currentReaction);
             decrementReactionCount(post, targetReaction);
             postRepository.save(post);
+            broadcastPostStats(post);
             log.debug("Reaction removed for user {} on post {}", currentUser.getId(), post.getId());
             return postMapper.toPostReactionResponse(currentReaction);
         }
@@ -84,6 +100,7 @@ public class ReactPostService implements ReactPostUseCase {
         PostReactions updatedReaction = postReactionsRepository.save(currentReaction);
         postRepository.save(post);
         notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
+        broadcastPostStats(post);
 
         log.debug("Reaction updated for user {} on post {} to {}", currentUser.getId(), post.getId(), targetReaction);
         return postMapper.toPostReactionResponse(updatedReaction);
@@ -109,6 +126,23 @@ public class ReactPostService implements ReactPostUseCase {
         if (reactionType == ReactionType.DOWNVOTE) {
             post.decrementDownvoteCount();
         }
+    }
+
+    private boolean canAccessPost(Post post, CustomUserDetails currentUser) {
+        if (post.isPublic() || post.getUserId().equals(currentUser.getId())) {
+            return true;
+        }
+
+        return currentUser.getAuthorities().stream()
+                .anyMatch(authority -> authority.getAuthority().equals("post:manage"));
+    }
+
+    private void broadcastPostStats(Post post) {
+        sseEmitterRegistry.broadcast("post_stats", Map.of(
+            "postId", post.getId(),
+            "upvoteCount", post.getUpvoteCount(),
+            "downvoteCount", post.getDownvoteCount()
+        ));
     }
 
 }

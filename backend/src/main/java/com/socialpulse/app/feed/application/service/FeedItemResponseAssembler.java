@@ -90,6 +90,7 @@ public class FeedItemResponseAssembler {
                 .type(post.getType())
                 .content(post.getContent())
                 .imageUrl(post.getImageUrl())
+                .topicSlugs(post.getTopicSlugs())
                 .userId(author.getId())
                 .username(author.getUsername())
                 .userAvatar(extractAvatar(author))
@@ -102,7 +103,9 @@ public class FeedItemResponseAssembler {
                 .aiScore(item.getAiScore())
                 .source(item.getSource() != null ? item.getSource().name() : null)
                 .rankedAt(item.getRankedAt())
+                .privacy(post.getPrivacy())
                 .createdAt(post.getCreatedAt())
+                .updatedAt(post.getUpdatedAt())
                 .build();
     }
 

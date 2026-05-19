@@ -58,7 +58,7 @@ class GetFeedServiceTest {
                 com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(100L).build(),
                 com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(101L).build()));
 
-        var response = service.getFeed(2, 2, currentUser);
+        var response = service.getFeed(2, 2, currentUser, null);
 
         assertEquals(2, response.size());
         verify(rankFeedUseCase).getPaginatedFeed(42L, 2, 2);

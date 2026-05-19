@@ -46,7 +46,12 @@ public interface CommentMapper {
     @Mapping(target = "replyCount", source = "replyCount")
     @Mapping(target = "upvoteCount", source = "comment.upvoteCount")
     @Mapping(target = "downvoteCount", source = "comment.downvoteCount")
-    com.socialpulse.app.comment.application.dto.response.CommentResponse toCommentResponse(Comment comment, User user, Integer replyCount);
+    @Mapping(target = "myReaction", source = "myReaction")
+    com.socialpulse.app.comment.application.dto.response.CommentResponse toCommentResponse(
+            Comment comment,
+            User user,
+            Integer replyCount,
+            ReactionType myReaction);
 
     @Mapping(target = "avatarUrl", source = "profile.avatarUrl")
     UserSummary toUserSummary(User user);

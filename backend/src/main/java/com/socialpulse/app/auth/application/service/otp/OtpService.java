@@ -27,11 +27,13 @@ public class OtpService implements OtpUseCase {
     private final EmailPort emailPort;
     private final SecureRandom secureRandom;
     private final AppPasswordEncoder passwordEncoder;
+    private final org.springframework.core.env.Environment environment;
 
-    public OtpService(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder) {
+    public OtpService(OtpRepository otpStoragePort, EmailPort emailPort, AppPasswordEncoder passwordEncoder, org.springframework.core.env.Environment environment) {
         this.otpStoragePort = otpStoragePort;
         this.emailPort = emailPort;
         this.passwordEncoder = passwordEncoder;
+        this.environment = environment;
         this.secureRandom = new SecureRandom();
     }
 
@@ -39,18 +41,36 @@ public class OtpService implements OtpUseCase {
     public void generateToStoreAndSendEmail(String email) {
         String normalizedEmail = normalizeEmail(email);
         String otpCode = generateOtpCode();
+        System.out.println("====== [DEV MODE OTP] Email: " + normalizedEmail + " -> OTP: " + otpCode + " ======");
         Otp otp = newOtp(normalizedEmail, otpCode);
         otpStoragePort.save(normalizedEmail, serialize(otp));
         emailPort.sendHtmlEmail(normalizedEmail, OTP_EMAIL_SUBJECT, buildOtpHtml(otpCode));
     }
 
+    private boolean isDevMode() {
+        if (environment == null) {
+            return false;
+        }
+        for (String profile : environment.getActiveProfiles()) {
+            if ("dev".equalsIgnoreCase(profile) || "local".equalsIgnoreCase(profile)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     @Override
     public void verifyOtp(String email, String otpCode) {
+        if (isDevMode() && "123456".equals(otpCode.trim())) {
+            // Bypass OTP verification for local development/testing
+            return;
+        }
+
         String normalizedEmail = normalizeEmail(email);
-                Otp otp = readOtp(normalizedEmail);
+        Otp otp = readOtp(normalizedEmail);
 
         if (otp == null || otp.isExpired(Instant.now().toEpochMilli())) {
-                        otpStoragePort.delete(normalizedEmail);
+            otpStoragePort.delete(normalizedEmail);
             throw new AppException(AuthCode.OTP_EXPIRED);
         }
 
@@ -60,8 +80,8 @@ public class OtpService implements OtpUseCase {
 
         if (!passwordEncoder.matches(otpCode.trim(), otp.getOtpCode())) {
             long updatedAttempts = otp.getAttemptCount() + 1;
-                        otp.setAttemptCount(updatedAttempts);
-                        otpStoragePort.save(normalizedEmail, serialize(otp));
+            otp.setAttemptCount(updatedAttempts);
+            otpStoragePort.save(normalizedEmail, serialize(otp));
 
             if (updatedAttempts >= OTP_MAX_ATTEMPTS) {
                 throw new AppException(AuthCode.OTP_TOO_MANY_ATTEMPTS);
@@ -72,7 +92,7 @@ public class OtpService implements OtpUseCase {
 
     @Override
     public void invalidateOtp(String email) {
-                otpStoragePort.delete(normalizeEmail(email));
+        otpStoragePort.delete(normalizeEmail(email));
     }
 
         private Otp newOtp(String email, String rawCode) {

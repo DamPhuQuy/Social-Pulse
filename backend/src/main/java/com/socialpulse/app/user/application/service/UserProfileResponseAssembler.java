@@ -32,12 +32,15 @@ public class UserProfileResponseAssembler {
                 .displayName(userProfile.getDisplayName())
                 .bio(userProfile.getBio())
                 .avatarUrl(userProfile.getAvatarUrl())
+                .coverImageUrl(userProfile.getCoverImageUrl())
                 .dob(userProfile.getDob())
                 .gender(userProfile.getGender())
                 .postCount(postCount)
                 .followers(followers)
                 .following(following)
                 .isFollowing(isFollowing)
+                .avatarPublicId(userProfile.getAvatarPublicId())
+                .coverImagePublicId(userProfile.getCoverImagePublicId())
                 .build();
     }
 }

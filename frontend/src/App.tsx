@@ -5,6 +5,7 @@ import { Route, Routes } from "react-router-dom";
 import "./App.css";
 import { routesConfig } from "./routes/routesConfig";
 import { AuthProvider } from "@/hooks/useAuth";
+import { RealTimeProvider } from "@/context/RealTimeContext";
 
 function App() {
   useEffect(() => {
@@ -20,28 +21,30 @@ function App() {
 
   return (
     <AuthProvider>
-      <Routes>
-        {routesConfig.map((route) => {
-          const Element: React.ComponentType = route.element;
+      <RealTimeProvider>
+        <Routes>
+          {routesConfig.map((route) => {
+            const Element: React.ComponentType = route.element;
 
-          return (
-            <Route
-              key={route.path}
-              path={route.path}
-              element={
-                route.isPrivate ? (
-                  <ProtectedRoute>
+            return (
+              <Route
+                key={route.path}
+                path={route.path}
+                element={
+                  route.isPrivate ? (
+                    <ProtectedRoute>
+                      <Element />
+                    </ProtectedRoute>
+                  ) : (
                     <Element />
-                  </ProtectedRoute>
-                ) : (
-                  <Element />
-                )
-              }
-            />
-          );
-        })}
-      </Routes>
-      <Toaster position="top-right" richColors />
+                  )
+                }
+              />
+            );
+          })}
+        </Routes>
+        <Toaster position="top-right" duration={3000} />
+      </RealTimeProvider>
     </AuthProvider>
   );
 }

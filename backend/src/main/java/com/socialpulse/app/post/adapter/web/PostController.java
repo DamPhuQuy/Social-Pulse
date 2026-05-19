@@ -1,5 +1,7 @@
 package com.socialpulse.app.post.adapter.web;
 
+import java.util.List;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -21,9 +23,11 @@ import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.application.dto.request.PostUpdateRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.application.dto.response.PostTopicResponse;
 import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.UserPostResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
+import com.socialpulse.app.post.application.service.PostTopicCatalog;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
 import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.EditPostUseCase;
@@ -109,6 +113,15 @@ public class PostController {
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getUserPostsUseCase.getUserPosts(userId, page, size, currentUser))
+                .build());
+    }
+
+    @GetMapping("/topics")
+    @PreAuthorize("hasAuthority('post:read')")
+    @Operation(summary = "List post topics", description = "List selectable post topics used by create/edit post flows")
+    public ResponseEntity<ApiResponse<List<PostTopicResponse>>> getPostTopics() {
+        return ResponseEntity.ok(ApiResponse.<List<PostTopicResponse>>builder()
+                .data(PostTopicCatalog.all())
                 .build());
     }
 

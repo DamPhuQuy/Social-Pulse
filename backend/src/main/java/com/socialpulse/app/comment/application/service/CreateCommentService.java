@@ -1,5 +1,8 @@
 package com.socialpulse.app.comment.application.service;
 
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
+import java.util.Map;
+
 import com.socialpulse.app.comment.application.dto.mapper.CommentMapper;
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
@@ -27,6 +30,7 @@ public class CreateCommentService implements CreateCommentUseCase {
     private final CommentResponseAssembler commentResponseAssembler;
     private final CommentMapper commentMapper;
     private final NotificationCommandService notificationCommandService;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
     public CreateCommentService(CommentRepository commentRepositoryPort,
                                 PostRepository postRepositoryPort,
@@ -34,7 +38,8 @@ public class CreateCommentService implements CreateCommentUseCase {
                                 ValidateParentCommentUseCase validateParentCommentUseCase,
                                 CommentResponseAssembler commentResponseAssembler,
                                 CommentMapper commentMapper,
-                                NotificationCommandService notificationCommandService) {
+                                NotificationCommandService notificationCommandService,
+                                SseEmitterRegistry sseEmitterRegistry) {
         this.commentRepositoryPort = commentRepositoryPort;
         this.postRepositoryPort = postRepositoryPort;
         this.userRepositoryPort = userRepositoryPort;
@@ -42,6 +47,7 @@ public class CreateCommentService implements CreateCommentUseCase {
         this.commentResponseAssembler = commentResponseAssembler;
         this.commentMapper = commentMapper;
         this.notificationCommandService = notificationCommandService;
+        this.sseEmitterRegistry = sseEmitterRegistry;
     }
 
     @Override
@@ -49,6 +55,8 @@ public class CreateCommentService implements CreateCommentUseCase {
     public CommentCreationResponse createComment(Long postId, CommentCreationRequest request, CustomUserDetails currentUser) {
         Post post = postRepositoryPort.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
+
+        validatePostAccessible(post, currentUser);
 
         User user = userRepositoryPort.findById(currentUser.getId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
@@ -61,6 +69,7 @@ public class CreateCommentService implements CreateCommentUseCase {
         Comment savedComment = commentRepositoryPort.save(comment);
         post.incrementCommentCount();
         postRepositoryPort.save(post);
+        sseEmitterRegistry.broadcast("post_stats", Map.of("postId", postId, "cmtCount", post.getCmtCount()));
         if (parent == null) {
             notificationCommandService.notifyCommentOnPost(user.getId(), post.getUserId(), postId, savedComment.getId());
         } else {
@@ -68,5 +77,20 @@ public class CreateCommentService implements CreateCommentUseCase {
         }
 
         return commentResponseAssembler.toCommentCreationResponse(savedComment, user);
+    }
+
+    private void validatePostAccessible(Post post, CustomUserDetails currentUser) {
+        if (post.getDeletedAt() != null) {
+            throw new AppException(PostCode.POST_NOT_FOUND);
+        }
+
+        boolean canAccess = post.isPublic()
+                || post.getUserId().equals(currentUser.getId())
+                || currentUser.getAuthorities().stream()
+                        .anyMatch(authority -> authority.getAuthority().equals("post:manage"));
+
+        if (!canAccess) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+        }
     }
 }

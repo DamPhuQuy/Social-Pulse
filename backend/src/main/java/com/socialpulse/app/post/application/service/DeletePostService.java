@@ -1,6 +1,7 @@
 package com.socialpulse.app.post.application.service;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
@@ -15,9 +16,11 @@ import lombok.extern.slf4j.Slf4j;
 public class DeletePostService implements DeletePostUseCase {
 
     private final PostRepository postRepository;
+    private final StringRedisTemplate redisTemplate;
 
-    public DeletePostService(PostRepository postRepository) {
+    public DeletePostService(PostRepository postRepository, StringRedisTemplate redisTemplate) {
         this.postRepository = postRepository;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -38,6 +41,7 @@ public class DeletePostService implements DeletePostUseCase {
         }
 
         postRepository.deleteById(postId);
+        redisTemplate.delete("user:feed:" + currentUser.getId());
         log.info("Post {} deleted successfully by user {}", postId, currentUser.getId());
     }
 }

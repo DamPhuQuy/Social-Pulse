@@ -22,5 +22,7 @@ public class UserProfile {
 	private UserGender gender;
 	private String avatarUrl;
 	private String avatarPublicId;
+	private String coverImageUrl;
+	private String coverImagePublicId;
 	private LocalDateTime updatedAt;
 }

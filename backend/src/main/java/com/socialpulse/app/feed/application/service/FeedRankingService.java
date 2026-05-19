@@ -90,7 +90,7 @@ public class FeedRankingService implements RankFeedUseCase {
                     // A brand new post has 0 likes/comments/views, so AI ranks it very low,
                     // causing it to be buried under old seed posts.
                     // 1. Creator Boost: Massive +10,000 boost to the user's OWN posts created in the last 60 minutes
-                    if (post.getUserId().equals(userId) && post.getCreatedAt() != null) {
+                    if (userId.equals(post.getUserId()) && post.getCreatedAt() != null) {
                         long ageMinutes = Math.max(0, java.time.Duration.between(post.getCreatedAt(), java.time.LocalDateTime.now()).toMinutes());
                         if (ageMinutes <= 60) {
                             boostedScore += 10000.0;
