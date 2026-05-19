@@ -19,6 +19,7 @@ public class ViewPostResponse {
     private Long id;
     private Long parentPostId;
     private PostType type;
+    private Long topicId;
 
     private String content;
     private String imageUrl;

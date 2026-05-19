@@ -17,8 +17,13 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.ValueOperations;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialpulse.app.feed.application.service.extraction.FeatureExtractionService;
+import com.socialpulse.app.feed.application.service.extraction.PostFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.AuthorFeatureExtractor;
+import com.socialpulse.app.feed.application.service.extraction.InteractionFeatureExtractor;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
+import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.enums.UserStatus;
@@ -40,13 +45,22 @@ class FeatureExtractionServiceTest {
     @Mock
     private PostRepository postRepository;
 
+    @Mock
+    private UserInteractionRepository userInteractionRepository;
+
     @Test
     void extractsPushshiftAlignedPostAndAuthorFeatures() {
+        PostFeatureExtractor postFeatureExtractor = new PostFeatureExtractor();
+        AuthorFeatureExtractor authorFeatureExtractor = new AuthorFeatureExtractor(redisTemplate, new ObjectMapper());
+        InteractionFeatureExtractor interactionFeatureExtractor = new InteractionFeatureExtractor(userInteractionRepository);
+
         FeatureExtractionService service = new FeatureExtractionService(
-                redisTemplate,
-                new ObjectMapper(),
                 userRepository,
-                postRepository);
+                postRepository,
+                userInteractionRepository,
+                postFeatureExtractor,
+                authorFeatureExtractor,
+                interactionFeatureExtractor);
 
         CandidatePost candidate = CandidatePost.builder()
                 .post(Post.builder()

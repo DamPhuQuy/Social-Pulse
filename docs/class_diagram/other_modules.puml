@@ -4,7 +4,7 @@ skinparam classAttributeIconSize 0
 skinparam packageStyle rectangle
 skinparam shadowing false
 
-title Bookmark, Follow, Notification, Report, Feed - Domain Models
+title Bookmark, Follow, Notification, Report, Feed, Chat - Domain Models
 
 ' === Bookmark ===
 package "bookmark.domain" {
@@ -69,6 +69,13 @@ package "report.domain" {
         USER
     }
 
+    enum ReviewAction {
+        REJECT
+        DELETE_CONTENT
+        BAN_USER
+        DELETE_CONTENT_AND_BAN_USER
+    }
+
     class Report {
         - id: Long
         - reporterId: Long
@@ -77,6 +84,8 @@ package "report.domain" {
         - reason: String
         - status: ReportStatus
         - createdAt: LocalDateTime
+        + markResolved()
+        + markRejected()
     }
 }
 
@@ -87,6 +96,7 @@ package "feed.domain" {
         FOLLOWING
         POPULAR
         RANDOM
+        TOPIC
     }
 
     class FeedItem {
@@ -101,6 +111,34 @@ package "feed.domain" {
         - post: Post
         - source: Source
     }
+
+    class UserInteraction {
+        - id: Long
+        - viewerId: Long
+        - authorId: Long
+        - interactionType: String
+        - createdAt: LocalDateTime
+    }
+}
+
+' === Chat ===
+package "chat.domain" {
+    class Conversation {
+        - id: Long
+        - participant1Id: Long
+        - participant2Id: Long
+        - createdAt: LocalDateTime
+        - lastMessageAt: LocalDateTime
+    }
+
+    class Message {
+        - id: Long
+        - conversationId: Long
+        - senderId: Long
+        - content: String
+        - timestamp: LocalDateTime
+        - status: String
+    }
 }
 
 ' Relationships
@@ -110,5 +148,6 @@ Report ..> ReportStatus
 Report ..> ReportTargetType
 FeedItem ..> Source
 CandidatePost ..> Source
+Conversation "1" -- "*" Message
 
 @enduml

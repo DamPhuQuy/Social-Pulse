@@ -25,9 +25,10 @@ class Post {
     - id: Long
     - userId: Long
     - content: String
-    - imageUrl: String
+    - imageUrl: Text
     - imagePublicId: String
     - parentPostId: Long
+    - topicId: Long
     - type: PostType
     - privacy: Privacy
     - upvoteCount: Long

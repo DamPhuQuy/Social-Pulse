@@ -26,4 +26,5 @@ public class PostCreationResponse {
     private Long userId;
     private Privacy privacy;
     private LocalDateTime createdAt;
+    private Long topicId;
 }

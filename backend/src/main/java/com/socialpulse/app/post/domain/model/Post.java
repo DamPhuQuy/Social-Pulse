@@ -25,6 +25,7 @@ public class Post {
 	@Builder.Default
 	private List<String> topicSlugs = new ArrayList<>();
 	private Long parentPostId;
+	private Long topicId;
 	private PostType type;
 	private Privacy privacy;
 	@Builder.Default

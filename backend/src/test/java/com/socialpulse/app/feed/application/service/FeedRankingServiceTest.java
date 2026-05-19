@@ -14,12 +14,15 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.socialpulse.app.feed.application.dto.RankingFeatures;
-import com.socialpulse.app.feed.application.dto.RankingResponse;
-import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.ExtractFeaturesUseCase;
-import com.socialpulse.app.feed.application.usecase.PredictRankingUseCase;
-import com.socialpulse.app.feed.application.usecase.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.application.dto.features.core.RankingFeatures;
+import com.socialpulse.app.feed.application.dto.response.RankingResponse;
+import com.socialpulse.app.feed.application.service.ranking.FallbackRankingService;
+import com.socialpulse.app.feed.application.service.ranking.FeedRankingService;
+import com.socialpulse.app.feed.application.service.ranking.ScoreBoostService;
+import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
+import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
@@ -45,6 +48,7 @@ class FeedRankingServiceTest {
                 CandidatePost.builder()
                         .post(Post.builder()
                                 .id(100L)
+                                .userId(10L)
                                 .hotScore(10.0)
                                 .cmtCount(20L)
                                 .shareCount(5L)
@@ -56,6 +60,7 @@ class FeedRankingServiceTest {
                 CandidatePost.builder()
                         .post(Post.builder()
                                 .id(200L)
+                                .userId(20L)
                                 .hotScore(1.0)
                                 .cmtCount(1L)
                                 .shareCount(0L)
@@ -79,6 +84,7 @@ class FeedRankingServiceTest {
                 predictRankingUseCase,
                 cacheFeedUseCase,
                 new FallbackRankingService("v1"),
+                new ScoreBoostService(),
                 "v1");
 
         List<FeedItem> rankedFeed = service.getRankedFeed(42L);
@@ -94,11 +100,11 @@ class FeedRankingServiceTest {
     void usesPredictedScoresWhenPredictionSetIsValid() {
         List<CandidatePost> candidates = List.of(
                 CandidatePost.builder()
-                        .post(Post.builder().id(100L).createdAt(LocalDateTime.now().minusHours(3)).build())
+                        .post(Post.builder().id(100L).userId(10L).createdAt(LocalDateTime.now().minusHours(3)).build())
                         .source(Source.RECENT)
                         .build(),
                 CandidatePost.builder()
-                        .post(Post.builder().id(200L).createdAt(LocalDateTime.now().minusHours(3)).build())
+                        .post(Post.builder().id(200L).userId(20L).createdAt(LocalDateTime.now().minusHours(3)).build())
                         .source(Source.POPULAR)
                         .build());
         List<RankingFeatures> features = List.of(
@@ -119,6 +125,7 @@ class FeedRankingServiceTest {
                 predictRankingUseCase,
                 cacheFeedUseCase,
                 new FallbackRankingService("v1"),
+                new ScoreBoostService(),
                 "v1");
 
         var rankedFeed = service.getRankedFeed(42L);

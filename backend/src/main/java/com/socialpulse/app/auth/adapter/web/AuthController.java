@@ -20,13 +20,14 @@ import com.socialpulse.app.auth.application.dto.request.ResendOtpRequest;
 import com.socialpulse.app.auth.application.dto.request.ResetPasswordRequest;
 import com.socialpulse.app.auth.application.dto.request.VerifyOtpRequest;
 import com.socialpulse.app.auth.application.dto.response.LoginResponse;
-import com.socialpulse.app.auth.application.usecase.JwtUseCase;
 import com.socialpulse.app.auth.application.usecase.AuthenticationUseCase;
+import com.socialpulse.app.auth.application.usecase.JwtUseCase;
 import com.socialpulse.app.auth.application.usecase.PasswordResetUseCase;
 import com.socialpulse.app.auth.application.usecase.RefreshTokenUseCase;
 import com.socialpulse.app.auth.application.usecase.RegisterUseCase;
 import com.socialpulse.app.auth.application.usecase.VerifyEmailUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
+import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserAuthorizedResponse;
@@ -242,7 +243,10 @@ public class AuthController {
             }
     )
     public ResponseEntity<ApiResponse<UserAuthorizedResponse>> getCurrentUser(@AuthenticationPrincipal CustomUserDetails user) {
-                UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.user());
+        if (user == null || user.user() == null) {
+            throw new AppException(com.socialpulse.app.common.exception.status.AuthCode.INVALID_TOKEN);
+        }
+        UserAuthorizedResponse response = authMapper.toUserAuthorizedResponse(user.user());
 
         return ResponseEntity.ok(ApiResponse.<UserAuthorizedResponse>builder()
                 .code(200)

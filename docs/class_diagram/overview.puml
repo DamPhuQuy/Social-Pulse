@@ -17,6 +17,7 @@ class User
 class UserProfile
 class Role
 class Permission
+class Topic
 class Post
 class PostReactions
 class Comment
@@ -29,6 +30,9 @@ class Notification
 class Report
 class FeedItem
 class CandidatePost
+class UserInteraction
+class Conversation
+class Message
 
 ' Enums
 enum ReactionType
@@ -41,12 +45,14 @@ enum NotificationType
 enum NotificationResourceType
 enum ReportStatus
 enum ReportTargetType
+enum ReviewAction
 enum Source
 
 ' === Core Relationships ===
 User "1" *-- "1" UserProfile
 User "1" *-- "*" Role
 Role "1" *-- "*" Permission
+User "1" -- "*" Topic : subscribes
 
 User "1" -- "*" Post
 User "1" -- "*" Comment
@@ -59,11 +65,13 @@ User "1" -- "*" Report
 Post "1" -- "*" PostReactions
 Post "1" -- "*" Comment
 Post "1" -- "*" Bookmark
+Post "*" -- "1" Topic
 
 Comment "1" -- "*" CommentReaction
 Comment "1" -- "*" Comment : replies
 
 CandidatePost --> Post
+Conversation "1" -- "*" Message
 
 ' === Enum Dependencies ===
 User ..> UserStatus

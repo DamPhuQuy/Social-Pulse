@@ -15,8 +15,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
 
-import com.socialpulse.app.feed.application.usecase.CacheFeedUseCase;
-import com.socialpulse.app.feed.application.usecase.RankFeedUseCase;
+import com.socialpulse.app.feed.application.service.assembler.FeedItemResponseAssembler;
+import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
+import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 import com.socialpulse.app.security.user.CustomUserDetails;

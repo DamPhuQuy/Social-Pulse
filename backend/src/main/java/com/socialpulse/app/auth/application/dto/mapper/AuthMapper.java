@@ -20,6 +20,6 @@ public interface AuthMapper {
     @Mapping(target = "expiresIn", source = "accessExpiresInMs")
     LoginResponse toLoginResponse(TokenPair tokens, long accessExpiresInMs);
 
-    @Mapping(target = "roles", expression = "java(user.getRoles().stream().map(role -> role.getName()).collect(java.util.stream.Collectors.toSet()))")
+    @Mapping(target = "roles", expression = "java(user.getRoles() == null ? java.util.Collections.emptySet() : user.getRoles().stream().filter(java.util.Objects::nonNull).map(role -> role.getName()).filter(java.util.Objects::nonNull).collect(java.util.stream.Collectors.toSet()))")
     UserAuthorizedResponse toUserAuthorizedResponse(User user);
 }

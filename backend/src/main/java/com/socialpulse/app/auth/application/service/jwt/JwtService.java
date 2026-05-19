@@ -4,17 +4,19 @@ import java.nio.charset.StandardCharsets;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Objects;
 import java.util.UUID;
 import java.util.function.Function;
 
 import javax.crypto.SecretKey;
 
-import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.core.GrantedAuthority;
+import org.springframework.security.core.userdetails.UserDetails;
 
 import com.socialpulse.app.auth.application.usecase.JwtUseCase;
 import com.socialpulse.app.security.jwt.JwtProperties;
 import com.socialpulse.app.security.user.CustomUserDetails;
+import com.socialpulse.app.user.domain.model.Role;
 
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
@@ -42,8 +44,10 @@ public class JwtService implements JwtUseCase {
         Map<String, Object> extraClaims = new HashMap<>();
 
         extraClaims.put("userId", userDetails.getId());
-        extraClaims.put("roles", userDetails.user().getRoles().stream()
-                .map(role -> role.getName())
+        extraClaims.put("roles", userDetails.user().getRoles() == null ? java.util.List.of() : userDetails.user().getRoles().stream()
+                .filter(Objects::nonNull)
+                .map(Role::getName)
+                .filter(Objects::nonNull)
                 .toList());
         extraClaims.put("permissions", userDetails.getAuthorities().stream()
                 .map(GrantedAuthority::getAuthority)

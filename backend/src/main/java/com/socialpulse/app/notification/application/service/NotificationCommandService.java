@@ -9,7 +9,6 @@ import com.socialpulse.app.notification.domain.model.Notification;
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
-
 import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 
 @Service
@@ -59,9 +58,8 @@ public class NotificationCommandService {
             return;
         }
 
-        String actorUsername = userRepository.findById(actorId)
-                .map(User::getUsername)
-                .orElse("Someone");
+        User actor = userRepository.findById(actorId).orElse(null);
+        String actorUsername = actor != null ? actor.getUsername() : "Someone";
 
         Notification notification = notificationRepository.save(Notification.builder()
                 .recipientId(recipientId)
