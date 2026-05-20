@@ -1,14 +1,14 @@
-"""Local tree-traversal scorer for LightGBM model artifacts."""
+"""Local tree-traversal scorer for tree model model artifacts."""
 import math
 
-from .model import LightGbmModel, TreeNode
-from .schema import LightGbmFeatureSchema
+from .model import TreeModel, TreeNode
+from .schema import RankingFeatureSchema
 
 
-class LightGbmModelScorer:
-    def __init__(self, model: LightGbmModel):
+class TreeModelScorer:
+    def __init__(self, model: TreeModel):
         if model is None or not model.tree_info:
-            raise ValueError("LightGBM model must contain at least one tree")
+            raise ValueError("tree model model must contain at least one tree")
         self._model = model
 
     def score(self, features: dict[str, float]) -> float:
@@ -38,7 +38,7 @@ class LightGbmModelScorer:
     @staticmethod
     def _resolve_feature(name: str, features: dict[str, float]) -> tuple[float, bool]:
         if name not in features:
-            return LightGbmFeatureSchema.DEFAULT_NUMERIC_VALUE, False
+            return RankingFeatureSchema.DEFAULT_NUMERIC_VALUE, False
         value = features[name]
         if value is None or math.isnan(value):
             return float("nan"), True

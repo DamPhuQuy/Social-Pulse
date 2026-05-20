@@ -1,120 +1,361 @@
-"""Trainer using scikit-learn GradientBoostingRegressor."""
+"""Trainer implementations for ranking model training."""
 from __future__ import annotations
 
 import math
+import os
 from typing import Any
 
 import numpy as np
 from sklearn.ensemble import GradientBoostingRegressor
+from sklearn.metrics import ndcg_score, r2_score
 
-from ai_pipeline.shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import RankingFeatureSchema
 from .arguments import TrainingArguments
-from .types import GradientBoostedModel, Metrics, TrainingRow
+from .types import Metrics, TrainedRankingModel, TrainingHistoryPoint, TrainingRow
 
 
 class GradientBoostedTreeTrainer:
-
     def train(
-        self, arguments: TrainingArguments, train_rows: list[TrainingRow], validation_rows: list[TrainingRow]
-    ) -> GradientBoostedModel:
-        X_train = np.array([r.features for r in train_rows])
-        y_train = np.array([r.label for r in train_rows])
-        X_val = np.array([r.features for r in validation_rows])
-        y_val = np.array([r.label for r in validation_rows])
+        self,
+        arguments: TrainingArguments,
+        train_rows: list[TrainingRow],
+        validation_rows: list[TrainingRow],
+    ) -> TrainedRankingModel:
+        x_train = np.array([row.features for row in train_rows], dtype=np.float32)
+        y_train = np.array([row.label for row in train_rows], dtype=np.float32)
+        x_val = np.array([row.features for row in validation_rows], dtype=np.float32)
+        y_val = np.array([row.label for row in validation_rows], dtype=np.float32)
 
-        # Validate data
-        _validate_data(X_train, y_train, "train")
-        _validate_data(X_val, y_val, "validation")
+        _validate_data(x_train, y_train, "train")
+        _validate_data(x_val, y_val, "validation")
 
+        if arguments.trainer_backend == "xgboost":
+            return self._train_xgboost(arguments, train_rows, validation_rows, x_train, y_train, x_val, y_val)
+        return self._train_sklearn(arguments, train_rows, validation_rows, x_train, y_train, x_val, y_val)
+
+    @staticmethod
+    def _resolve_n_jobs(arguments: TrainingArguments) -> int:
+        return arguments.n_jobs if arguments.n_jobs > 0 else max(1, os.cpu_count() or 1)
+
+    def _train_sklearn(
+        self,
+        arguments: TrainingArguments,
+        train_rows: list[TrainingRow],
+        validation_rows: list[TrainingRow],
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+        x_val: np.ndarray,
+        y_val: np.ndarray,
+    ) -> TrainedRankingModel:
         model = GradientBoostingRegressor(
             n_estimators=arguments.n_estimators,
             max_depth=arguments.max_depth,
             min_samples_leaf=arguments.min_samples_leaf,
             learning_rate=arguments.learning_rate,
-            subsample=0.8,
+            subsample=arguments.subsample,
             random_state=arguments.seed,
         )
 
-        # Fit with early stopping via staged_predict
         best_n_estimators = arguments.n_estimators
         best_val_ndcg = -1.0
         rounds_no_improve = 0
-
-        # Train full model first, then find best iteration via staged_predict
-        model.fit(X_train, y_train)
-
-        # Evaluate at each stage to find best iteration by NDCG
         best_train_preds = None
         best_val_preds = None
+        history: list[TrainingHistoryPoint] = []
 
-        for i, (train_pred, val_pred) in enumerate(
-            zip(model.staged_predict(X_train), model.staged_predict(X_val))
-        ):
-            val_ndcg = _ndcg(validation_rows, val_pred, k=10)
+        model.fit(x_train, y_train)
 
-            if (i + 1) % 10 == 0 or i == 0:
-                train_rmse = _rmse(y_train, train_pred)
-                val_rmse = _rmse(y_val, val_pred)
-                print(f"[iter {i + 1:>3}] train_rmse={train_rmse:.6f}  val_rmse={val_rmse:.6f}  val_ndcg={val_ndcg:.6f}")
+        for idx, (train_pred, val_pred) in enumerate(zip(model.staged_predict(x_train), model.staged_predict(x_val))):
+            train_rmse = _rmse(y_train, train_pred)
+            validation_rmse = _rmse(y_val, val_pred)
+            train_mae = _mae(y_train, train_pred)
+            validation_mae = _mae(y_val, val_pred)
+            validation_ndcg = _ndcg(validation_rows, val_pred, k=10)
 
-            if val_ndcg > best_val_ndcg:
-                best_val_ndcg = val_ndcg
-                best_n_estimators = i + 1
+            history.append(
+                TrainingHistoryPoint(
+                    iteration=idx + 1,
+                    train_rmse=train_rmse,
+                    validation_rmse=validation_rmse,
+                    train_mae=train_mae,
+                    validation_mae=validation_mae,
+                )
+            )
+
+            if (idx + 1) % 10 == 0 or idx == 0:
+                print(
+                    f"[iter {idx + 1:>4}] "
+                    f"train_rmse={train_rmse:.6f}  "
+                    f"val_rmse={validation_rmse:.6f}  "
+                    f"val_ndcg={validation_ndcg:.6f}"
+                )
+
+            if validation_ndcg > best_val_ndcg:
+                best_val_ndcg = validation_ndcg
+                best_n_estimators = idx + 1
                 best_train_preds = train_pred.copy()
                 best_val_preds = val_pred.copy()
                 rounds_no_improve = 0
             else:
                 rounds_no_improve += 1
                 if rounds_no_improve >= arguments.early_stopping_rounds:
-                    print(f"Early stopping at iteration {i + 1}, best val_ndcg@10={best_val_ndcg:.6f} at iter {best_n_estimators}")
+                    print(
+                        f"Early stopping at iteration {idx + 1}, "
+                        f"best val_ndcg@10={best_val_ndcg:.6f} at iter {best_n_estimators}"
+                    )
                     break
 
-        # Trim model to best iteration
         model.n_estimators_ = best_n_estimators
         model.estimators_ = model.estimators_[:best_n_estimators]
 
         if best_train_preds is None:
-            best_train_preds = model.predict(X_train)
-            best_val_preds = model.predict(X_val)
+            best_train_preds = model.predict(x_train)
+            best_val_preds = model.predict(x_val)
 
-        # Feature importance
-        feature_names = list(LightGbmFeatureSchema.FEATURE_ORDER)
+        feature_names = list(RankingFeatureSchema.FEATURE_ORDER)
         importances = model.feature_importances_
-        importance_ranking = sorted(
-            zip(feature_names, importances), key=lambda x: x[1], reverse=True
-        )
+        feature_importances = dict(zip(feature_names, importances.tolist()))
+
         print("\nFeature importance (top 10):")
-        for name, imp in importance_ranking[:10]:
-            print(f"  {name}: {imp:.4f}")
+        for name, importance in sorted(feature_importances.items(), key=lambda item: item[1], reverse=True)[:10]:
+            print(f"  {name}: {importance:.4f}")
 
         metrics = Metrics(
             train_rmse=_rmse(y_train, best_train_preds),
             validation_rmse=_rmse(y_val, best_val_preds),
+            test_rmse=0.0,
             train_mae=_mae(y_train, best_train_preds),
             validation_mae=_mae(y_val, best_val_preds),
+            test_mae=0.0,
             train_ndcg_k=_ndcg(train_rows, best_train_preds, k=10),
             validation_ndcg_k=best_val_ndcg,
+            test_ndcg_k=0.0,
+            train_r2=_r2(y_train, best_train_preds),
+            validation_r2=_r2(y_val, best_val_preds),
+            test_r2=0.0,
         )
 
         model_dump = _export_model(model, feature_names, importances)
-        return GradientBoostedModel(model_dump, metrics)
+        return TrainedRankingModel(
+            backend="sklearn",
+            runtime_model=model,
+            model_dump=model_dump,
+            metrics=metrics,
+            history=history,
+            feature_importances=feature_importances,
+            best_iteration=best_n_estimators,
+        )
+
+    def _train_xgboost(
+        self,
+        arguments: TrainingArguments,
+        train_rows: list[TrainingRow],
+        validation_rows: list[TrainingRow],
+        x_train: np.ndarray,
+        y_train: np.ndarray,
+        x_val: np.ndarray,
+        y_val: np.ndarray,
+    ) -> TrainedRankingModel:
+        try:
+            import xgboost as xgb
+        except ImportError as exc:
+            if arguments.allow_cpu_fallback:
+                print("xgboost is not installed; falling back to sklearn GradientBoostingRegressor.")
+                fallback_args = TrainingArguments(**{**arguments.__dict__, "trainer_backend": "sklearn", "device": "cpu"})
+                return self._train_sklearn(fallback_args, train_rows, validation_rows, x_train, y_train, x_val, y_val)
+            raise RuntimeError("xgboost is required for GPU training. Install dependencies first.") from exc
+
+        feature_names = list(RankingFeatureSchema.FEATURE_ORDER)
+        params = dict(
+            n_estimators=arguments.n_estimators,
+            max_depth=arguments.max_depth,
+            learning_rate=arguments.learning_rate,
+            subsample=arguments.subsample,
+            colsample_bytree=arguments.colsample_bytree,
+            min_child_weight=arguments.min_child_weight,
+            reg_lambda=arguments.reg_lambda,
+            reg_alpha=arguments.reg_alpha,
+            max_bin=arguments.max_bin,
+            objective="reg:squarederror",
+            tree_method="hist",
+            random_state=arguments.seed,
+            device=arguments.device,
+            n_jobs=self._resolve_n_jobs(arguments),
+            eval_metric=["rmse", "mae"],
+            early_stopping_rounds=arguments.early_stopping_rounds,
+        )
+
+        model = xgb.XGBRegressor(**params)
+        active_device = arguments.device
+        try:
+            model.fit(
+                x_train,
+                y_train,
+                eval_set=[(x_train, y_train), (x_val, y_val)],
+                verbose=25,
+            )
+        except xgb.core.XGBoostError as exc:
+            if not arguments.allow_cpu_fallback or arguments.device != "cuda":
+                raise
+            print(f"GPU training unavailable ({exc}); retrying on CPU.")
+            active_device = "cpu"
+            params["device"] = "cpu"
+            model = xgb.XGBRegressor(**params)
+            model.fit(
+                x_train,
+                y_train,
+                eval_set=[(x_train, y_train), (x_val, y_val)],
+                verbose=25,
+            )
+
+        best_iteration = getattr(model, "best_iteration", None)
+        if best_iteration is None:
+            best_iteration = arguments.n_estimators - 1
+
+        booster = model.get_booster()
+        booster.set_param({"device": "cpu"})
+        iteration_range = (0, best_iteration + 1)
+        train_pred = booster.inplace_predict(x_train, iteration_range=iteration_range)
+        val_pred = booster.inplace_predict(x_val, iteration_range=iteration_range)
+        booster = _slice_booster_to_best_iteration(booster, best_iteration + 1)
+
+        evals_result = model.evals_result()
+        history = _build_xgboost_history(evals_result)
+        raw_importances = booster.get_score(importance_type="gain")
+        feature_importances = {
+            name: float(raw_importances.get(f"f{idx}", 0.0))
+            for idx, name in enumerate(feature_names)
+        }
+
+        print(f"Training backend: xgboost ({'GPU' if active_device == 'cuda' else 'CPU fallback'})")
+        print("\nFeature importance (top 10):")
+        for name, importance in sorted(feature_importances.items(), key=lambda item: item[1], reverse=True)[:10]:
+            print(f"  {name}: {importance:.4f}")
+
+        metrics = Metrics(
+            train_rmse=_rmse(y_train, train_pred),
+            validation_rmse=_rmse(y_val, val_pred),
+            test_rmse=0.0,
+            train_mae=_mae(y_train, train_pred),
+            validation_mae=_mae(y_val, val_pred),
+            test_mae=0.0,
+            train_ndcg_k=_ndcg(train_rows, train_pred, k=10),
+            validation_ndcg_k=_ndcg(validation_rows, val_pred, k=10),
+            test_ndcg_k=0.0,
+            train_r2=_r2(y_train, train_pred),
+            validation_r2=_r2(y_val, val_pred),
+            test_r2=0.0,
+        )
+
+        return TrainedRankingModel(
+            backend="xgboost",
+            runtime_model=booster,
+            model_dump=None,
+            metrics=metrics,
+            history=history,
+            feature_importances=feature_importances,
+            best_iteration=best_iteration + 1,
+        )
+
+    def evaluate(
+        self,
+        backend: str,
+        runtime_model,
+        rows: list[TrainingRow],
+    ) -> Metrics:
+        if not rows:
+            return Metrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+
+        x = np.array([row.features for row in rows], dtype=np.float32)
+        y = np.array([row.label for row in rows], dtype=np.float32)
+        _validate_data(x, y, "test")
+
+        if backend == "xgboost":
+            runtime_model.set_param({"device": "cpu"})
+            predictions = runtime_model.inplace_predict(x)
+        else:
+            predictions = runtime_model.predict(x)
+
+        score_rmse = _rmse(y, predictions)
+        score_mae = _mae(y, predictions)
+        score_ndcg = _ndcg(rows, predictions, k=10)
+        score_r2 = _r2(y, predictions)
+        return Metrics(
+            train_rmse=0.0,
+            validation_rmse=0.0,
+            test_rmse=score_rmse,
+            train_mae=0.0,
+            validation_mae=0.0,
+            test_mae=score_mae,
+            train_ndcg_k=0.0,
+            validation_ndcg_k=0.0,
+            test_ndcg_k=score_ndcg,
+            train_r2=0.0,
+            validation_r2=0.0,
+            test_r2=score_r2,
+        )
+
+    def evaluate_baseline(self, rows: list[TrainingRow], prediction_value: float) -> Metrics:
+        if not rows:
+            return Metrics(0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0, 0.0)
+        y = np.array([row.label for row in rows], dtype=np.float32)
+        predictions = np.full(len(rows), prediction_value, dtype=np.float32)
+        return Metrics(
+            train_rmse=0.0,
+            validation_rmse=0.0,
+            test_rmse=_rmse(y, predictions),
+            train_mae=0.0,
+            validation_mae=0.0,
+            test_mae=_mae(y, predictions),
+            train_ndcg_k=0.0,
+            validation_ndcg_k=0.0,
+            test_ndcg_k=_ndcg(rows, predictions, k=10),
+            train_r2=0.0,
+            validation_r2=0.0,
+            test_r2=_r2(y, predictions),
+        )
+
+    def evaluation_diagnostics(
+        self,
+        backend: str,
+        runtime_model,
+        rows: list[TrainingRow],
+    ) -> dict[str, float | int | dict[str, float]]:
+        if not rows:
+            return {}
+
+        x = np.array([row.features for row in rows], dtype=np.float32)
+        y = np.array([row.label for row in rows], dtype=np.float32)
+        if backend == "xgboost":
+            runtime_model.set_param({"device": "cpu"})
+            predictions = runtime_model.inplace_predict(x)
+        else:
+            predictions = runtime_model.predict(x)
+
+        return {
+            "label_stats": _label_stats(y),
+            "prediction_stats": _label_stats(np.array(predictions, dtype=np.float32)),
+            "ranking": _ranking_diagnostics(rows, predictions),
+        }
 
 
-def _export_model(model: GradientBoostingRegressor, feature_names: list[str], importances: np.ndarray) -> dict[str, Any]:
-    """Export sklearn model to the same JSON format used by the scorer."""
+def _export_model(
+    model: GradientBoostingRegressor,
+    feature_names: list[str],
+    importances: np.ndarray,
+) -> dict[str, Any]:
     tree_info: list[dict[str, Any]] = []
-
-    # Bias tree (init prediction)
-    init_value = float(model.init_.constant_[0][0]) if hasattr(model.init_, 'constant_') else 0.0
+    init_value = float(model.init_.constant_[0][0]) if hasattr(model.init_, "constant_") else 0.0
     tree_info.append({"shrinkage": 1.0, "tree_structure": {"leaf_value": init_value}})
 
-    # Each boosting iteration
-    for i in range(model.n_estimators_):
-        tree = model.estimators_[i, 0].tree_
-        tree_info.append({
-            "shrinkage": model.learning_rate,
-            "tree_structure": _tree_to_dict(tree, 0),
-        })
+    for idx in range(model.n_estimators_):
+        tree = model.estimators_[idx, 0].tree_
+        tree_info.append(
+            {
+                "shrinkage": model.learning_rate,
+                "tree_structure": _tree_to_dict(tree, 0),
+            }
+        )
 
     return {
         "objective": "regression",
@@ -126,8 +367,7 @@ def _export_model(model: GradientBoostingRegressor, feature_names: list[str], im
 
 
 def _tree_to_dict(tree, node_id: int) -> dict[str, Any]:
-    """Recursively convert sklearn tree to our JSON format."""
-    if tree.children_left[node_id] == -1:  # leaf
+    if tree.children_left[node_id] == -1:
         return {"leaf_value": float(tree.value[node_id][0, 0])}
     return {
         "split_feature": int(tree.feature[node_id]),
@@ -139,13 +379,13 @@ def _tree_to_dict(tree, node_id: int) -> dict[str, Any]:
     }
 
 
-def _validate_data(X: np.ndarray, y: np.ndarray, name: str) -> None:
-    if len(X) == 0:
+def _validate_data(x: np.ndarray, y: np.ndarray, name: str) -> None:
+    if len(x) == 0:
         raise ValueError(f"{name} set is empty")
-    if np.any(np.isnan(X)):
-        nan_cols = np.where(np.any(np.isnan(X), axis=0))[0]
-        raise ValueError(f"{name} set has NaN values in feature columns: {nan_cols.tolist()}")
-    if np.any(np.isinf(X)):
+    if np.any(np.isnan(x)):
+        nan_columns = np.where(np.any(np.isnan(x), axis=0))[0]
+        raise ValueError(f"{name} set has NaN values in feature columns: {nan_columns.tolist()}")
+    if np.any(np.isinf(x)):
         raise ValueError(f"{name} set has infinite values")
     if np.any(np.isnan(y)) or np.any(np.isinf(y)):
         raise ValueError(f"{name} labels contain NaN or infinite values")
@@ -163,25 +403,121 @@ def _mae(actual: np.ndarray, predicted: np.ndarray) -> float:
     return float(np.abs(actual - predicted).mean())
 
 
+def _r2(actual: np.ndarray, predicted: np.ndarray) -> float:
+    if len(actual) <= 1:
+        return 0.0
+    if float(np.var(actual)) == 0.0:
+        return 0.0
+    return float(r2_score(actual, predicted))
+
+
 def _ndcg(rows: list[TrainingRow], predictions: np.ndarray, k: int = 10) -> float:
-    """Compute NDCG@k grouped by post_id (each post's viewers form a group)."""
     from collections import defaultdict
+
     groups: dict[str, list[int]] = defaultdict(list)
-    for i, row in enumerate(rows):
-        groups[row.post_id].append(i)
+    for idx, row in enumerate(rows):
+        groups[row.post_id].append(idx)
+
     if not groups:
         return 0.0
+
     ndcg_sum = 0.0
     count = 0
     for indices in groups.values():
         if len(indices) < 2:
             continue
-        relevances = np.array([rows[i].label for i in indices])
+        relevances = np.array([rows[i].label for i in indices], dtype=np.float32)
+        if float(relevances.max()) == float(relevances.min()):
+            continue
         scores = predictions[indices]
-        ranked = np.argsort(-scores)[:k]
-        dcg = float(np.sum((2.0 ** relevances[ranked] - 1.0) / np.log2(np.arange(len(ranked)) + 2.0)))
-        ideal_order = np.argsort(-relevances)[:k]
-        idcg = float(np.sum((2.0 ** relevances[ideal_order] - 1.0) / np.log2(np.arange(len(ideal_order)) + 2.0)))
-        ndcg_sum += dcg / idcg if idcg > 0 else 1.0  # perfect score if all same relevance
+        ndcg_sum += float(
+            ndcg_score(
+                relevances.reshape(1, -1),
+                np.array(scores, dtype=np.float32).reshape(1, -1),
+                k=min(k, len(indices)),
+                ignore_ties=False,
+            )
+        )
         count += 1
     return ndcg_sum / count if count > 0 else 0.0
+
+
+def _slice_booster_to_best_iteration(booster, tree_count: int):
+    try:
+        if tree_count > 0 and tree_count < len(booster.get_dump()):
+            return booster[:tree_count]
+    except (TypeError, AttributeError):
+        return booster
+    return booster
+
+
+def _label_stats(values: np.ndarray) -> dict[str, float]:
+    if len(values) == 0:
+        return {"mean": 0.0, "std": 0.0, "min": 0.0, "max": 0.0, "zero_ratio": 0.0}
+    return {
+        "mean": float(values.mean()),
+        "std": float(values.std()),
+        "min": float(values.min()),
+        "max": float(values.max()),
+        "zero_ratio": float((values == 0).sum() / len(values)),
+    }
+
+
+def _ranking_diagnostics(rows: list[TrainingRow], predictions: np.ndarray) -> dict[str, float | int]:
+    from collections import defaultdict
+
+    groups: dict[str, list[int]] = defaultdict(list)
+    for idx, row in enumerate(rows):
+        groups[row.post_id].append(idx)
+
+    ranked_groups = 0
+    comparable_pairs = 0
+    correct_pairs = 0.0
+    for indices in groups.values():
+        if len(indices) < 2:
+            continue
+        labels = np.array([rows[i].label for i in indices], dtype=np.float32)
+        if float(labels.max()) == float(labels.min()):
+            continue
+        ranked_groups += 1
+        scores = predictions[indices]
+        for left in range(len(indices)):
+            for right in range(left + 1, len(indices)):
+                label_diff = labels[left] - labels[right]
+                if label_diff == 0:
+                    continue
+                comparable_pairs += 1
+                score_diff = scores[left] - scores[right]
+                if score_diff == 0:
+                    correct_pairs += 0.5
+                elif (score_diff > 0) == (label_diff > 0):
+                    correct_pairs += 1.0
+
+    pairwise_accuracy = correct_pairs / comparable_pairs if comparable_pairs > 0 else 0.0
+    return {
+        "group_count": len(groups),
+        "ranked_group_count": ranked_groups,
+        "comparable_pair_count": comparable_pairs,
+        "pairwise_accuracy": float(pairwise_accuracy),
+    }
+
+
+def _build_xgboost_history(evals_result: dict[str, dict[str, list[float]]]) -> list[TrainingHistoryPoint]:
+    train_rmse = evals_result.get("validation_0", {}).get("rmse", [])
+    validation_rmse = evals_result.get("validation_1", {}).get("rmse", [])
+    train_mae = evals_result.get("validation_0", {}).get("mae", [])
+    validation_mae = evals_result.get("validation_1", {}).get("mae", [])
+    count = max(len(train_rmse), len(validation_rmse), len(train_mae), len(validation_mae))
+
+    history: list[TrainingHistoryPoint] = []
+    for idx in range(count):
+        history.append(
+            TrainingHistoryPoint(
+                iteration=idx + 1,
+                train_rmse=train_rmse[idx] if idx < len(train_rmse) else None,
+                validation_rmse=validation_rmse[idx] if idx < len(validation_rmse) else None,
+                train_mae=train_mae[idx] if idx < len(train_mae) else None,
+                validation_mae=validation_mae[idx] if idx < len(validation_mae) else None,
+            )
+        )
+    return history

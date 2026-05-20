@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import json
+import os
 from pathlib import Path
 from typing import Any, Iterator
 
@@ -77,6 +78,8 @@ class JsonLineReader:
 
     def __init__(self, path: Path):
         import zstandard as zstd
+        self._path = path
+        self._size_bytes = max(1, os.path.getsize(path))
         self._fh = open(path, "rb")
         self._dctx = zstd.ZstdDecompressor()
         self._reader = self._dctx.stream_reader(self._fh)
@@ -103,6 +106,18 @@ class JsonLineReader:
     def close(self) -> None:
         self._lines.close()
         self._fh.close()
+
+    @property
+    def bytes_read(self) -> int:
+        return self._fh.tell()
+
+    @property
+    def size_bytes(self) -> int:
+        return self._size_bytes
+
+    @property
+    def progress_percent(self) -> float:
+        return min(100.0, max(0.0, (self.bytes_read / self._size_bytes) * 100.0))
 
     def __enter__(self):
         return self

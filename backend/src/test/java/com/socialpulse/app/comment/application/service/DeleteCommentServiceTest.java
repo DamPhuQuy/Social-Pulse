@@ -15,10 +15,10 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.common.exception.AppException;
+import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
-import com.socialpulse.app.user.domain.model.Role;
 import com.socialpulse.app.user.domain.model.User;
 
 @ExtendWith(MockitoExtension.class)
@@ -42,7 +42,7 @@ class DeleteCommentServiceTest {
     @Test
     void deleteComment_asOwner_succeeds() {
         Comment comment = Comment.builder().id(1L).postId(10L).userId(5L).build();
-        Post post = Post.builder().id(10L).cmtCount(3L).build();
+        Post post = Post.builder().id(10L).userId(5L).privacy(Privacy.PUBLIC).cmtCount(3L).build();
         when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
         when(postRepository.findById(10L)).thenReturn(Optional.of(post));
 
@@ -62,7 +62,9 @@ class DeleteCommentServiceTest {
     @Test
     void deleteComment_wrongPost_throws() {
         Comment comment = Comment.builder().id(1L).postId(99L).userId(5L).build();
+        Post post = Post.builder().id(10L).userId(5L).privacy(Privacy.PUBLIC).cmtCount(3L).build();
         when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+        when(postRepository.findById(10L)).thenReturn(Optional.of(post));
 
         assertThrows(AppException.class, () -> service.deleteComment(10L, 1L, userDetails(5L)));
     }
@@ -70,7 +72,9 @@ class DeleteCommentServiceTest {
     @Test
     void deleteComment_notOwnerNoPermission_throws() {
         Comment comment = Comment.builder().id(1L).postId(10L).userId(5L).build();
+        Post post = Post.builder().id(10L).userId(5L).privacy(Privacy.PUBLIC).cmtCount(3L).build();
         when(commentRepository.findById(1L)).thenReturn(Optional.of(comment));
+        when(postRepository.findById(10L)).thenReturn(Optional.of(post));
 
         assertThrows(AppException.class, () -> service.deleteComment(10L, 1L, userDetails(99L)));
     }

@@ -9,8 +9,8 @@ import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
-import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type Privacy, type PostTopic } from "@/services/post/postService";
-import { getMyProfile, type UserProfile } from "@/services/user/userService";
+import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type Privacy, type PostTopic, type PulseReaction } from "@/services/post/postService";
+import { getMyProfile, type UserPost, type UserProfile } from "@/services/user/userService";
 import { getTrendingHashtags, type TrendingHashtagResponse } from "@/services/social/discoveryService";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
 
@@ -210,7 +210,7 @@ export default function HomePage() {
   const loadBookmarks = async () => {
     const res = await getBookmarks(0, 100);
     if (res.ok && res.data) {
-      setBookmarkedPostIds(new Set((res.data.items ?? []).map((item: any) => item.postId)));
+      setBookmarkedPostIds(new Set((res.data.items ?? []).map((item: UserPost) => item.postId)));
     }
   };
 
@@ -265,7 +265,7 @@ export default function HomePage() {
     };
   }, []);
 
-  const handleReact = async (postId: number, type: "UPVOTE" | "DOWNVOTE") => {
+  const handleReact = async (postId: number, type: PulseReaction) => {
     if (reactingPostIds.has(postId)) return;
 
     const previousPost = feed.find((post) => post.postId === postId);
@@ -276,7 +276,7 @@ export default function HomePage() {
     setFeed((prevFeed) =>
       prevFeed.map((post) => {
         if (post.postId === postId) {
-          return nextPostPulseState(post, type);
+          return nextPostPulseState(post);
         }
         return post;
       })
@@ -622,18 +622,16 @@ export default function HomePage() {
 
 function nextPostPulseState<T extends { myVote: number | null; upvoteCount: number; downvoteCount: number; myReaction: string | null }>(
   post: T,
-  type: "UPVOTE" | "DOWNVOTE",
 ): T {
   const currentVote = post.myVote ?? 0;
-  const targetVote = type === "UPVOTE" ? 1 : -1;
-  const nextVote = currentVote === targetVote ? 0 : targetVote;
+  const nextVote = currentVote === 1 ? 0 : 1;
 
   return {
     ...post,
     myVote: nextVote,
-    myReaction: nextVote === 1 ? "UPVOTE" : nextVote === -1 ? "DOWNVOTE" : null,
+    myReaction: nextVote === 1 ? "UPVOTE" : null,
     upvoteCount: Math.max(0, post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
-    downvoteCount: Math.max(0, post.downvoteCount + (nextVote === -1 ? 1 : 0) - (currentVote === -1 ? 1 : 0)),
+    downvoteCount: post.downvoteCount,
   };
 }
 
@@ -649,7 +647,7 @@ function FeedPost({
   onReport,
 }: {
   post: FeedItem;
-  onReact: (id: number, type: "UPVOTE" | "DOWNVOTE") => void;
+  onReact: (id: number, type: PulseReaction) => void;
   isReacting: boolean;
   currentUserId?: number;
   onEdit: (post: FeedItem) => void;

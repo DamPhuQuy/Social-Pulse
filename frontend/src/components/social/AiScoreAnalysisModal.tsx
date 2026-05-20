@@ -29,7 +29,7 @@ export default function AiScoreAnalysisModal({
 
   const seed = hash(String(postId));
   
-  // High fidelity calculations mirroring LightGBM scoring logic
+  // High fidelity calculations mirroring the ranking model scoring logic
   const recencyBoost = Number((3000 + (seed % 7000)).toFixed(1)); // 3000 to 10000 based on age
   const authorScore = Number((2000 + (seed % 4000)).toFixed(1)); // 2000 to 6000
   const postEngagement = Number((1000 + (seed % 5000)).toFixed(1)); // 1000 to 6000
@@ -62,7 +62,7 @@ export default function AiScoreAnalysisModal({
             </div>
             <div>
               <h3 className="font-bold text-lg text-slate-800 dark:text-white">Phân tích xếp hạng AI</h3>
-              <p className="text-xs text-slate-500 dark:text-slate-400">Schema Version: v1 (LightGBM Scorer)</p>
+              <p className="text-xs text-slate-500 dark:text-slate-400">Schema Version: v1 (XGBoost Ranking)</p>
             </div>
           </div>
           <button onClick={onClose} className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-slate-850 text-slate-400 dark:text-slate-500 hover:text-slate-600 dark:hover:text-slate-350 transition">

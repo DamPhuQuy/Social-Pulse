@@ -2,9 +2,7 @@ import React, { createContext, useContext, useEffect, useRef } from "react";
 import { useAuth } from "@/hooks/useAuth";
 import { toast } from "sonner";
 
-interface RealTimeContextType {
-  // We can add any globally exposed functions or state here if needed
-}
+type RealTimeContextType = Record<string, never>;
 
 const RealTimeContext = createContext<RealTimeContextType | undefined>(undefined);
 
@@ -38,29 +36,17 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
 
     const url = `${baseUrl}/realtime/connect?token=${encodeURIComponent(accessToken)}`;
     
-    console.log("Connecting to SSE:", url);
     const eventSource = new EventSource(url);
     eventSourceRef.current = eventSource;
-
-    eventSource.onopen = () => {
-      console.log("SSE connected successfully");
-    };
 
     eventSource.onerror = (err) => {
       console.error("SSE error occurred, will reconnect:", err);
     };
 
-    // Listen to default "connected" confirmation
-    eventSource.addEventListener("connected", (event) => {
-      console.log("SSE Connection Confirmed:", event.data);
-    });
-
     // Listen to "notification" events
     eventSource.addEventListener("notification", (event) => {
       try {
         const notification = JSON.parse(event.data);
-        console.log("Realtime notification received:", notification);
-
         // Show standard toast notification
         toast.info(notification.message || "Bạn có thông báo mới!");
 
@@ -76,8 +62,6 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
     eventSource.addEventListener("post_stats", (event) => {
       try {
         const stats = JSON.parse(event.data);
-        console.log("Realtime post stats received:", stats);
-
         // Dispatch custom event to notify HomePage/feed components to update stats
         const customEvent = new CustomEvent("realtime:post_stats", { detail: stats });
         window.dispatchEvent(customEvent);

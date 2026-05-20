@@ -1,8 +1,10 @@
 package com.socialpulse.app.feed.infrastructure.config;
 
+import java.time.Duration;
 import java.util.List;
 
 import org.springframework.core.ParameterizedTypeReference;
+import org.springframework.http.client.SimpleClientHttpRequestFactory;
 import org.springframework.web.client.RestClient;
 
 import com.socialpulse.app.feed.application.dto.request.RankingRequest;
@@ -17,7 +19,13 @@ public class AiPipelineRankingClient implements PredictRankingUseCase {
     private final boolean enabled;
 
     public AiPipelineRankingClient(String baseUrl, boolean enabled) {
-        this.restClient = RestClient.builder().baseUrl(baseUrl).build();
+        SimpleClientHttpRequestFactory requestFactory = new SimpleClientHttpRequestFactory();
+        requestFactory.setConnectTimeout(Duration.ofSeconds(2));
+        requestFactory.setReadTimeout(Duration.ofSeconds(5));
+        this.restClient = RestClient.builder()
+                .baseUrl(baseUrl)
+                .requestFactory(requestFactory)
+                .build();
         this.enabled = enabled;
     }
 

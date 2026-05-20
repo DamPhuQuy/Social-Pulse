@@ -21,6 +21,7 @@ type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
   element: React.ComponentType;
   isPrivate: boolean;
+  requiresAdmin?: boolean;
 };
 
 export const routesConfig: RouteConfig[] = [
@@ -103,15 +104,18 @@ export const routesConfig: RouteConfig[] = [
     path: PATHS.ADMIN_REPORTS,
     element: AdminDashboard,
     isPrivate: true,
+    requiresAdmin: true,
   },
   {
     path: PATHS.ADMIN_AI,
     element: AiModelDashboard,
     isPrivate: true,
+    requiresAdmin: true,
   },
   {
     path: PATHS.ADMIN_RBAC,
     element: RbacManagement,
     isPrivate: true,
+    requiresAdmin: true,
   },
 ];

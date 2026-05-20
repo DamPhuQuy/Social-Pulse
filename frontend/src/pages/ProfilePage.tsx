@@ -28,7 +28,7 @@ import {
   type UserProfile,
   type UserPost,
 } from "@/services/user/userService";
-import { deletePost, reactPost, uploadMedia, type Privacy } from "@/services/post/postService";
+import { deletePost, reactPost, uploadMedia, type Privacy, type PulseReaction } from "@/services/post/postService";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
 import { followUser, getFollowers, getFollowing, unfollowUser, type UserSummary } from "@/services/social/followService";
 import ReportModal from "@/components/social/ReportModal";
@@ -67,18 +67,16 @@ export function SafeAvatar({ src, alt, className = "w-full h-full object-cover" 
 
 function nextPostPulseState<T extends { myVote: number | null; upvoteCount: number; downvoteCount: number; myReaction: string | null }>(
   post: T,
-  type: "UPVOTE" | "DOWNVOTE",
 ): T {
   const currentVote = post.myVote ?? 0;
-  const targetVote = type === "UPVOTE" ? 1 : -1;
-  const nextVote = currentVote === targetVote ? 0 : targetVote;
+  const nextVote = currentVote === 1 ? 0 : 1;
 
   return {
     ...post,
     myVote: nextVote,
-    myReaction: nextVote === 1 ? "UPVOTE" : nextVote === -1 ? "DOWNVOTE" : null,
+    myReaction: nextVote === 1 ? "UPVOTE" : null,
     upvoteCount: Math.max(0, post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
-    downvoteCount: Math.max(0, post.downvoteCount + (nextVote === -1 ? 1 : 0) - (currentVote === -1 ? 1 : 0)),
+    downvoteCount: post.downvoteCount,
   };
 }
 
@@ -120,7 +118,7 @@ function FeedMedia({ urls }: { urls: string[] }) {
 interface ProfilePostProps {
   post: UserPost;
   displayName: string;
-  handleReact: (postId: number, type: "UPVOTE" | "DOWNVOTE") => void;
+  handleReact: (postId: number, type: PulseReaction) => void;
   isReacting: boolean;
   currentUserId?: number;
   onEdit: (post: UserPost) => void;
@@ -385,7 +383,7 @@ export default function ProfilePage() {
     loadData();
   }, [loadData]);
 
-  const handleReact = async (postId: number, type: "UPVOTE" | "DOWNVOTE") => {
+  const handleReact = async (postId: number, type: PulseReaction) => {
     if (!accessToken) {
       toast.error("Vui lòng đăng nhập trước.");
       return;
@@ -401,7 +399,7 @@ export default function ProfilePage() {
     setPosts((prevPosts) =>
       prevPosts.map((post) => {
         if (post.postId === postId) {
-          return nextPostPulseState(post, type);
+          return nextPostPulseState(post);
         }
         return post;
       })
@@ -800,7 +798,7 @@ export default function ProfilePage() {
               } else {
                 toast.error(uploadRes.message || "Tải lên ảnh thất bại.", { id: "avatar-upload" });
               }
-            } catch (err) {
+            } catch {
               toast.error("Lỗi khi tải ảnh lên.", { id: "avatar-upload" });
             }
           }

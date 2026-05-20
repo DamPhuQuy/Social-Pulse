@@ -84,8 +84,8 @@ _LOG_TRANSFORM_FEATURES = {
 ## 2. Model Loading (Lazy + Thread-safe)
 
 ```python
-class LightGbmRankingService:
-    def _get_or_load_scorer(self) -> LightGbmModelScorer | None:
+class RankingService:
+    def _get_or_load_scorer(self) -> TreeModelScorer | None:
         if self._scorer is not None:
             return self._scorer
         with self._lock:  # Double-checked locking
@@ -129,7 +129,7 @@ Nếu model được train với schema khác → từ chối scoring, trả emp
 ## 3. Tree Traversal Scorer
 
 ```python
-class LightGbmModelScorer:
+class TreeModelScorer:
     def score(self, features: dict[str, float]) -> float:
         total = 0.0
         for tree_info in self._model.tree_info:
@@ -220,7 +220,7 @@ def _score_node(self, node, features):
 |----------|----------|
 | Model file not found | Log warning, return empty `[]` |
 | Schema version mismatch | Log warning, return empty `[]` |
-| AI disabled (`AI_ENABLED=false`) | Return empty `[]` |
+| AI disabled (`AI_PIPELINE_ENABLED=false`) | Return empty `[]` |
 | Invalid model JSON | Log warning, return empty `[]` |
 | Missing features in request | Use defaults (graceful degradation) |
 
@@ -230,9 +230,12 @@ def _score_node(self, node, features):
 
 | Variable | Default | Mô tả |
 |----------|---------|--------|
-| `AI_ENABLED` | `true` | Enable/disable scoring |
-| `AI_MODEL_LOCATION` | `ai_pipeline/model/model.json` | Path tới model artifact |
-| `AI_FEATURE_SCHEMA_VERSION` | `v1` | Expected schema version |
+| `AI_PIPELINE_ENABLED` | `true` | Enable/disable scoring |
+| `AI_PIPELINE_MODEL_LOCATION` | `ai_pipeline/model/model.json` | Path tới model artifact |
+| `AI_PIPELINE_FEATURE_SCHEMA_VERSION` | `v1` | Expected schema version |
+| `AI_PIPELINE_INFERENCE_DEVICE` | `cpu` | Device cho XGBoost inference (`cpu` hoặc `cuda`) |
+
+Legacy env vars `AI_ENABLED`, `AI_MODEL_LOCATION`, `AI_FEATURE_SCHEMA_VERSION` vẫn được đọc để tương thích ngược.
 
 ## Performance
 

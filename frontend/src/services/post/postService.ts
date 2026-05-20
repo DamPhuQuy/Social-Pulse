@@ -77,9 +77,11 @@ export interface FeedItem {
   updatedAt: string | null;
 }
 
+export type PulseReaction = "UPVOTE";
+
 export interface PostReactionRequest {
   postId: number;
-  reactionType: "UPVOTE" | "DOWNVOTE";
+  reactionType: PulseReaction;
 }
 
 // ─── API Functions ──────────────────────────────────────────────────────────────
@@ -195,9 +197,6 @@ export async function getFeed(
   }
 }
 
-/**
- * React (upvote/downvote) to a post.
- */
 export async function reactPost(
   payload: PostReactionRequest
 ): Promise<{ ok: boolean; message?: string }> {

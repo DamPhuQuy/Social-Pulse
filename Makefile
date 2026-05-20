@@ -1,5 +1,5 @@
-PYTHON = ai_pipeline/.venv/bin/python
-PYTHONPATH_ENV = PYTHONPATH=$(CURDIR)
+PYTHON = uv run --project ai_pipeline python
+PYTHONPATH_ENV =
 
 .PHONY: train serve test lint docker clean
 
@@ -13,7 +13,7 @@ serve:
 
 ## Verify pipeline (syntax + imports + smoke test)
 test:
-	$(PYTHONPATH_ENV) $(PYTHON) -c "import ast; from pathlib import Path; [ast.parse(f.read_text()) for f in Path('ai_pipeline').rglob('*.py') if '.venv' not in str(f)]; from ai_pipeline.training import PushshiftTrainingPipeline, TrainingArguments; from ai_pipeline.inference import LightGbmRankingService, LightGbmFeatureVectorizer; from ai_pipeline.shared import LightGbmFeatureSchema, LightGbmModelScorer; print('✓ All checks passed')"
+	$(PYTHONPATH_ENV) $(PYTHON) -c "import ast; from pathlib import Path; [ast.parse(f.read_text()) for f in Path('ai_pipeline').rglob('*.py') if '.venv' not in str(f)]; from ai_pipeline.training import PushshiftTrainingPipeline, TrainingArguments; from ai_pipeline.inference import RankingService, FeatureVectorizer; from ai_pipeline.shared import RankingFeatureSchema, TreeModelScorer; print('✓ All checks passed')"
 
 ## Docker build
 docker:

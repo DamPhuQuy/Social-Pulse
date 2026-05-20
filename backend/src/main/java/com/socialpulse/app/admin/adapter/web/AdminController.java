@@ -7,6 +7,7 @@ import org.springframework.http.ContentDisposition;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.client.RestClient;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -16,16 +17,21 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.socialpulse.app.admin.application.dto.AdminUserResponse;
+import com.socialpulse.app.admin.application.dto.AiStatusResponse;
 import com.socialpulse.app.admin.application.dto.BanUserRequest;
 import com.socialpulse.app.admin.application.dto.ChangeUserRoleRequest;
+import com.socialpulse.app.admin.application.dto.RbacRoleResponse;
 import com.socialpulse.app.admin.application.dto.SystemMetricsResponse;
 import com.socialpulse.app.admin.application.usecase.GetSystemMetricsUseCase;
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
+import com.socialpulse.app.feed.infrastructure.config.AiPipelineProperties;
 import com.socialpulse.app.security.permission.RequiresPermission;
 import com.socialpulse.app.user.application.service.UserRoleService;
+import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
+import com.socialpulse.app.user.infrastructure.persistence.entity.RoleEntity;
 import com.socialpulse.app.user.domain.model.Role;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
@@ -42,13 +48,19 @@ public class AdminController {
     private final GetSystemMetricsUseCase getSystemMetricsUseCase;
     private final UserRepository userRepository;
     private final UserRoleService userRoleService;
+    private final JpaRoleRepository jpaRoleRepository;
+    private final AiPipelineProperties aiPipelineProperties;
 
     public AdminController(GetSystemMetricsUseCase getSystemMetricsUseCase,
                            UserRepository userRepository,
-                           UserRoleService userRoleService) {
+                           UserRoleService userRoleService,
+                           JpaRoleRepository jpaRoleRepository,
+                           AiPipelineProperties aiPipelineProperties) {
         this.getSystemMetricsUseCase = getSystemMetricsUseCase;
         this.userRepository = userRepository;
         this.userRoleService = userRoleService;
+        this.jpaRoleRepository = jpaRoleRepository;
+        this.aiPipelineProperties = aiPipelineProperties;
     }
 
     // ── Metrics ──────────────────────────────────────────────────────────────
@@ -143,6 +155,33 @@ public class AdminController {
         return ResponseEntity.ok(ApiResponse.<Void>builder().message("Roles updated").build());
     }
 
+    @GetMapping("/rbac/roles")
+    @RequiresPermission.UserManage
+    @Operation(summary = "Get RBAC role matrix", description = "Return all roles with the permissions currently assigned to each role")
+    public ResponseEntity<ApiResponse<java.util.List<RbacRoleResponse>>> getRbacRoles() {
+        var roles = jpaRoleRepository.findAll(Sort.by("name").ascending()).stream()
+                .map(this::toRbacRoleResponse)
+                .toList();
+        return ResponseEntity.ok(ApiResponse.<java.util.List<RbacRoleResponse>>builder()
+                .data(roles)
+                .build());
+    }
+
+    @GetMapping("/ai/status")
+    @RequiresPermission.AdminAccess
+    @Operation(summary = "Get AI pipeline status", description = "Return the current feed-ranking AI pipeline configuration and health reachability")
+    public ResponseEntity<ApiResponse<AiStatusResponse>> getAiStatus() {
+        return ResponseEntity.ok(ApiResponse.<AiStatusResponse>builder()
+                .data(AiStatusResponse.builder()
+                        .enabled(aiPipelineProperties.isEnabled())
+                        .baseUrl(aiPipelineProperties.getBaseUrl())
+                        .featureSchemaVersion(aiPipelineProperties.getFeatureSchemaVersion())
+                        .healthReachable(isAiHealthReachable())
+                        .trainingControlsAvailable(false)
+                        .build())
+                .build());
+    }
+
     private AdminUserResponse toAdminUserResponse(User user) {
         var roles = user.getRoles().stream()
                 .map(Role::getName)
@@ -163,5 +202,34 @@ public class AdminController {
                 .lastLoginAt(user.getLastLoginAt())
                 .createdAt(user.getCreatedAt())
                 .build();
+    }
+
+    private RbacRoleResponse toRbacRoleResponse(RoleEntity role) {
+        var permissions = role.getPermissions().stream()
+                .map(permission -> permission.getName())
+                .collect(java.util.stream.Collectors.toCollection(java.util.TreeSet::new));
+        return RbacRoleResponse.builder()
+                .name(role.getName())
+                .description(role.getDescription())
+                .permissions(permissions)
+                .build();
+    }
+
+    private boolean isAiHealthReachable() {
+        if (!aiPipelineProperties.isEnabled()) {
+            return false;
+        }
+        try {
+            String response = RestClient.builder()
+                    .baseUrl(aiPipelineProperties.getBaseUrl())
+                    .build()
+                    .get()
+                    .uri("/health")
+                    .retrieve()
+                    .body(String.class);
+            return response != null && !response.isBlank();
+        } catch (Exception ignored) {
+            return false;
+        }
     }
 }
