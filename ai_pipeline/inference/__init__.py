@@ -1,4 +1,4 @@
-from .vectorizer import LightGbmFeatureVectorizer
-from .ranking_service import LightGbmRankingService, LightGbmProperties
+from .vectorizer import FeatureVectorizer
+from .ranking_service import RankingService, RankingProperties
 
-__all__ = ["LightGbmFeatureVectorizer", "LightGbmRankingService", "LightGbmProperties"]
+__all__ = ["FeatureVectorizer", "RankingService", "RankingProperties"]
