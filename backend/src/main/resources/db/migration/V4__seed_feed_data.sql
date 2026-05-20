@@ -398,3 +398,31 @@ UPDATE posts
 SET hot_score = (upvote_count * 1.8 + cmt_count * 2.6 + view_count / 18.0 + share_count * 3.1 - downvote_count * 1.5),
     updated_at = NOW()
 WHERE deleted_at IS NULL;
+
+-- ============================================================
+-- SEED POST_TOPICS
+-- ============================================================
+INSERT INTO post_topics (post_id, topic_order, topic_slug)
+SELECT
+    p.id,
+    0,
+    CASE
+        WHEN LOWER(COALESCE(p.content, '')) LIKE '%backend%'
+          OR LOWER(COALESCE(p.content, '')) LIKE '%api%'
+          OR LOWER(COALESCE(p.content, '')) LIKE '%react%'
+          OR LOWER(COALESCE(p.content, '')) LIKE '%frontend%'
+          OR LOWER(COALESCE(p.content, '')) LIKE '%tech%'
+          THEN 'technology'
+        WHEN LOWER(COALESCE(p.content, '')) LIKE '%onboarding%'
+          OR LOWER(COALESCE(p.content, '')) LIKE '%flow%'
+          THEN 'design'
+        WHEN LOWER(COALESCE(p.content, '')) LIKE '%topic bucket%'
+          THEN 'community'
+        ELSE 'general'
+    END
+FROM posts p
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM post_topics pt
+    WHERE pt.post_id = p.id
+);

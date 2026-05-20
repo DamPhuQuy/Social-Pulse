@@ -26,6 +26,8 @@ CREATE TABLE profiles (
     gender VARCHAR(20),
     avatar_url VARCHAR(255),
     avatar_public_id VARCHAR(255),
+    cover_image_url VARCHAR(2048),
+    cover_image_public_id VARCHAR(255),
     updated_at TIMESTAMP,
     CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
@@ -235,6 +237,25 @@ CREATE TABLE search_history (
     CONSTRAINT unique_user_keyword UNIQUE (user_id, keyword)
 );
 
+CREATE TABLE post_topics (
+    post_id BIGINT NOT NULL,
+    topic_order INT NOT NULL DEFAULT 0,
+    topic_slug VARCHAR(80) NOT NULL,
+    PRIMARY KEY (post_id, topic_order),
+    CONSTRAINT fk_post_topics_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+);
+
+CREATE TABLE user_blocks (
+    id BIGSERIAL PRIMARY KEY,
+    blocker_id BIGINT NOT NULL,
+    blocked_id BIGINT NOT NULL,
+    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT fk_blocker FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT fk_blocked FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
+    CONSTRAINT unique_block UNIQUE (blocker_id, blocked_id),
+    CONSTRAINT check_not_self_block CHECK (blocker_id != blocked_id)
+);
+
 -- ============================================================
 -- INDEXES
 -- ============================================================
@@ -293,3 +314,8 @@ CREATE INDEX idx_user_interactions_viewer_created ON user_interactions(viewer_id
 
 CREATE INDEX idx_user_keyword ON search_history(user_id, keyword);
 CREATE INDEX idx_user_updated ON search_history(user_id, updated_at DESC);
+
+CREATE INDEX idx_post_topics_slug ON post_topics(topic_slug);
+
+CREATE INDEX idx_blocker ON user_blocks(blocker_id);
+CREATE INDEX idx_blocked ON user_blocks(blocked_id);
