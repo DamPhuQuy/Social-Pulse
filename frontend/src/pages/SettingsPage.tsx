@@ -7,7 +7,7 @@ import AppSidebar from "@/components/social/AppSidebar";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/services/auth/authService";
-import { deleteProfile } from "@/services/user/userService";
+import { changePassword, deleteProfile } from "@/services/user/userService";
 import { getBlockedUserIds, unblockUser } from "@/services/social/blockService";
 
 type ActiveTab = "password" | "blocks" | "danger";
@@ -71,15 +71,16 @@ export default function SettingsPage() {
     }
 
     setPasswordLoading(true);
-
-    // Simulate API delay for a high fidelity, responsive experience
-    setTimeout(() => {
-      setPasswordLoading(false);
-      toast.success("Thay đổi mật khẩu thành công!");
-      setCurrentPassword("");
-      setNewPassword("");
-      setConfirmPassword("");
-    }, 1200);
+    const res = await changePassword({ currentPassword, newPassword, confirmPassword });
+    setPasswordLoading(false);
+    if (!res.ok) {
+      toast.error(res.message ?? "Không thể đổi mật khẩu.");
+      return;
+    }
+    toast.success("Thay đổi mật khẩu thành công!");
+    setCurrentPassword("");
+    setNewPassword("");
+    setConfirmPassword("");
   };
 
   const handleDeleteProfile = async () => {

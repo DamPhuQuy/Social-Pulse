@@ -30,15 +30,15 @@ Vi vay, ranh gioi hien tai la "package separation", chua phai "module separation
 ```text
 com.socialpulse.app.ai
 |- inference
-|  |- LightGbmFeatureVectorizer
-|  |- LightGbmRankingService
+|  |- FeatureVectorizer
+|  |- RankingService
 |  `- config
-|     `- LightGbmProperties
+|     `- RankingProperties
 |- shared
-|  |- LightGbmFeatureSchema
-|  |- LightGbmModel
-|  |- LightGbmModelArtifact
-|  `- LightGbmModelScorer
+|  |- RankingFeatureSchema
+|  |- TreeModel
+|  |- RankingModelArtifact
+|  `- TreeModelScorer
 `- training
    |- GradientBoostedTreeTrainer
    |- PushshiftDatasetScanner
@@ -54,11 +54,11 @@ com.socialpulse.app.ai
 
 ### 3.1. `inference/config`
 
-`LightGbmProperties` la config runtime cho backend inference:
+`RankingProperties` la config runtime cho backend inference:
 
-- `ai.lightgbm.enabled`
-- `ai.lightgbm.model-location`
-- `ai.lightgbm.feature-schema-version`
+- `ai.pipeline.enabled`
+- `ai.pipeline.model-location`
+- `ai.pipeline.feature-schema-version`
 
 Class nay khong dung cho training pipeline. No chi phuc vu backend khi load model artifact va nam trong boundary inference.
 
@@ -66,34 +66,34 @@ Class nay khong dung cho training pipeline. No chi phuc vu backend khi load mode
 
 Day la lop "shared AI core" cua he thong hien tai.
 
-- `LightGbmFeatureSchema`
+- `RankingFeatureSchema`
   - la source of truth cho `DEFAULT_SCHEMA_VERSION`
   - khai bao `FEATURE_ORDER`
   - khai bao default preprocessing values nhu `DEFAULT_UPVOTE_RATIO`
-- `LightGbmModel`
+- `TreeModel`
   - object model de doc JSON dump
-- `LightGbmModelArtifact`
+- `RankingModelArtifact`
   - object model cho wrapped artifact co metadata + `model_dump`
-- `LightGbmModelScorer`
+- `TreeModelScorer`
   - scorer local, duyet tree dump va tinh score trong Java
 
 Luu y quan trong:
 
 - `shared` la boundary dung cho contract va scorer dung chung
-- nhung training implementation hien tai khong dung thu vien LightGBM that
-- scorer chi can artifact JSON co shape tuong thich voi `LightGbmModel`
+- nhung training implementation hien tai khong dung thu vien XGBoost that
+- scorer chi can artifact JSON co shape tuong thich voi `TreeModel`
 
 ### 3.3. `inference`
 
 Day la lop runtime adapter giua feed ranking va AI scorer.
 
-- `LightGbmFeatureVectorizer`
+- `FeatureVectorizer`
   - chuyen `RankingFeatures` cua backend thanh `Map<String, Double>`
   - dam bao ten feature trung voi training contract
-- `LightGbmRankingService`
+- `RankingService`
   - bridge giua AI va feed ranking runtime
 
-`LightGbmRankingService` la bridge giua AI va feed ranking runtime.
+`RankingService` la bridge giua AI va feed ranking runtime.
 
 Trach nhiem:
 
@@ -102,7 +102,7 @@ Trach nhiem:
 - check schema version
 - load JSON artifact tu `ResourceLoader`
 - parse raw model dump hoac wrapped artifact
-- tao `LightGbmModelScorer`
+- tao `TreeModelScorer`
 - score tung `RankingFeatures`
 - tra `RankingResponse`
 
@@ -166,7 +166,7 @@ Chi tiet:
    - `isSharePost`
    - `hotScore` (Reddit formula: sign * log10(|score|) + seconds/45000)
    - `upvoteRatio` (extracted from Reddit `upvote_ratio` field, validated 0.0-1.0)
-4. `PushshiftFeatureEngineering` bien record thanh vector theo `LightGbmFeatureSchema.FEATURE_ORDER`.
+4. `PushshiftFeatureEngineering` bien record thanh vector theo `RankingFeatureSchema.FEATURE_ORDER`.
    - `upvote_ratio` dung gia tri that tu Reddit, khong hardcode
    - `hot_score` dung Reddit formula
 5. `GradientBoostedTreeTrainer` train mot model regression tren label `log1p(popularity)`.
@@ -184,9 +184,9 @@ Chi tiet:
 ```text
 Candidate posts
 -> FeatureExtractionService
--> LightGbmFeatureVectorizer
--> LightGbmRankingService
--> LightGbmModelScorer
+-> FeatureVectorizer
+-> RankingService
+-> TreeModelScorer
 -> RankingResponse
 -> FeedRankingService sort/fallback
 ```
@@ -201,9 +201,9 @@ Chi tiet:
    - follow relation
    - Redis cache
 3. `FeedRankingService` tao `RankingRequest` kem `featureSchemaVersion`.
-4. `LightGbmRankingService` load artifact tu file/resource.
-5. `LightGbmFeatureVectorizer` doi `RankingFeatures` sang map feature-name -> value.
-6. `LightGbmModelScorer` score tung post.
+4. `RankingService` load artifact tu file/resource.
+5. `FeatureVectorizer` doi `RankingFeatures` sang map feature-name -> value.
+6. `TreeModelScorer` score tung post.
 7. `FeedRankingService` validate prediction set:
    - du so luong
    - dung `postId`
@@ -218,12 +218,12 @@ Chi tiet:
 `feed` phu thuoc vao `ai` o nhieu diem:
 
 - `FeedConfig`
-  - enable `LightGbmProperties`
-  - tao bean `LightGbmFeatureVectorizer`
-  - tao bean `LightGbmRankingService`
+  - enable `RankingProperties`
+  - tao bean `FeatureVectorizer`
+  - tao bean `RankingService`
   - expose `PredictRankingUseCase`
 - `RankingRequest`
-  - lay default schema version tu `LightGbmFeatureSchema`
+  - lay default schema version tu `RankingFeatureSchema`
 
 Dependency huong nay la hop ly cho runtime scoring.
 
@@ -231,12 +231,12 @@ Dependency huong nay la hop ly cho runtime scoring.
 
 Day la coupling chat nhat trong code hien tai:
 
-- `LightGbmFeatureVectorizer` import:
+- `FeatureVectorizer` import:
   - `RankingFeatures`
   - `PostFeatures`
   - `UserFeatures`
   - `InteractionFeatures`
-- `LightGbmRankingService` import:
+- `RankingService` import:
   - `RankingRequest`
   - `RankingResponse`
   - `PredictRankingUseCase`
@@ -253,7 +253,7 @@ Neu tach `ai` thanh module rieng, day la diem can xu ly dau tien.
 `training` khong phu thuoc truc tiep vao `feed`, `post`, `user`, `follow`, `auth`.
 No chu yeu phu thuoc vao:
 
-- `ai.shared.LightGbmFeatureSchema`
+- `ai.shared.RankingFeatureSchema`
 - Jackson
 - zstd-jni
 - Java standard library
@@ -262,7 +262,7 @@ Vi vay, phan offline training da "gan doc lap" hon inference layer.
 
 ## 6. Contract chung giua training va inference
 
-Contract quan trong nhat la `LightGbmFeatureSchema`.
+Contract quan trong nhat la `RankingFeatureSchema`.
 
 No quyet dinh:
 
@@ -279,8 +279,8 @@ Training dang dung contract nay o:
 
 Inference dang dung contract nay o:
 
-- `LightGbmFeatureVectorizer`
-- `LightGbmProperties`
+- `FeatureVectorizer`
+- `RankingProperties`
 - `RankingRequest`
 
 Neu thay doi feature ma khong bump schema version, backend co nguy co:
@@ -289,12 +289,12 @@ Neu thay doi feature ma khong bump schema version, backend co nguy co:
 - score sai do map feature khong con khop
 - cho ra ket qua hop le ve ky thuat nhung sai ve nghia
 
-## 7. Muc do "LightGBM" hien tai
+## 7. Muc do "XGBoost" hien tai
 
 Can phan biet ro 2 viec:
 
-1. Runtime scorer dang doc dump theo shape tuong thich LightGBM.
-2. Training code hien tai la custom implementation, khong goi LightGBM library.
+1. Runtime scorer dang doc dump theo shape tuong thich XGBoost.
+2. Training code hien tai la custom implementation, khong goi XGBoost library.
 
 Cu the:
 
@@ -303,12 +303,12 @@ Cu the:
 - label la `log1p(popularity)`
 - split criterion la squared error
 
-Vi vay, ten "LightGBM" trong code hien tai dung hon cho:
+Vi vay, ten "XGBoost" trong code hien tai dung hon cho:
 
 - artifact/scoring format
 - feature contract va runtime scorer
 
-Chu chua dung nghia "train bang LightGBM framework that".
+Chu chua dung nghia "train bang XGBoost framework that".
 
 ## 8. Chat luong feature va label hien tai
 
@@ -316,27 +316,27 @@ Offline training hien tai van mang tinh proxy nhung da duoc cai thien:
 
 - `upvote_ratio` duoc extract tu Reddit data that (field `upvote_ratio`, validated 0.0-1.0)
 - `hot_score` dung Reddit formula: `sign(score) * log10(|score|) + seconds/45000`
-- interaction features phan lon la placeholder (chua co behavior tracking)
-- `hours_since_last_interaction` default `999.0`
+- interaction features duoc tinh tu bang user interaction khi backend co lich su viewer-author
+- `hours_since_last_interaction` default `999.0` cho truong hop cold-start/chua co tuong tac
 - label dung `log1p(popularity)` thay vi user engagement label that
 
 Online extraction da duoc align voi training:
 
 - `hot_score` dung cung formula Reddit-style: `sign(netScore) * log10(max(|netScore|, 1)) + postAgeHours / 12.5`
 - `upvote_ratio` tinh tu upvotes / (upvotes + downvotes)
-- `interactionCount7d` va `interactionCount30d` dang `0` (chua implement behavior)
-- affinity chua implement
+- `interactionCount7d` va `interactionCount30d` lay tu `UserInteractionRepository`
+- affinity duoc tinh bang interaction 30 ngay voi author / tong interaction 30 ngay cua viewer
 
 He qua:
 
 - pipeline da chay duoc end-to-end voi feature alignment dung
 - model hien tai nghieng ve "content popularity proxy" hon la "personalized feed ranking"
-- khi implement behavior tracking, chi can fill cac slot 9-12 va retrain
+- khi bo sung them loai behavior moi, can giu dung feature schema hoac bump schema version roi retrain
 
 ## 9. Diem manh cua thiet ke hien tai
 
 - Co feature contract tap trung mot cho.
-- Co local scorer thuần Java, khong can native LightGBM runtime.
+- Co local scorer thuần Java, khong can native XGBoost runtime.
 - Artifact format co metadata schema version.
 - Runtime co guard:
   - model missing -> bo qua
@@ -368,11 +368,11 @@ Dieu nay co nghia:
 
 ### 10.3. Artifact format va trainer implementation co the gay nham
 
-Ten package la `lightgbm`, nhung trainer la custom tree booster.
-Neu team nghi rang hien tai dang train bang LightGBM that, se de danh gia sai:
+Ten package la `XGBoost`, nhung trainer la custom tree booster.
+Neu team nghi rang hien tai dang train bang XGBoost that, se de danh gia sai:
 
 - hyperparameter semantics
-- model parity voi Python LightGBM
+- model parity voi Python XGBoost
 - expected scoring behavior
 
 ## 11. Neu muon tach module sau nay, nen tach o dau
@@ -382,12 +382,12 @@ Huong tach thuc te nhat:
 1. Tach `training` ra truoc.
    - vi no da gan doc lap
    - no chi can shared feature contract
-2. Tach `lightgbm` core thanh shared artifact package.
-   - `LightGbmFeatureSchema`
-   - `LightGbmModel`
-   - `LightGbmModelArtifact`
-   - `LightGbmModelScorer`
-3. Giu `LightGbmFeatureVectorizer` va `LightGbmRankingService` o backend feed layer, hoac doi chung sang contract trung gian.
+2. Tach `XGBoost` core thanh shared artifact package.
+   - `RankingFeatureSchema`
+   - `TreeModel`
+   - `RankingModelArtifact`
+   - `TreeModelScorer`
+3. Giu `FeatureVectorizer` va `RankingService` o backend feed layer, hoac doi chung sang contract trung gian.
 4. Neu muon `ai` doc lap hon nua, thay dependency vao `RankingFeatures` bang mot DTO trung gian khong thuoc `feed`.
 
 Noi ngan gon:

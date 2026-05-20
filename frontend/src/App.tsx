@@ -32,7 +32,7 @@ function App() {
                 path={route.path}
                 element={
                   route.isPrivate ? (
-                    <ProtectedRoute>
+                    <ProtectedRoute requiresAdmin={route.requiresAdmin}>
                       <Element />
                     </ProtectedRoute>
                   ) : (

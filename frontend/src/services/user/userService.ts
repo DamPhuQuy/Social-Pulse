@@ -99,6 +99,12 @@ export interface UpdateProfileRequest {
   dob?: string;
 }
 
+export interface ChangePasswordRequest {
+  currentPassword: string;
+  newPassword: string;
+  confirmPassword: string;
+}
+
 export async function updateProfile(request: UpdateProfileRequest): Promise<{ ok: boolean; data?: UserProfile; message?: string }> {
   try {
     const res = await apiClient.put<{ code: number; message: string; data: UserProfile }>("/users/profile", request);
@@ -121,6 +127,19 @@ export async function deleteProfile(): Promise<{ ok: boolean; message?: string }
     return {
       ok: false,
       message: axiosErr?.response?.data?.message ?? "Failed to delete profile.",
+    };
+  }
+}
+
+export async function changePassword(request: ChangePasswordRequest): Promise<{ ok: boolean; message?: string }> {
+  try {
+    await apiClient.put("/users/me/password", request);
+    return { ok: true };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return {
+      ok: false,
+      message: axiosErr?.response?.data?.message ?? "Failed to change password.",
     };
   }
 }

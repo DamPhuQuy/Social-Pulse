@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
+import { logoutUser } from "@/services/auth/authService";
 import { getUnreadNotificationCount } from "@/services/social/notificationService";
 import { isAdminToken } from "@/lib/jwtUtils";
 
@@ -14,7 +15,7 @@ interface AppSidebarProps {
 
 export default function AppSidebar({ active }: AppSidebarProps) {
   const navigate = useNavigate();
-  const { logout, accessToken } = useAuth();
+  const { logout, accessToken, setAccessToken } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
 
   const isAdmin = isAdminToken(accessToken);
@@ -35,6 +36,13 @@ export default function AppSidebar({ active }: AppSidebarProps) {
       window.removeEventListener("realtime:notification", handleRealtimeNotification);
     };
   }, []);
+
+  const handleLogout = async () => {
+    await logoutUser();
+    setAccessToken(null);
+    logout();
+    navigate(PATHS.LOGIN);
+  };
 
   return (
     <aside className="hidden lg:flex flex-col gap-6 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-2">
@@ -61,7 +69,7 @@ export default function AppSidebar({ active }: AppSidebarProps) {
 
       <div className="mt-auto pt-4 pb-2 border-t border-slate-200/80 dark:border-neutral-800">
         <button
-          onClick={logout}
+          onClick={handleLogout}
           className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors w-full rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900"
         >
           <LogOut className="w-5 h-5" /> Đăng xuất

@@ -1,8 +1,8 @@
-# LightGBM Feed Ranking Pipeline
+# XGBoost Feed Ranking Pipeline
 
 ## Goal
 
-Train a LightGBM-compatible ranking model offline from the Pushshift Reddit dataset, export one deployable model artifact, and reuse that artifact inside the Java backend to score feed candidates.
+Train a XGBoost-compatible ranking model offline from the Pushshift Reddit dataset, export one deployable model artifact, and reuse that artifact inside the Java backend to score feed candidates.
 
 ## Recommended split
 
@@ -11,7 +11,7 @@ Train a LightGBM-compatible ranking model offline from the Pushshift Reddit data
    - extract real Reddit signals: `upvote_ratio`, `score`, `num_comments`, `num_crossposts`
    - compute Reddit-style hot score: `sign(score) * log10(|score|) + seconds/45000`
    - aggregate author-level features (post count, average popularity, seniority)
-   - reservoir-sample posts, build feature rows aligned with `LightGbmFeatureSchema.FEATURE_ORDER`
+   - reservoir-sample posts, build feature rows aligned with `RankingFeatureSchema.FEATURE_ORDER`
    - train gradient-boosted regression tree on `log1p(popularity)` label
    - export one JSON artifact containing metadata plus `model_dump`
 
@@ -19,13 +19,13 @@ Train a LightGBM-compatible ranking model offline from the Pushshift Reddit data
    - `FeatureExtractionService` builds `RankingFeatures` from live app data
    - computes Reddit-aligned hot score: `sign(netScore) * log10(max(|netScore|, 1)) + postAgeHours / 12.5`
    - computes real `upvote_ratio` from upvote/downvote counts
-   - `LightGbmFeatureVectorizer` converts them to the training feature contract
-   - `LightGbmRankingService` loads the exported artifact and scores each post
+   - `FeatureVectorizer` converts them to the training feature contract
+   - `RankingService` loads the exported artifact and scores each post
    - `FeedRankingService` sorts posts by model score and falls back safely if the model is unavailable
 
 ## Feature schema (v1)
 
-19 features in fixed order, defined in `LightGbmFeatureSchema.FEATURE_ORDER`:
+19 features in fixed order, defined in `RankingFeatureSchema.FEATURE_ORDER`:
 
 | # | Feature | Training source | Inference source |
 |---|---------|----------------|-----------------|
@@ -38,10 +38,10 @@ Train a LightGBM-compatible ranking model offline from the Pushshift Reddit data
 | 6 | author_seniority | (created_utc - author_created_utc) / seconds_per_year | days since user registration / 365 |
 | 7 | author_post_count | aggregate from scanned posts | DB count |
 | 8 | author_engagement_rate | average popularity across author's posts | DB average popularity |
-| 9 | interaction_count_7d | 0.0 (no behavior data) | 0.0 (not implemented) |
-| 10 | interaction_count_30d | 0.0 (no behavior data) | 0.0 (not implemented) |
-| 11 | hours_since_last_interaction | 999.0 (placeholder) | 999.0 (not implemented) |
-| 12 | affinity_score | 0.0 (no behavior data) | 0.0 (not implemented) |
+| 9 | interaction_count_7d | 0.0 when Reddit behavior data is unavailable | viewer-author interactions in the last 7 days |
+| 10 | interaction_count_30d | 0.0 when Reddit behavior data is unavailable | viewer-author interactions in the last 30 days |
+| 11 | hours_since_last_interaction | 999.0 cold-start default | hours since the viewer last interacted with the author, or 999.0 when none exists |
+| 12 | affinity_score | 0.0 when Reddit behavior data is unavailable | 30-day viewer-author interactions divided by viewer total interactions |
 | 13 | upvote_count | Reddit score (net upvotes) | post upvote count |
 | 14 | downvote_count | 0.0 (Reddit doesn't expose) | post downvote count |
 | 15 | comment_count | num_comments | post comment count |
@@ -54,7 +54,7 @@ Train a LightGBM-compatible ranking model offline from the Pushshift Reddit data
 ```bash
 ./mvnw compile exec:java \
   -Dexec.mainClass="com.socialpulse.app.ai.training.PushshiftTrainingCli" \
-  -Dexec.arguments="--submissions,path/to/RS_2019-04.zst,--comments,path/to/RC_2019-04.zst,--output,src/main/resources/ai/lightgbm-ranking-model.json,--sample-size,12000,--scan-limit-posts,30000,--scan-limit-comments,100000,--n-estimators,16,--max-depth,3,--min-samples-leaf,64,--max-thresholds,16,--learning-rate,0.18,--seed,42"
+  -Dexec.arguments="--submissions,path/to/RS_2019-04.zst,--comments,path/to/RC_2019-04.zst,--output,src/main/resources/ai/ranking-model.json,--sample-size,12000,--scan-limit-posts,30000,--scan-limit-comments,100000,--n-estimators,16,--max-depth,3,--min-samples-leaf,64,--max-thresholds,16,--learning-rate,0.18,--seed,42"
 ```
 
 ## Artifact shape
@@ -73,7 +73,7 @@ Train a LightGBM-compatible ranking model offline from the Pushshift Reddit data
 
 ## Important rules
 
-- Training code must emit the exact same feature names and preprocessing defaults as `LightGbmFeatureVectorizer`.
+- Training code must emit the exact same feature names and preprocessing defaults as `FeatureVectorizer`.
 - If you change features, bump `feature_schema_version` and deploy the new artifact together with backend config.
 - `hot_score` must use the same formula in both training and inference. Currently both use the Reddit-style time-decayed formula.
 - `upvote_ratio` must be extracted from real data (not hardcoded) in training, and computed from real counts at inference.

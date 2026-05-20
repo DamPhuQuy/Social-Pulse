@@ -5,6 +5,7 @@ const REPORT_BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "http://localhost:
 
 export type ReportTargetType = "POST" | "COMMENT" | "USER";
 export type ReportStatus = "PENDING" | "RESOLVED" | "REJECTED";
+export type ReviewAction = "REJECT" | "DELETE_CONTENT" | "BAN_USER" | "DELETE_CONTENT_AND_BAN_USER";
 
 export interface CreateReportRequest {
   targetType: ReportTargetType;
@@ -20,6 +21,9 @@ export interface ReportResponse {
   reason: string;
   status: ReportStatus;
   createdAt: string;
+  targetContent?: string | null;
+  targetOwnerId?: number | null;
+  targetOwnerUsername?: string | null;
 }
 
 export async function createReport(payload: CreateReportRequest): Promise<{ ok: boolean; data?: ReportResponse; message?: string }> {
@@ -56,11 +60,29 @@ export async function updateReportStatus(reportId: number, status: ReportStatus)
     await apiClient.request<{ code: number; message: string }>({
       method: "patch",
       url: `${REPORT_BASE_URL}/reports/${reportId}/status`,
-      params: { status }
+      data: { status }
     });
     return { ok: true };
   } catch (err: unknown) {
     const axiosErr = err as { response?: { data?: { message?: string } } };
     return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to update report status." };
+  }
+}
+
+export async function reviewReport(
+  reportId: number,
+  action: ReviewAction,
+  note?: string,
+): Promise<{ ok: boolean; data?: ReportResponse; message?: string }> {
+  try {
+    const res = await apiClient.request<{ code: number; message: string; data: ReportResponse }>({
+      method: "post",
+      url: `${REPORT_BASE_URL}/reports/${reportId}/review`,
+      data: { action, note },
+    });
+    return { ok: true, data: res.data.data, message: res.data.message };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to review report." };
   }
 }

@@ -41,6 +41,8 @@ export interface CommentReactionResponse {
   reactionType: "UPVOTE" | "DOWNVOTE";
 }
 
+export type CommentPulseReaction = "UPVOTE";
+
 export interface CommentUpdateResponse {
   id: number;
   postId: number;
@@ -125,13 +127,10 @@ export async function createComment(
   }
 }
 
-/**
- * React to a comment (Upvote/Downvote).
- */
 export async function reactComment(
   postId: number,
   commentId: number,
-  reactionType: "UPVOTE" | "DOWNVOTE"
+  reactionType: CommentPulseReaction
 ): Promise<{ ok: boolean; message?: string }> {
   try {
     await apiClient.post<{ code: number; message: string; data: CommentReactionResponse }>(

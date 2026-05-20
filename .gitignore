@@ -34,6 +34,7 @@ build/
 .env
 
 .venv
+*.egg-info/
 
 .claude
 
@@ -46,3 +47,6 @@ build/
 .jqwik-database
 
 __pycache__
+ai_pipeline/model/*.json
+ai_pipeline/model/*.ubj
+ai_pipeline/model/plots/

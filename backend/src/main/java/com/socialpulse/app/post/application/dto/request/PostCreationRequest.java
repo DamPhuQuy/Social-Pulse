@@ -37,7 +37,6 @@ public class PostCreationRequest {
 
     private Long parentPostId;
 
-    @NotNull(message = "Topic ID is required")
     private Long topicId;
 }
 
