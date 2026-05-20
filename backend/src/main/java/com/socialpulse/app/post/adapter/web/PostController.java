@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.dto.response.ApiResponse;
@@ -39,10 +40,12 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/posts")
 @Tag(name = "Posts", description = "Post management APIs")
+@Validated
 public class PostController {
     private final CreatePostUseCase createPostUseCase;
     private final ViewPostUseCase viewPostUseCase;
@@ -109,7 +112,7 @@ public class PostController {
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getUserPosts(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getUserPostsUseCase.getUserPosts(userId, page, size, currentUser))

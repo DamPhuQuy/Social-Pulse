@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.PageResponse;
@@ -36,10 +37,12 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/discovery")
 @Tag(name = "Discovery", description = "Search and discovery APIs")
+@Validated
 public class DiscoveryController {
     private final SearchUsersUseCase searchUsersUseCase;
     private final SearchPostsUseCase searchPostsUseCase;
@@ -77,7 +80,7 @@ public class DiscoveryController {
     public ResponseEntity<ApiResponse<PageResponse<SearchUserResponse>>> searchUsers(
             @RequestParam("q") String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<SearchUserResponse>>builder()
                 .data(searchUsersUseCase.searchUsers(query, page, size))
                 .build());
@@ -88,7 +91,7 @@ public class DiscoveryController {
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> searchPosts(
             @RequestParam("q") String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(searchPostsUseCase.searchPosts(query, page, size))
                 .build());
@@ -97,8 +100,8 @@ public class DiscoveryController {
     @GetMapping("/hashtags/trending")
     @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<List<TrendingHashtagResponse>>> getTrendingHashtags(
-            @RequestParam(defaultValue = "7") int days,
-            @RequestParam(defaultValue = "10") int limit) {
+            @RequestParam(defaultValue = "7") @Max(365) int days,
+            @RequestParam(defaultValue = "10") @Max(100) int limit) {
         return ResponseEntity.ok(ApiResponse.<List<TrendingHashtagResponse>>builder()
                 .data(getTrendingHashtagsUseCase.getTrendingHashtags(days, limit))
                 .build());
@@ -109,7 +112,7 @@ public class DiscoveryController {
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getPostsByHashtag(
             @PathVariable String hashtag,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getPostsByHashtagUseCase.getPostsByHashtag(hashtag, page, size))
                 .build());
@@ -120,7 +123,7 @@ public class DiscoveryController {
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getPostsByMention(
             @PathVariable String username,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getPostsByMentionUseCase.getPostsByMention(username, page, size))
                 .build());

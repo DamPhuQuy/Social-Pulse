@@ -3,6 +3,8 @@ package com.socialpulse.app.auth.application.service.otp;
 import java.security.SecureRandom;
 import java.time.Instant;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.auth.application.usecase.OtpUseCase;
@@ -15,6 +17,8 @@ import com.socialpulse.app.security.encoder.AppPasswordEncoder;
 
 @Service
 public class OtpService implements OtpUseCase {
+
+    private static final Logger log = LoggerFactory.getLogger(OtpService.class);
 
     // static constants
     private static final String OTP_EMAIL_SUBJECT = "Your OTP Code for Social Pulse";
@@ -41,7 +45,9 @@ public class OtpService implements OtpUseCase {
     public void generateToStoreAndSendEmail(String email) {
         String normalizedEmail = normalizeEmail(email);
         String otpCode = generateOtpCode();
-        System.out.println("====== [DEV MODE OTP] Email: " + normalizedEmail + " -> OTP: " + otpCode + " ======");
+        if (isDevMode()) {
+            log.debug("Generated OTP for {}", normalizedEmail);
+        }
         Otp otp = newOtp(normalizedEmail, otpCode);
         otpStoragePort.save(normalizedEmail, serialize(otp));
         emailPort.sendHtmlEmail(normalizedEmail, OTP_EMAIL_SUBJECT, buildOtpHtml(otpCode));
@@ -225,5 +231,4 @@ public class OtpService implements OtpUseCase {
         """.formatted(otpCode);
     }
 }
-
 

@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.bookmark.application.dto.response.BookmarkResponse;
 import com.socialpulse.app.bookmark.application.usecase.CreateBookmarkUseCase;
@@ -22,10 +23,12 @@ import com.socialpulse.app.post.application.dto.response.UserPostResponse;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/bookmarks")
 @Tag(name = "Bookmarks", description = "Saved posts APIs")
+@Validated
 public class BookmarkController {
     private final CreateBookmarkUseCase createBookmarkUseCase;
     private final DeleteBookmarkUseCase deleteBookmarkUseCase;
@@ -63,7 +66,7 @@ public class BookmarkController {
     @RequiresPermission.BookmarkRead
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getBookmarks(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getBookmarksUseCase.getBookmarks(page, size, currentUser))
