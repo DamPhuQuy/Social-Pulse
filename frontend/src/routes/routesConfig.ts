@@ -16,6 +16,9 @@ import SettingsPage from "@/pages/SettingsPage";
 import AdminDashboard from "@/pages/AdminDashboard";
 import AiModelDashboard from "@/pages/AiModelDashboard";
 import RbacManagement from "@/pages/RbacManagement";
+import LearnMorePage from "@/pages/LearnMorePage";
+import TermsPage from "@/pages/TermsPage";
+import PrivacyPage from "@/pages/PrivacyPage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -28,6 +31,21 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.ONBOARDING,
     element: OnboardingPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.LEARN_MORE,
+    element: LearnMorePage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.TERMS,
+    element: TermsPage,
+    isPrivate: false,
+  },
+  {
+    path: PATHS.PRIVACY,
+    element: PrivacyPage,
     isPrivate: false,
   },
   {
