@@ -5,19 +5,10 @@ import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
 import CommentSection from "@/components/comment/CommentSection";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { reactPost } from "@/services/post/postService";
 import { getPostDetail, type ViewPostResponse } from "@/services/social/postDetailService";
-
-function nextPostPulseState(post: ViewPostResponse): ViewPostResponse {
-  const currentVote = post.myVote ?? 0;
-  const nextVote = currentVote === 1 ? 0 : 1;
-  return {
-    ...post,
-    myVote: nextVote,
-    upvoteCount: Math.max(0, post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
-  };
-}
+import { nextPostPulseState } from "@/lib/postUtils";
 
 export default function PostDetailPage() {
   const navigate = useNavigate();

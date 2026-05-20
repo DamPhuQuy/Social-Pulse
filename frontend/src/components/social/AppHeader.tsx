@@ -3,7 +3,7 @@ import { Activity, Moon, Plus, Sun } from "lucide-react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { getMyProfile, type UserProfile } from "@/services/user/userService";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import CreatePostModal from "@/components/post/CreatePostModal";
 
 export default function AppHeader() {

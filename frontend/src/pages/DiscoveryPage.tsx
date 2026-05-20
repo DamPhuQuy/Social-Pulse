@@ -4,7 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
   getPostsByHashtag,
   getPostsByMention,

@@ -4,7 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
 import type { UserPost } from "@/services/user/userService";
 

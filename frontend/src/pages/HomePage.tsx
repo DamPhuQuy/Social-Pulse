@@ -17,55 +17,15 @@ import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/
 import ReportModal from "@/components/social/ReportModal";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import AppSidebar from "@/components/social/AppSidebar";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import CommentSection from "@/components/comment/CommentSection";
 
-// ─── Time formatter ────────────────────────────────────────────────────────────
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return "";
-  const parsedDate = !dateStr.endsWith("Z") && !dateStr.includes("+")
-    ? new Date(dateStr.includes("T") ? dateStr + "Z" : dateStr.replace(" ", "T") + "Z")
-    : new Date(dateStr);
-  const diff = (Date.now() - parsedDate.getTime()) / 1000;
-  if (diff < 60) return `Vừa xong`;
-  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-  return `${Math.floor(diff / 86400)} ngày trước`;
-}
+// Utility imports
+import { timeAgo } from "@/lib/dateUtils";
+import { nextPostPulseState } from "@/lib/postUtils";
 
-// ─── Media Renderer ────────────────────────────────────────────────────────────
-function FeedMedia({ urls }: { urls: string[] }) {
-  if (!urls || urls.length === 0) return null;
-
-  const isVideo = (url: string) => url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes("video/upload");
-
-  if (urls.length === 1) {
-    const url = urls[0];
-    return (
-      <div className="rounded-2xl overflow-hidden bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 max-h-[500px] flex items-center justify-center">
-        {isVideo(url) ? (
-          <video src={url} controls className="w-full h-full object-contain max-h-[500px]" />
-        ) : (
-          <img src={url} alt="post-media" className="w-full h-full object-cover max-h-[500px]" />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div className="grid grid-cols-2 gap-2 rounded-2xl overflow-hidden bg-slate-100 dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800">
-      {urls.map((url, idx) => (
-        <div key={idx} className="aspect-video relative overflow-hidden bg-gray-100 dark:bg-neutral-800">
-          {isVideo(url) ? (
-            <video src={url} controls className="w-full h-48 object-cover" />
-          ) : (
-            <img src={url} alt={`post-media-${idx}`} className="w-full h-48 object-cover" />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
+// Component imports
+import { PostMedia } from "@/components/post/PostMedia";
 
 // ─── HomePage ──────────────────────────────────────────────────────────────────
 export default function HomePage() {
@@ -620,21 +580,6 @@ export default function HomePage() {
 
 // ─── Sub-components ────────────────────────────────────────────────────────────
 
-function nextPostPulseState<T extends { myVote: number | null; upvoteCount: number; downvoteCount: number; myReaction: string | null }>(
-  post: T,
-): T {
-  const currentVote = post.myVote ?? 0;
-  const nextVote = currentVote === 1 ? 0 : 1;
-
-  return {
-    ...post,
-    myVote: nextVote,
-    myReaction: nextVote === 1 ? "UPVOTE" : null,
-    upvoteCount: Math.max(0, post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
-    downvoteCount: post.downvoteCount,
-  };
-}
-
 function FeedPost({
   post,
   onReact,
@@ -713,7 +658,7 @@ function FeedPost({
             {post.content}
           </p>
 
-          <FeedMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} />
+          <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="feed" />
 
           {post.topicSlugs?.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">

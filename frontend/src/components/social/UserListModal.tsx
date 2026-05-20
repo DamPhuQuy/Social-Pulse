@@ -1,6 +1,6 @@
 import { X } from "lucide-react";
 import { useNavigate } from "react-router-dom";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import type { UserSummary } from "@/services/social/followService";
 
 interface UserListModalProps {

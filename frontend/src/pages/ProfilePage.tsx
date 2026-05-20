@@ -60,116 +60,13 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 
-// ─── Time formatter ────────────────────────────────────────────────────────────
-function timeAgo(dateStr: string): string {
-  if (!dateStr) return "";
-  const parsedDate =
-    !dateStr.endsWith("Z") && !dateStr.includes("+")
-      ? new Date(
-          dateStr.includes("T")
-            ? dateStr + "Z"
-            : dateStr.replace(" ", "T") + "Z",
-        )
-      : new Date(dateStr);
-  const diff = (Date.now() - parsedDate.getTime()) / 1000;
-  if (diff < 60) return `Vừa xong`;
-  if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)} giờ trước`;
-  return `${Math.floor(diff / 86400)} ngày trước`;
-}
+// Utility imports
+import { timeAgo } from "@/lib/dateUtils";
+import { nextPostPulseState } from "@/lib/postUtils";
 
-// ─── Safe Avatar Renderer ──────────────────────────────────────────────────────
-export function SafeAvatar({
-  src,
-  alt,
-  className = "w-full h-full object-cover",
-}: {
-  src?: string | null;
-  alt?: string;
-  className?: string;
-}) {
-  if (!src) {
-    return (
-      <div className="w-full h-full bg-slate-200 dark:bg-neutral-800 flex items-center justify-center text-slate-400 dark:text-neutral-500">
-        <svg className="w-1/2 h-1/2" fill="currentColor" viewBox="0 0 24 24">
-          <path d="M24 20.993V24H0v-2.996A14.977 14.977 0 0 1 12.004 15c4.904 0 9.26 2.354 11.996 5.993zM16.002 8.999a4 4 0 1 1-8 0 4 4 0 0 1 8 0z" />
-        </svg>
-      </div>
-    );
-  }
-  return <img src={src} alt={alt || "Avatar"} className={className} />;
-}
-
-function nextPostPulseState<
-  T extends {
-    myVote: number | null;
-    upvoteCount: number;
-    downvoteCount: number;
-    myReaction: string | null;
-  },
->(post: T): T {
-  const currentVote = post.myVote ?? 0;
-  const nextVote = currentVote === 1 ? 0 : 1;
-
-  return {
-    ...post,
-    myVote: nextVote,
-    myReaction: nextVote === 1 ? "UPVOTE" : null,
-    upvoteCount: Math.max(
-      0,
-      post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0),
-    ),
-    downvoteCount: post.downvoteCount,
-  };
-}
-
-// ─── Media Renderer ────────────────────────────────────────────────────────────
-function FeedMedia({ urls }: { urls: string[] }) {
-  if (!urls || urls.length === 0) return null;
-
-  const isVideo = (url: string) =>
-    url.match(/\.(mp4|webm|ogg|mov)$/i) || url.includes("video/upload");
-
-  if (urls.length === 1) {
-    const url = urls[0];
-    return (
-      <div className="rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-800 mb-3 bg-black">
-        {isVideo(url) ? (
-          <video src={url} controls className="w-full h-auto max-h-[500px]" />
-        ) : (
-          <img
-            src={url}
-            alt="post"
-            className="w-full h-auto object-cover max-h-[500px]"
-          />
-        )}
-      </div>
-    );
-  }
-
-  return (
-    <div
-      className={`grid gap-2 mb-3 ${urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}
-    >
-      {urls.map((url, idx) => (
-        <div
-          key={idx}
-          className={`rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-800 bg-black ${urls.length === 3 && idx === 0 ? "col-span-2" : ""}`}
-        >
-          {isVideo(url) ? (
-            <video src={url} controls className="w-full h-48 object-cover" />
-          ) : (
-            <img
-              src={url}
-              alt={`post-media-${idx}`}
-              className="w-full h-48 object-cover"
-            />
-          )}
-        </div>
-      ))}
-    </div>
-  );
-}
+// Component imports
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { PostMedia } from "@/components/post/PostMedia";
 
 interface ProfilePostProps {
   post: UserPost;
@@ -272,7 +169,7 @@ function ProfilePost({
             {post.content}
           </p>
 
-          <FeedMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} />
+          <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="profile" />
 
           {post.topicSlugs?.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">

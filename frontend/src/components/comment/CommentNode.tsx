@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from "react";
 import { Activity, Flag, Loader2, MessageCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { type UserProfile } from "@/services/user/userService";
 import { 
   type CommentResponse, 

@@ -5,7 +5,7 @@ import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
 import { PATHS } from "@/constants/paths";
-import { SafeAvatar } from "@/pages/ProfilePage";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
   getNotifications,
   markAllNotificationsRead,
