@@ -1,49 +1,76 @@
-import { useState, useEffect, useCallback, useRef } from "react";
-import { useParams, useNavigate } from "react-router-dom";
-import {
-  CalendarDays,
-  Activity,
-  MoreHorizontal,
-  MessageCircle,
-  Share2,
-  Loader2,
-  Bookmark,
-  Camera,
-  X,
-  Edit3,
-  Trash2,
-  UserX,
-  Eye,
-  Crop,
-  MousePointerClick,
-} from "lucide-react";
-import { blockUser, unblockUser, checkIsBlocked } from "@/services/social/blockService";
-import { toast } from "sonner";
-import { useAuth } from "@/hooks/useAuth";
-import {
-  getMyProfile,
-  getUserProfile,
-  getUserPosts,
-  updateProfile,
-  type UserProfile,
-  type UserPost,
-} from "@/services/user/userService";
-import { deletePost, reactPost, uploadMedia, type Privacy, type PulseReaction } from "@/services/post/postService";
-import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
-import { followUser, getFollowers, getFollowing, unfollowUser, type UserSummary } from "@/services/social/followService";
+import CommentSection from "@/components/comment/CommentSection";
+import CreatePostModal from "@/components/post/CreatePostModal";
+import AppHeader from "@/components/social/AppHeader";
+import AppSidebar from "@/components/social/AppSidebar";
 import ReportModal from "@/components/social/ReportModal";
 import UserListModal from "@/components/social/UserListModal";
-import CreatePostModal from "@/components/post/CreatePostModal";
-import CommentSection from "@/components/comment/CommentSection";
-import AppSidebar from "@/components/social/AppSidebar";
-import AppHeader from "@/components/social/AppHeader";
+import { PATHS } from "@/constants/paths";
+import { useAuth } from "@/hooks/useAuth";
+import {
+  deletePost,
+  reactPost,
+  uploadMedia,
+  type Privacy,
+  type PulseReaction,
+} from "@/services/post/postService";
+import {
+  blockUser,
+  checkIsBlocked,
+  unblockUser,
+} from "@/services/social/blockService";
+import {
+  createBookmark,
+  deleteBookmark,
+  getBookmarks,
+} from "@/services/social/bookmarkService";
+import {
+  followUser,
+  getFollowers,
+  getFollowing,
+  unfollowUser,
+  type UserSummary,
+} from "@/services/social/followService";
+import {
+  getMyProfile,
+  getUserPosts,
+  getUserProfile,
+  updateProfile,
+  type UserPost,
+  type UserProfile,
+} from "@/services/user/userService";
+import {
+  Activity,
+  Bookmark,
+  CalendarDays,
+  Camera,
+  Crop,
+  Edit3,
+  Eye,
+  Loader2,
+  MessageCircle,
+  MessageSquare,
+  MoreHorizontal,
+  MousePointerClick,
+  Share2,
+  Trash2,
+  UserX,
+  X,
+} from "lucide-react";
+import { useCallback, useEffect, useRef, useState } from "react";
+import { useNavigate, useParams } from "react-router-dom";
+import { toast } from "sonner";
 
 // ─── Time formatter ────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string): string {
   if (!dateStr) return "";
-  const parsedDate = !dateStr.endsWith("Z") && !dateStr.includes("+")
-    ? new Date(dateStr.includes("T") ? dateStr + "Z" : dateStr.replace(" ", "T") + "Z")
-    : new Date(dateStr);
+  const parsedDate =
+    !dateStr.endsWith("Z") && !dateStr.includes("+")
+      ? new Date(
+          dateStr.includes("T")
+            ? dateStr + "Z"
+            : dateStr.replace(" ", "T") + "Z",
+        )
+      : new Date(dateStr);
   const diff = (Date.now() - parsedDate.getTime()) / 1000;
   if (diff < 60) return `Vừa xong`;
   if (diff < 3600) return `${Math.floor(diff / 60)} phút trước`;
@@ -52,7 +79,15 @@ function timeAgo(dateStr: string): string {
 }
 
 // ─── Safe Avatar Renderer ──────────────────────────────────────────────────────
-export function SafeAvatar({ src, alt, className = "w-full h-full object-cover" }: { src?: string | null, alt?: string, className?: string }) {
+export function SafeAvatar({
+  src,
+  alt,
+  className = "w-full h-full object-cover",
+}: {
+  src?: string | null;
+  alt?: string;
+  className?: string;
+}) {
   if (!src) {
     return (
       <div className="w-full h-full bg-slate-200 dark:bg-neutral-800 flex items-center justify-center text-slate-400 dark:text-neutral-500">
@@ -65,9 +100,14 @@ export function SafeAvatar({ src, alt, className = "w-full h-full object-cover" 
   return <img src={src} alt={alt || "Avatar"} className={className} />;
 }
 
-function nextPostPulseState<T extends { myVote: number | null; upvoteCount: number; downvoteCount: number; myReaction: string | null }>(
-  post: T,
-): T {
+function nextPostPulseState<
+  T extends {
+    myVote: number | null;
+    upvoteCount: number;
+    downvoteCount: number;
+    myReaction: string | null;
+  },
+>(post: T): T {
   const currentVote = post.myVote ?? 0;
   const nextVote = currentVote === 1 ? 0 : 1;
 
@@ -75,7 +115,10 @@ function nextPostPulseState<T extends { myVote: number | null; upvoteCount: numb
     ...post,
     myVote: nextVote,
     myReaction: nextVote === 1 ? "UPVOTE" : null,
-    upvoteCount: Math.max(0, post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0)),
+    upvoteCount: Math.max(
+      0,
+      post.upvoteCount + (nextVote === 1 ? 1 : 0) - (currentVote === 1 ? 1 : 0),
+    ),
     downvoteCount: post.downvoteCount,
   };
 }
@@ -94,20 +137,33 @@ function FeedMedia({ urls }: { urls: string[] }) {
         {isVideo(url) ? (
           <video src={url} controls className="w-full h-auto max-h-[500px]" />
         ) : (
-          <img src={url} alt="post" className="w-full h-auto object-cover max-h-[500px]" />
+          <img
+            src={url}
+            alt="post"
+            className="w-full h-auto object-cover max-h-[500px]"
+          />
         )}
       </div>
     );
   }
 
   return (
-    <div className={`grid gap-2 mb-3 ${urls.length === 2 ? 'grid-cols-2' : 'grid-cols-2'}`}>
+    <div
+      className={`grid gap-2 mb-3 ${urls.length === 2 ? "grid-cols-2" : "grid-cols-2"}`}
+    >
       {urls.map((url, idx) => (
-        <div key={idx} className={`rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-800 bg-black ${urls.length === 3 && idx === 0 ? 'col-span-2' : ''}`}>
+        <div
+          key={idx}
+          className={`rounded-xl overflow-hidden border border-slate-200 dark:border-neutral-800 bg-black ${urls.length === 3 && idx === 0 ? "col-span-2" : ""}`}
+        >
           {isVideo(url) ? (
             <video src={url} controls className="w-full h-48 object-cover" />
           ) : (
-            <img src={url} alt={`post-media-${idx}`} className="w-full h-48 object-cover" />
+            <img
+              src={url}
+              alt={`post-media-${idx}`}
+              className="w-full h-48 object-cover"
+            />
           )}
         </div>
       ))}
@@ -128,7 +184,18 @@ interface ProfilePostProps {
   onReport: (postId: number) => void;
 }
 
-function ProfilePost({ post, displayName, handleReact, isReacting, currentUserId, onEdit, onDelete, isBookmarked, onToggleBookmark, onReport }: ProfilePostProps) {
+function ProfilePost({
+  post,
+  displayName,
+  handleReact,
+  isReacting,
+  currentUserId,
+  onEdit,
+  onDelete,
+  isBookmarked,
+  onToggleBookmark,
+  onReport,
+}: ProfilePostProps) {
   const [showComments, setShowComments] = useState(false);
   const [cmtCount, setCmtCount] = useState(post.cmtCount);
   const [showMenu, setShowMenu] = useState(false);
@@ -148,26 +215,51 @@ function ProfilePost({ post, displayName, handleReact, isReacting, currentUserId
         <div className="flex-1 min-w-0">
           <div className="flex items-center justify-between mb-1">
             <div className="flex items-center gap-2 truncate">
-              <span className="font-bold text-[16px] text-slate-800 dark:text-[#e4e6eb] hover:underline truncate">{displayName}</span>
-              <span className="text-slate-500 dark:text-neutral-400 text-sm">· {timeAgo(post.createdAt)}</span>
+              <span className="font-bold text-[16px] text-slate-800 dark:text-[#e4e6eb] hover:underline truncate">
+                {displayName}
+              </span>
+              <span className="text-slate-500 dark:text-neutral-400 text-sm">
+                · {timeAgo(post.createdAt)}
+              </span>
             </div>
             <div className="relative shrink-0">
-              <button onClick={() => setShowMenu((value) => !value)} className="text-slate-400 dark:text-neutral-500 hover:text-blue-500 p-1.5 rounded-full transition-colors">
+              <button
+                onClick={() => setShowMenu((value) => !value)}
+                className="text-slate-400 dark:text-neutral-500 hover:text-blue-500 p-1.5 rounded-full transition-colors"
+              >
                 <MoreHorizontal className="w-4 h-4" />
               </button>
               {showMenu && (
                 <div className="absolute right-0 top-8 z-20 w-44 overflow-hidden rounded-xl border border-slate-200 dark:border-neutral-800 bg-white dark:bg-neutral-900 shadow-xl">
                   {isAuthor ? (
                     <>
-                      <button onClick={() => { setShowMenu(false); onEdit(post); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 dark:hover:bg-neutral-800">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          onEdit(post);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold hover:bg-slate-50 dark:hover:bg-neutral-800"
+                      >
                         <Edit3 className="w-4 h-4" /> Chỉnh sửa
                       </button>
-                      <button onClick={() => { setShowMenu(false); onDelete(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                      <button
+                        onClick={() => {
+                          setShowMenu(false);
+                          onDelete(post.postId);
+                        }}
+                        className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                      >
                         <Trash2 className="w-4 h-4" /> Xóa bài viết
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => { setShowMenu(false); onReport(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                    <button
+                      onClick={() => {
+                        setShowMenu(false);
+                        onReport(post.postId);
+                      }}
+                      className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10"
+                    >
                       <Trash2 className="w-4 h-4" /> Báo cáo
                     </button>
                   )}
@@ -185,7 +277,10 @@ function ProfilePost({ post, displayName, handleReact, isReacting, currentUserId
           {post.topicSlugs?.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {post.topicSlugs.map((topic) => (
-                <span key={topic} className="rounded-full bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                <span
+                  key={topic}
+                  className="rounded-full bg-slate-100 dark:bg-neutral-800 px-2.5 py-1 text-xs font-semibold text-slate-500 dark:text-neutral-400"
+                >
                   #{topic}
                 </span>
               ))}
@@ -195,34 +290,53 @@ function ProfilePost({ post, displayName, handleReact, isReacting, currentUserId
           <div className="flex items-center justify-between text-gray-500 dark:text-neutral-500 max-w-xs mt-4">
             <button
               disabled={isReacting}
-              onClick={(e) => { e.stopPropagation(); handleReact(post.postId, "UPVOTE"); }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleReact(post.postId, "UPVOTE");
+              }}
               className={`flex items-center gap-2 transition-colors group ${isUpvoted ? "text-blue-600 dark:text-blue-400" : "hover:text-slate-900 dark:hover:text-white"}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
-                <Activity className={`w-5 h-5 ${isUpvoted ? "stroke-[2.5px]" : "stroke-2"}`} />
+                <Activity
+                  className={`w-5 h-5 ${isUpvoted ? "stroke-[2.5px]" : "stroke-2"}`}
+                />
               </div>
-              <span className="text-sm">{post.upvoteCount > 0 ? post.upvoteCount : ''}</span>
+              <span className="text-sm">
+                {post.upvoteCount > 0 ? post.upvoteCount : ""}
+              </span>
             </button>
 
-            <button 
-              onClick={(e) => { e.stopPropagation(); setShowComments(!showComments); }}
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setShowComments(!showComments);
+              }}
               className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${showComments ? "text-slate-900 dark:text-white font-bold" : ""}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
-                <MessageCircle className={`w-5 h-5 ${showComments ? "stroke-[2.5px]" : "stroke-2"}`} />
+                <MessageCircle
+                  className={`w-5 h-5 ${showComments ? "stroke-[2.5px]" : "stroke-2"}`}
+                />
               </div>
-              <span className="text-sm">{cmtCount > 0 ? cmtCount : ''}</span>
+              <span className="text-sm">{cmtCount > 0 ? cmtCount : ""}</span>
             </button>
 
-            <button onClick={() => onToggleBookmark(post.postId)} className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-blue-600 dark:text-blue-400" : ""}`}>
+            <button
+              onClick={() => onToggleBookmark(post.postId)}
+              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-blue-600 dark:text-blue-400" : ""}`}
+            >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
-                <Bookmark className={`w-5 h-5 stroke-2 ${isBookmarked ? "fill-current" : ""}`} />
+                <Bookmark
+                  className={`w-5 h-5 stroke-2 ${isBookmarked ? "fill-current" : ""}`}
+                />
               </div>
             </button>
 
             <button
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/posts/${post.postId}`);
+                navigator.clipboard.writeText(
+                  `${window.location.origin}/posts/${post.postId}`,
+                );
                 toast.success("Đã sao chép liên kết bài viết.");
               }}
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
@@ -234,10 +348,10 @@ function ProfilePost({ post, displayName, handleReact, isReacting, currentUserId
           </div>
 
           {showComments && (
-            <CommentSection 
-              postId={post.postId} 
-              initialCmtCount={cmtCount} 
-              onCommentCountChange={setCmtCount} 
+            <CommentSection
+              postId={post.postId}
+              initialCmtCount={cmtCount}
+              onCommentCountChange={setCmtCount}
             />
           )}
         </div>
@@ -257,9 +371,15 @@ export default function ProfilePage() {
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [loading, setLoading] = useState(true);
   const [postsLoading, setPostsLoading] = useState(false);
-  const [reactingPostIds, setReactingPostIds] = useState<Set<number>>(() => new Set());
-  const [bookmarkingPostIds, setBookmarkingPostIds] = useState<Set<number>>(() => new Set());
-  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<Set<number>>(() => new Set());
+  const [reactingPostIds, setReactingPostIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [bookmarkingPostIds, setBookmarkingPostIds] = useState<Set<number>>(
+    () => new Set(),
+  );
+  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<Set<number>>(
+    () => new Set(),
+  );
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [followersList, setFollowersList] = useState<UserSummary[]>([]);
@@ -285,7 +405,9 @@ export default function ProfilePage() {
 
   // Avatar Circular Cropper States
   const [avatarPreviewSrc, setAvatarPreviewSrc] = useState<string | null>(null);
-  const [originalAvatarFile, setOriginalAvatarFile] = useState<File | null>(null);
+  const [originalAvatarFile, setOriginalAvatarFile] = useState<File | null>(
+    null,
+  );
   const [previewAspect, setPreviewAspect] = useState<number>(1);
   const [zoom, setZoom] = useState(1);
   const [offset, setOffset] = useState({ x: 0, y: 0 });
@@ -293,8 +415,6 @@ export default function ProfilePage() {
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const cropperImgRef = useRef<HTMLImageElement>(null);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
-
-
 
   useEffect(() => {
     getMyProfile().then((res) => {
@@ -304,7 +424,9 @@ export default function ProfilePage() {
     });
     getBookmarks(0, 100).then((res) => {
       if (res.ok && res.data) {
-        setBookmarkedPostIds(new Set((res.data.items ?? []).map((item) => item.postId)));
+        setBookmarkedPostIds(
+          new Set((res.data.items ?? []).map((item) => item.postId)),
+        );
       }
     });
   }, []);
@@ -322,8 +444,7 @@ export default function ProfilePage() {
       if (res.ok && res.data) {
         profileData = res.data;
         setMyProfile(res.data);
-      }
-      else toast.error(res.message);
+      } else toast.error(res.message);
     }
 
     if (profileData) {
@@ -357,20 +478,28 @@ export default function ProfilePage() {
     if (isBlocked) {
       const res = await unblockUser(profile.userId);
       if (res.ok) {
-        toast.success(`Đã hủy chặn ${profile.displayName || profile.username}!`);
+        toast.success(
+          `Đã hủy chặn ${profile.displayName || profile.username}!`,
+        );
         setIsBlocked(false);
         loadData();
       } else {
         toast.error(res.message ?? "Hủy chặn thất bại.");
       }
     } else {
-      if (window.confirm(`Bạn có chắc chắn muốn chặn ${profile.displayName || profile.username}? Các mối quan hệ Theo dõi sẽ bị hủy bỏ tự động.`)) {
+      if (
+        window.confirm(
+          `Bạn có chắc chắn muốn chặn ${profile.displayName || profile.username}? Các mối quan hệ Theo dõi sẽ bị hủy bỏ tự động.`,
+        )
+      ) {
         const res = await blockUser(profile.userId);
         if (res.ok) {
-          toast.success(`Đã chặn thành công ${profile.displayName || profile.username}!`);
+          toast.success(
+            `Đã chặn thành công ${profile.displayName || profile.username}!`,
+          );
           setIsBlocked(true);
           setPosts([]);
-          setProfile(prev => prev ? { ...prev, isFollowing: false } : null);
+          setProfile((prev) => (prev ? { ...prev, isFollowing: false } : null));
         } else {
           toast.error(res.message ?? "Chặn thất bại.");
         }
@@ -402,18 +531,24 @@ export default function ProfilePage() {
           return nextPostPulseState(post);
         }
         return post;
-      })
+      }),
     );
 
     try {
       const res = await reactPost({ postId, reactionType: type });
       if (!res.ok) {
-        setPosts((prevPosts) => prevPosts.map((post) => post.postId === postId ? previousPost : post));
+        setPosts((prevPosts) =>
+          prevPosts.map((post) =>
+            post.postId === postId ? previousPost : post,
+          ),
+        );
         toast.error(res.message ?? "Thả cảm xúc thất bại.");
       }
     } catch (err) {
       console.error(err);
-      setPosts((prevPosts) => prevPosts.map((post) => post.postId === postId ? previousPost : post));
+      setPosts((prevPosts) =>
+        prevPosts.map((post) => (post.postId === postId ? previousPost : post)),
+      );
     } finally {
       setReactingPostIds((prev) => {
         const next = new Set(prev);
@@ -443,8 +578,8 @@ export default function ProfilePage() {
               updatedAt: updated.updatedAt,
               createdAt: updated.updatedAt,
             }
-          : post
-      )
+          : post,
+      ),
     );
     setEditingPost(null);
   };
@@ -474,7 +609,9 @@ export default function ProfilePage() {
       return next;
     });
 
-    const res = wasBookmarked ? await deleteBookmark(postId) : await createBookmark(postId);
+    const res = wasBookmarked
+      ? await deleteBookmark(postId)
+      : await createBookmark(postId);
     if (!res.ok) {
       setBookmarkedPostIds((prev) => {
         const next = new Set(prev);
@@ -492,7 +629,10 @@ export default function ProfilePage() {
     });
   };
 
-  const handleReportSuccess = (options: { hidePost: boolean; hideUser: boolean }) => {
+  const handleReportSuccess = (options: {
+    hidePost: boolean;
+    hideUser: boolean;
+  }) => {
     if (reportPostId === null) return;
 
     const reportedPost = posts.find((p) => p.postId === reportPostId);
@@ -510,26 +650,35 @@ export default function ProfilePage() {
     });
   };
 
-
   const handleToggleFollow = async () => {
     if (!profile || isOwnProfile || followLoading) return;
 
     const wasFollowing = profile.isFollowing;
     setFollowLoading(true);
-    setProfile((prev) => prev ? ({
-      ...prev,
-      isFollowing: !wasFollowing,
-      followers: Math.max(0, prev.followers + (wasFollowing ? -1 : 1)),
-    }) : prev);
+    setProfile((prev) =>
+      prev
+        ? {
+            ...prev,
+            isFollowing: !wasFollowing,
+            followers: Math.max(0, prev.followers + (wasFollowing ? -1 : 1)),
+          }
+        : prev,
+    );
 
-    const res = wasFollowing ? await unfollowUser(profile.userId) : await followUser(profile.userId);
+    const res = wasFollowing
+      ? await unfollowUser(profile.userId)
+      : await followUser(profile.userId);
     setFollowLoading(false);
     if (!res.ok) {
-      setProfile((prev) => prev ? ({
-        ...prev,
-        isFollowing: wasFollowing,
-        followers: Math.max(0, prev.followers + (wasFollowing ? 1 : -1)),
-      }) : prev);
+      setProfile((prev) =>
+        prev
+          ? {
+              ...prev,
+              isFollowing: wasFollowing,
+              followers: Math.max(0, prev.followers + (wasFollowing ? 1 : -1)),
+            }
+          : prev,
+      );
       toast.error(res.message ?? "Không thể cập nhật theo dõi.");
     }
   };
@@ -560,7 +709,7 @@ export default function ProfilePage() {
   const handleSaveProfile = async () => {
     const res = await updateProfile({
       displayName: editDisplayName,
-      bio: editBio
+      bio: editBio,
     });
 
     if (res.ok) {
@@ -584,13 +733,19 @@ export default function ProfilePage() {
     if (uploadRes.ok && uploadRes.data) {
       const updateRes = await updateProfile({ coverImageUrl: uploadRes.data });
       if (updateRes.ok) {
-        toast.success("Đã thay đổi ảnh bìa thành công!", { id: "cover-upload" });
+        toast.success("Đã thay đổi ảnh bìa thành công!", {
+          id: "cover-upload",
+        });
         loadData();
       } else {
-        toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", { id: "cover-upload" });
+        toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", {
+          id: "cover-upload",
+        });
       }
     } else {
-      toast.error(uploadRes.message || "Tải ảnh lên thất bại.", { id: "cover-upload" });
+      toast.error(uploadRes.message || "Tải ảnh lên thất bại.", {
+        id: "cover-upload",
+      });
     }
     setUploadingCover(false);
   };
@@ -661,7 +816,7 @@ export default function ProfilePage() {
 
     const res = await updateProfile({
       avatarUrl: "DELETE",
-      avatarPublicId: "DELETE"
+      avatarPublicId: "DELETE",
     });
 
     setUploadingAvatar(false);
@@ -669,7 +824,9 @@ export default function ProfilePage() {
       toast.success("Đã xóa ảnh đại diện thành công!", { id: "avatar-upload" });
       loadData();
     } else {
-      toast.error(res.message || "Xóa ảnh đại diện thất bại.", { id: "avatar-upload" });
+      toast.error(res.message || "Xóa ảnh đại diện thất bại.", {
+        id: "avatar-upload",
+      });
     }
   };
 
@@ -681,7 +838,7 @@ export default function ProfilePage() {
 
     const res = await updateProfile({
       coverImageUrl: "DELETE",
-      coverImagePublicId: "DELETE"
+      coverImagePublicId: "DELETE",
     });
 
     setUploadingCover(false);
@@ -689,7 +846,9 @@ export default function ProfilePage() {
       toast.success("Đã xóa ảnh bìa thành công!", { id: "cover-upload" });
       loadData();
     } else {
-      toast.error(res.message || "Xóa ảnh bìa thất bại.", { id: "cover-upload" });
+      toast.error(res.message || "Xóa ảnh bìa thất bại.", {
+        id: "cover-upload",
+      });
     }
   };
 
@@ -697,7 +856,7 @@ export default function ProfilePage() {
     if (!profile?.avatarUrl) return;
     // Re-crop from original if available, otherwise fallback to current avatar
     const sourceImage = profile.avatarPublicId || profile.avatarUrl;
-    
+
     const img = new Image();
     img.src = sourceImage;
     img.crossOrigin = "anonymous";
@@ -723,7 +882,9 @@ export default function ProfilePage() {
     if (!avatarPreviewSrc) return;
 
     setUploadingAvatar(true);
-    toast.loading("Đang cắt và tải ảnh đại diện lên...", { id: "avatar-upload" });
+    toast.loading("Đang cắt và tải ảnh đại diện lên...", {
+      id: "avatar-upload",
+    });
 
     const img = new Image();
     img.src = avatarPreviewSrc;
@@ -776,27 +937,38 @@ export default function ProfilePage() {
                 if (origRes.ok && origRes.data) {
                   originalUrl = origRes.data;
                 } else {
-                  toast.error("Tải ảnh gốc lên thất bại. Đang thử lưu ảnh đã cắt...", { id: "avatar-upload" });
+                  toast.error(
+                    "Tải ảnh gốc lên thất bại. Đang thử lưu ảnh đã cắt...",
+                    { id: "avatar-upload" },
+                  );
                 }
               }
 
-              const croppedFile = new File([blob], "avatar.png", { type: "image/png" });
+              const croppedFile = new File([blob], "avatar.png", {
+                type: "image/png",
+              });
               const uploadRes = await uploadMedia(croppedFile);
               if (uploadRes.ok && uploadRes.data) {
-                const updateRes = await updateProfile({ 
+                const updateRes = await updateProfile({
                   avatarUrl: uploadRes.data,
-                  avatarPublicId: originalUrl || uploadRes.data
+                  avatarPublicId: originalUrl || uploadRes.data,
                 });
                 if (updateRes.ok) {
-                  toast.success("Thay đổi ảnh đại diện thành công!", { id: "avatar-upload" });
+                  toast.success("Thay đổi ảnh đại diện thành công!", {
+                    id: "avatar-upload",
+                  });
                   setAvatarPreviewSrc(null);
                   setOriginalAvatarFile(null);
                   loadData();
                 } else {
-                  toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", { id: "avatar-upload" });
+                  toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", {
+                    id: "avatar-upload",
+                  });
                 }
               } else {
-                toast.error(uploadRes.message || "Tải lên ảnh thất bại.", { id: "avatar-upload" });
+                toast.error(uploadRes.message || "Tải lên ảnh thất bại.", {
+                  id: "avatar-upload",
+                });
               }
             } catch {
               toast.error("Lỗi khi tải ảnh lên.", { id: "avatar-upload" });
@@ -829,15 +1001,24 @@ export default function ProfilePage() {
         <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
           <AppSidebar active="profile" />
           <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-neutral-500">
-            <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">Không tìm thấy người dùng</h2>
-            <button onClick={() => navigate(-1)} className="text-blue-500 hover:underline">Quay lại</button>
+            <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
+              Không tìm thấy người dùng
+            </h2>
+            <button
+              onClick={() => navigate(-1)}
+              className="text-blue-500 hover:underline"
+            >
+              Quay lại
+            </button>
           </div>
         </div>
       </div>
     );
   }
 
-  const isOwnProfile = !username || (myProfile && profile && profile.username === myProfile.username);
+  const isOwnProfile =
+    !username ||
+    (myProfile && profile && profile.username === myProfile.username);
   const coverUrl = profile.coverImageUrl;
 
   const baseWidth = previewAspect > 1 ? 300 * previewAspect : 300;
@@ -849,32 +1030,36 @@ export default function ProfilePage() {
 
       {/* 3-COLUMN GRID */}
       <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
-        
         {/* LEFT COLUMN: SIDEBAR */}
         <AppSidebar active="profile" />
 
         {/* MIDDLE COLUMN: PROFILE HEADER & TIMELINE */}
         <div className="flex flex-col gap-6 min-w-0">
-          
           {/* PROFILE CARD: COVER & AVATAR & BASIC DETAILS */}
           <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] overflow-hidden">
             {/* COVER */}
             <div className="h-48 sm:h-64 bg-[radial-gradient(ellipse_at_top_right,_var(--tw-gradient-stops))] from-blue-100 via-blue-50 to-cyan-50 dark:from-blue-900/40 dark:via-[#1e1e1e] dark:to-[#121212] relative group overflow-hidden border-b border-slate-200/80 dark:border-[#2a2a2a]">
               {coverUrl && (
-                <img 
-                  src={coverUrl} 
-                  alt="Cover" 
+                <img
+                  src={coverUrl}
+                  alt="Cover"
                   onClick={() => setViewingImageUrl(coverUrl)}
-                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer" 
+                  className="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105 cursor-pointer"
                   title="Nhấp để xem ảnh bìa đầy đủ"
                 />
               )}
               {isOwnProfile && (
                 <>
-                  <input type="file" ref={coverInputRef} onChange={handleCoverUpload} accept="image/*" className="hidden" />
+                  <input
+                    type="file"
+                    ref={coverInputRef}
+                    onChange={handleCoverUpload}
+                    accept="image/*"
+                    className="hidden"
+                  />
                   <div className="absolute right-4 bottom-4 flex items-center gap-2 z-20">
                     {coverUrl && (
-                      <button 
+                      <button
                         onClick={handleDeleteCover}
                         disabled={uploadingCover}
                         className="p-3 bg-red-650 hover:bg-red-750 rounded-full text-white flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95 duration-200"
@@ -883,7 +1068,7 @@ export default function ProfilePage() {
                         <Trash2 className="w-5 h-5" />
                       </button>
                     )}
-                    <button 
+                    <button
                       onClick={() => coverInputRef.current?.click()}
                       disabled={uploadingCover}
                       className="p-3 bg-black/60 hover:bg-black/80 rounded-full text-white flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95 duration-200"
@@ -905,43 +1090,70 @@ export default function ProfilePage() {
             <div className="px-6 pb-6 relative">
               <div className="flex justify-between items-end relative -mt-16 sm:-mt-20 mb-4">
                 {/* Avatar */}
-                <div 
+                <div
                   onClick={() => {
                     if (!isOwnProfile && profile.avatarUrl) {
-                      setViewingImageUrl(profile.avatarPublicId || profile.avatarUrl);
+                      setViewingImageUrl(
+                        profile.avatarPublicId || profile.avatarUrl,
+                      );
                     }
                   }}
                   className={`relative group/avatar w-32 h-32 sm:w-40 sm:h-40 rounded-full border-[8px] border-white dark:border-[#1e1e1e] overflow-hidden bg-slate-100 dark:bg-neutral-800 shadow-xl z-10 ${
-                    !isOwnProfile && profile.avatarUrl ? "cursor-pointer hover:opacity-90 transition-opacity" : ""
+                    !isOwnProfile && profile.avatarUrl
+                      ? "cursor-pointer hover:opacity-90 transition-opacity"
+                      : ""
                   }`}
-                  title={!isOwnProfile && profile.avatarUrl ? "Nhấp để xem ảnh đại diện gốc đầy đủ" : undefined}
+                  title={
+                    !isOwnProfile && profile.avatarUrl
+                      ? "Nhấp để xem ảnh đại diện gốc đầy đủ"
+                      : undefined
+                  }
                 >
                   <SafeAvatar src={profile.avatarUrl} alt={profile.username} />
                   {isOwnProfile && (
                     <>
-                      <input type="file" ref={avatarInputRef} onChange={handleAvatarSelect} accept="image/*" className="hidden" />
+                      <input
+                        type="file"
+                        ref={avatarInputRef}
+                        onChange={handleAvatarSelect}
+                        accept="image/*"
+                        className="hidden"
+                      />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 flex flex-col items-center justify-center text-white z-20">
-                        <span className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-300">Ảnh đại diện</span>
+                        <span className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-300">
+                          Ảnh đại diện
+                        </span>
                         <div className="flex items-center gap-1.5">
                           {profile.avatarUrl && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); setViewingImageUrl(profile.avatarPublicId || profile.avatarUrl); }}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingImageUrl(
+                                  profile.avatarPublicId || profile.avatarUrl,
+                                );
+                              }}
                               className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md transition-all hover:scale-115 border border-white/20 cursor-pointer"
                               title="Xem ảnh gốc đầy đủ"
                             >
                               <Eye className="w-3.5 h-3.5 text-white" />
                             </button>
                           )}
-                          <button 
-                            onClick={(e) => { e.stopPropagation(); avatarInputRef.current?.click(); }}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              avatarInputRef.current?.click();
+                            }}
                             className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md transition-all hover:scale-115 border border-white/20 cursor-pointer"
                             title="Tải ảnh mới lên"
                           >
                             <Camera className="w-3.5 h-3.5 text-white" />
                           </button>
                           {profile.avatarUrl && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleRecropCurrentAvatar(); }}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleRecropCurrentAvatar();
+                              }}
                               className="p-1.5 rounded-full bg-white/20 hover:bg-white/40 backdrop-blur-md transition-all hover:scale-115 border border-white/20 cursor-pointer"
                               title="Cắt lại ảnh gốc này"
                             >
@@ -949,8 +1161,11 @@ export default function ProfilePage() {
                             </button>
                           )}
                           {profile.avatarUrl && (
-                            <button 
-                              onClick={(e) => { e.stopPropagation(); handleDeleteAvatar(); }}
+                            <button
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                handleDeleteAvatar();
+                              }}
                               className="p-1.5 rounded-full bg-red-600/70 hover:bg-red-650 backdrop-blur-md transition-all hover:scale-115 border border-red-500/20 cursor-pointer"
                               title="Xóa ảnh đại diện"
                             >
@@ -966,7 +1181,7 @@ export default function ProfilePage() {
                 {/* Edit / Follow Action Button on the right */}
                 <div className="shrink-0 pb-2">
                   {isOwnProfile ? (
-                    <button 
+                    <button
                       onClick={() => setShowEditModal(true)}
                       className="px-5 py-2 font-bold rounded-full border border-slate-200 dark:border-neutral-800 hover:bg-slate-100 dark:hover:bg-neutral-800 transition-all text-sm hover:border-slate-300 dark:hover:border-neutral-700 shadow-sm active:scale-95 text-slate-800 dark:text-white"
                     >
@@ -974,19 +1189,45 @@ export default function ProfilePage() {
                     </button>
                   ) : (
                     <div className="flex items-center gap-2">
-                      <button onClick={handleToggleFollow} disabled={followLoading || isBlocked} className={`px-5 py-2 font-bold rounded-full transition-all text-sm active:scale-95 shadow-md disabled:opacity-50 ${
-                        profile.isFollowing 
-                          ? 'border border-slate-300 dark:border-neutral-700 hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-slate-700 dark:text-neutral-300' 
-                          : 'bg-slate-900 text-white dark:bg-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200'
-                      }`}>
-                        {followLoading ? 'Đang xử lý...' : profile.isFollowing ? 'Đang theo dõi' : 'Theo dõi'}
+                      <button
+                        onClick={() =>
+                          navigate(`${PATHS.CHAT}?userId=${profile.userId}`)
+                        }
+                        disabled={isBlocked}
+                        className="px-5 py-2 font-bold rounded-full border border-blue-200 dark:border-blue-500/30 bg-blue-50/80 dark:bg-blue-500/10 text-blue-700 dark:text-blue-300 hover:bg-blue-100 dark:hover:bg-blue-500/20 transition-all text-sm active:scale-95 shadow-md disabled:opacity-50"
+                      >
+                        <MessageSquare className="mr-2 inline-block h-4 w-4 align-[-0.125em]" />
+                        Nhắn tin
                       </button>
-                      <button onClick={handleToggleBlock} disabled={blockLoading} className={`px-5 py-2 font-bold rounded-full transition-all text-sm active:scale-95 shadow-md disabled:opacity-50 ${
-                        isBlocked
-                          ? 'bg-red-650 hover:bg-red-750 text-white border border-red-650'
-                          : 'border border-slate-300 dark:border-neutral-700 hover:bg-red-50 hover:text-red-500 text-slate-700 dark:text-neutral-300'
-                      }`}>
-                        {blockLoading ? 'Đang xử lý...' : isBlocked ? 'Bỏ chặn' : 'Chặn'}
+                      <button
+                        onClick={handleToggleFollow}
+                        disabled={followLoading || isBlocked}
+                        className={`px-5 py-2 font-bold rounded-full transition-all text-sm active:scale-95 shadow-md disabled:opacity-50 ${
+                          profile.isFollowing
+                            ? "border border-slate-300 dark:border-neutral-700 hover:bg-red-50 hover:text-red-500 hover:border-red-200 text-slate-700 dark:text-neutral-300"
+                            : "bg-slate-900 text-white dark:bg-white dark:text-black hover:bg-slate-800 dark:hover:bg-neutral-200"
+                        }`}
+                      >
+                        {followLoading
+                          ? "Đang xử lý..."
+                          : profile.isFollowing
+                            ? "Đang theo dõi"
+                            : "Theo dõi"}
+                      </button>
+                      <button
+                        onClick={handleToggleBlock}
+                        disabled={blockLoading}
+                        className={`px-5 py-2 font-bold rounded-full transition-all text-sm active:scale-95 shadow-md disabled:opacity-50 ${
+                          isBlocked
+                            ? "bg-red-650 hover:bg-red-750 text-white border border-red-650"
+                            : "border border-slate-300 dark:border-neutral-700 hover:bg-red-50 hover:text-red-500 text-slate-700 dark:text-neutral-300"
+                        }`}
+                      >
+                        {blockLoading
+                          ? "Đang xử lý..."
+                          : isBlocked
+                            ? "Bỏ chặn"
+                            : "Chặn"}
                       </button>
                     </div>
                   )}
@@ -998,16 +1239,24 @@ export default function ProfilePage() {
                 <h2 className="font-extrabold text-2xl tracking-tight text-gray-900 dark:text-white leading-tight">
                   {profile.displayName || profile.username}
                 </h2>
-                <p className="text-sm text-gray-500 dark:text-neutral-400 font-medium">@{profile.username}</p>
-                
+                <p className="text-sm text-gray-500 dark:text-neutral-400 font-medium">
+                  @{profile.username}
+                </p>
+
                 {/* Meta stats for mobile */}
                 <div className="flex items-center gap-4 mt-3 text-xs text-gray-500 dark:text-neutral-500 font-semibold lg:hidden">
                   <span>{profile.postCount} bài đăng</span>
                   <button onClick={openFollowing} className="hover:underline">
-                    <strong className="text-gray-900 dark:text-white font-extrabold">{profile.following}</strong> đang theo dõi
+                    <strong className="text-gray-900 dark:text-white font-extrabold">
+                      {profile.following}
+                    </strong>{" "}
+                    đang theo dõi
                   </button>
                   <button onClick={openFollowers} className="hover:underline">
-                    <strong className="text-gray-900 dark:text-white font-extrabold">{profile.followers}</strong> người theo dõi
+                    <strong className="text-gray-900 dark:text-white font-extrabold">
+                      {profile.followers}
+                    </strong>{" "}
+                    người theo dõi
                   </button>
                 </div>
               </div>
@@ -1019,8 +1268,12 @@ export default function ProfilePage() {
             {isBlocked ? (
               <div className="text-center py-20 bg-white dark:bg-[#1e1e1e] rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] p-8 shadow-sm">
                 <UserX className="w-12 h-12 text-slate-400 mx-auto mb-3" />
-                <h3 className="text-lg font-bold text-gray-900 dark:text-white">Bạn đã chặn người dùng này</h3>
-                <p className="text-sm text-slate-500 mt-1">Hủy chặn để có thể xem bài viết và tương tác với họ.</p>
+                <h3 className="text-lg font-bold text-gray-900 dark:text-white">
+                  Bạn đã chặn người dùng này
+                </h3>
+                <p className="text-sm text-slate-500 mt-1">
+                  Hủy chặn để có thể xem bài viết và tương tác với họ.
+                </p>
               </div>
             ) : postsLoading ? (
               <div className="flex justify-center py-16">
@@ -1028,16 +1281,20 @@ export default function ProfilePage() {
               </div>
             ) : !posts || posts.length === 0 ? (
               <div className="text-center py-20 text-gray-500 dark:text-neutral-500 bg-white dark:bg-[#1e1e1e] rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.03)]">
-                <p className="text-lg font-bold text-gray-900 dark:text-white">Chưa có bài viết</p>
-                <p className="text-sm">Khi người dùng này đăng bài, chúng sẽ hiển thị ở đây.</p>
+                <p className="text-lg font-bold text-gray-900 dark:text-white">
+                  Chưa có bài viết
+                </p>
+                <p className="text-sm">
+                  Khi người dùng này đăng bài, chúng sẽ hiển thị ở đây.
+                </p>
               </div>
             ) : (
-              posts.map(post => (
-                <ProfilePost 
-                  key={post.postId} 
-                  post={post} 
+              posts.map((post) => (
+                <ProfilePost
+                  key={post.postId}
+                  post={post}
                   displayName={profile?.displayName || post.username}
-                  handleReact={handleReact} 
+                  handleReact={handleReact}
                   isReacting={reactingPostIds.has(post.postId)}
                   currentUserId={myProfile?.userId}
                   onEdit={setEditingPost}
@@ -1049,18 +1306,18 @@ export default function ProfilePage() {
               ))
             )}
           </div>
-
         </div>
 
         {/* RIGHT COLUMN: ABOUT / INTRO INFO SIDEBAR */}
         <aside className="hidden lg:flex flex-col gap-6 sticky top-24 h-fit">
           <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl p-5 border border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)]">
-            
             {/* ABOUT */}
             <div className="flex items-center gap-2 mb-3">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Giới thiệu</h3>
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                Giới thiệu
+              </h3>
             </div>
-            
+
             {profile.bio ? (
               <p className="text-slate-700 dark:text-neutral-300 text-sm mb-5 leading-relaxed whitespace-pre-line break-words font-medium">
                 {profile.bio}
@@ -1068,9 +1325,7 @@ export default function ProfilePage() {
             ) : (
               <div className="flex items-start gap-2 text-slate-400 dark:text-neutral-500 text-xs mb-5 italic font-medium">
                 <Edit3 className="w-4 h-4 mt-0.5 shrink-0" />
-                <p className="leading-relaxed">
-                  Chưa có mô tả bản thân.
-                </p>
+                <p className="leading-relaxed">Chưa có mô tả bản thân.</p>
               </div>
             )}
 
@@ -1079,22 +1334,34 @@ export default function ProfilePage() {
               <CalendarDays className="w-4 h-4 text-gray-400" />
               <span>Đã tham gia SocialPulse</span>
             </div>
-            
+
             {/* STATS */}
             <div className="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-100 dark:border-neutral-800/60">
-              <button onClick={openFollowing} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/30 p-2.5 rounded-xl transition-colors flex flex-col items-center text-center border border-slate-100 dark:border-neutral-800">
-                <span className="font-extrabold text-xl text-gray-900 dark:text-white tracking-tight">{profile.following}</span>
-                <span className="text-[9px] font-bold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mt-1">Đang theo dõi</span>
+              <button
+                onClick={openFollowing}
+                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/30 p-2.5 rounded-xl transition-colors flex flex-col items-center text-center border border-slate-100 dark:border-neutral-800"
+              >
+                <span className="font-extrabold text-xl text-gray-900 dark:text-white tracking-tight">
+                  {profile.following}
+                </span>
+                <span className="text-[9px] font-bold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mt-1">
+                  Đang theo dõi
+                </span>
               </button>
-              <button onClick={openFollowers} className="cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/30 p-2.5 rounded-xl transition-colors flex flex-col items-center text-center border border-slate-100 dark:border-neutral-800">
-                <span className="font-extrabold text-xl text-gray-900 dark:text-white tracking-tight">{profile.followers}</span>
-                <span className="text-[9px] font-bold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mt-1">Người theo dõi</span>
+              <button
+                onClick={openFollowers}
+                className="cursor-pointer hover:bg-slate-50 dark:hover:bg-neutral-800/30 p-2.5 rounded-xl transition-colors flex flex-col items-center text-center border border-slate-100 dark:border-neutral-800"
+              >
+                <span className="font-extrabold text-xl text-gray-900 dark:text-white tracking-tight">
+                  {profile.followers}
+                </span>
+                <span className="text-[9px] font-bold text-gray-400 dark:text-neutral-500 uppercase tracking-wider mt-1">
+                  Người theo dõi
+                </span>
               </button>
             </div>
-
           </div>
         </aside>
-
       </div>
 
       {/* TEXT PROFILE EDIT MODAL */}
@@ -1102,21 +1369,25 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-neutral-800 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-neutral-800">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Chỉnh sửa hồ sơ</h3>
-              <button 
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                Chỉnh sửa hồ sơ
+              </h3>
+              <button
                 onClick={() => setShowEditModal(false)}
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-gray-400 dark:text-neutral-500 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
-            
+
             <div className="p-6 flex flex-col gap-5">
               <div>
-                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Tên hiển thị</label>
-                <input 
-                  type="text" 
-                  value={editDisplayName} 
+                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
+                  Tên hiển thị
+                </label>
+                <input
+                  type="text"
+                  value={editDisplayName}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 outline-none text-sm transition-all dark:text-white"
                   placeholder="Nhập tên hiển thị mới của bạn"
@@ -1124,9 +1395,11 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">Mô tả bản thân (Bio)</label>
-                <textarea 
-                  value={editBio} 
+                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
+                  Mô tả bản thân (Bio)
+                </label>
+                <textarea
+                  value={editBio}
                   rows={4}
                   onChange={(e) => setEditBio(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 outline-none text-sm transition-all dark:text-white resize-none leading-relaxed"
@@ -1136,13 +1409,13 @@ export default function ProfilePage() {
             </div>
 
             <div className="flex justify-end items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-neutral-950 border-t border-slate-100 dark:border-neutral-800">
-              <button 
+              <button
                 onClick={() => setShowEditModal(false)}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors"
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={handleSaveProfile}
                 className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-500/20 active:scale-95"
               >
@@ -1188,8 +1461,10 @@ export default function ProfilePage() {
         <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
           <div className="bg-white dark:bg-neutral-900 w-full max-w-md rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-neutral-800 animate-in fade-in zoom-in-95 duration-200">
             <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-neutral-800">
-              <h3 className="font-bold text-lg text-gray-900 dark:text-white">Căn chỉnh ảnh đại diện</h3>
-              <button 
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                Căn chỉnh ảnh đại diện
+              </h3>
+              <button
                 onClick={() => setAvatarPreviewSrc(null)}
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-gray-400 dark:text-neutral-500 transition-colors"
               >
@@ -1198,7 +1473,7 @@ export default function ProfilePage() {
             </div>
 
             <div className="p-8 flex flex-col items-center">
-              <div 
+              <div
                 className="w-[300px] h-[300px] bg-slate-900 relative overflow-hidden rounded-lg cursor-move select-none touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
@@ -1209,10 +1484,10 @@ export default function ProfilePage() {
                 onTouchEnd={handleMouseUp}
                 onWheel={handleWheel}
               >
-                <img 
+                <img
                   ref={cropperImgRef}
-                  src={avatarPreviewSrc} 
-                  alt="Cropper Preview" 
+                  src={avatarPreviewSrc}
+                  alt="Cropper Preview"
                   className="max-w-none absolute pointer-events-none select-none"
                   style={{
                     transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
@@ -1226,37 +1501,59 @@ export default function ProfilePage() {
                   }}
                 />
 
-                <svg className="absolute inset-0 pointer-events-none w-full h-full" viewBox="0 0 300 300">
+                <svg
+                  className="absolute inset-0 pointer-events-none w-full h-full"
+                  viewBox="0 0 300 300"
+                >
                   <defs>
                     <mask id="circle-mask">
                       <rect x="0" y="0" width="300" height="300" fill="white" />
                       <circle cx="150" cy="150" r="145" fill="black" />
                     </mask>
                   </defs>
-                  <rect x="0" y="0" width="300" height="300" fill="black" opacity="0.65" mask="url(#circle-mask)" />
-                  <circle cx="150" cy="150" r="145" stroke="#3b82f6" strokeWidth="3" strokeDasharray="5,5" fill="none" />
+                  <rect
+                    x="0"
+                    y="0"
+                    width="300"
+                    height="300"
+                    fill="black"
+                    opacity="0.65"
+                    mask="url(#circle-mask)"
+                  />
+                  <circle
+                    cx="150"
+                    cy="150"
+                    r="145"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                    strokeDasharray="5,5"
+                    fill="none"
+                  />
                 </svg>
               </div>
 
               <div className="w-full mt-6 flex items-center justify-center gap-2.5 text-xs font-semibold text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-neutral-950 py-3.5 px-4 rounded-xl border border-slate-200/50 dark:border-neutral-850">
                 <MousePointerClick className="w-4 h-4 text-blue-500 animate-bounce shrink-0" />
-                <span>Lăn chuột hoặc dùng pad (2 ngón) để thu nhỏ / phóng to</span>
+                <span>
+                  Lăn chuột hoặc dùng pad (2 ngón) để thu nhỏ / phóng to
+                </span>
               </div>
 
               <p className="text-xs text-gray-500 dark:text-neutral-400 mt-4 text-center leading-relaxed">
-                * Nhấp giữ kéo chuột/ngón tay để di chuyển góc ảnh phù hợp với vòng tròn tiêu điểm nét.
+                * Nhấp giữ kéo chuột/ngón tay để di chuyển góc ảnh phù hợp với
+                vòng tròn tiêu điểm nét.
               </p>
             </div>
 
             <div className="flex justify-end items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-neutral-950 border-t border-slate-100 dark:border-neutral-800">
-              <button 
+              <button
                 onClick={() => setAvatarPreviewSrc(null)}
                 className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors"
                 disabled={uploadingAvatar}
               >
                 Hủy bỏ
               </button>
-              <button 
+              <button
                 onClick={handleAvatarCropConfirm}
                 disabled={uploadingAvatar}
                 className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
@@ -1276,21 +1573,25 @@ export default function ProfilePage() {
       )}
       {/* LIGHTBOX FOR FULL VIEWING AVATAR / COVER */}
       {viewingImageUrl && (
-        <div 
-          className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200" 
+        <div
+          className="fixed inset-0 bg-black/90 backdrop-blur-md z-50 flex items-center justify-center p-4 cursor-zoom-out animate-in fade-in duration-200"
           onClick={() => setViewingImageUrl(null)}
         >
-          <div 
-            className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl border border-neutral-850 bg-neutral-900/50 shadow-2xl animate-in zoom-in-95 duration-200" 
+          <div
+            className="relative max-w-4xl max-h-[90vh] overflow-hidden rounded-2xl border border-neutral-850 bg-neutral-900/50 shadow-2xl animate-in zoom-in-95 duration-200"
             onClick={(e) => e.stopPropagation()}
           >
-            <button 
+            <button
               onClick={() => setViewingImageUrl(null)}
               className="absolute right-4 top-4 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors z-10 cursor-pointer"
             >
               <X className="w-5 h-5" />
             </button>
-            <img src={viewingImageUrl} alt="Full view" className="max-w-full max-h-[85vh] object-contain mx-auto" />
+            <img
+              src={viewingImageUrl}
+              alt="Full view"
+              className="max-w-full max-h-[85vh] object-contain mx-auto"
+            />
           </div>
         </div>
       )}

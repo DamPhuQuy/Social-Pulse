@@ -9,7 +9,8 @@
     "skipLibCheck": true,
     "composite": true,
     "paths": {
-      "@/*": ["./src/*"]
+      "@/*": ["./src/*"],
+      "@pages/*": ["./src/pages/*"]
     },
 
     /* Bundler mode */

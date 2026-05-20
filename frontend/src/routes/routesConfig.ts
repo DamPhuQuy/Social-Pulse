@@ -19,6 +19,7 @@ import RbacManagement from "@/pages/RbacManagement";
 import LearnMorePage from "@/pages/LearnMorePage";
 import TermsPage from "@/pages/TermsPage";
 import PrivacyPage from "@/pages/PrivacyPage";
+import ChatPage from "@/pages/ChatPage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -101,6 +102,11 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.SETTINGS,
     element: SettingsPage,
+    isPrivate: true,
+  },
+  {
+    path: PATHS.CHAT,
+    element: ChatPage,
     isPrivate: true,
   },
   {
