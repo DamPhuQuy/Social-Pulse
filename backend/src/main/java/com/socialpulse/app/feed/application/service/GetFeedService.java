@@ -40,7 +40,6 @@ public class GetFeedService implements GetFeedUseCase {
 
         if (page == 0) {
             cacheFeedUseCase.invalidateFeed(userId);
-            redisTemplate.delete(getSeenPostsKey(userId));
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
@@ -55,7 +54,6 @@ public class GetFeedService implements GetFeedUseCase {
 
         if (page == 0) {
             cacheFeedUseCase.invalidateFeed(userId);
-            redisTemplate.delete(getSeenPostsKey(userId));
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
