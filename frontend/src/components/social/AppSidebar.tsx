@@ -7,7 +7,17 @@ import { logoutUser } from "@/services/auth/authService";
 import { getUnreadNotificationCount } from "@/services/social/notificationService";
 import { isAdminToken } from "@/lib/jwtUtils";
 
-type SidebarKey = "home" | "discovery" | "notifications" | "chat" | "bookmarks" | "profile" | "settings";
+type SidebarKey =
+  | "home"
+  | "discovery"
+  | "notifications"
+  | "chat"
+  | "bookmarks"
+  | "profile"
+  | "settings"
+  | "admin-reports"
+  | "admin-ai"
+  | "admin-rbac";
 
 interface AppSidebarProps {
   active: SidebarKey;
@@ -61,9 +71,9 @@ export default function AppSidebar({ active }: AppSidebarProps) {
         <div className="flex flex-col gap-2 pt-4 border-t border-slate-200/80 dark:border-neutral-800">
           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-neutral-500 px-3">Quản trị viên</span>
           <nav className="flex flex-col gap-1 mt-1">
-            <NavItem icon={Flag} label="Báo cáo" active={active === "settings" && window.location.pathname === PATHS.ADMIN_REPORTS} onClick={() => navigate(PATHS.ADMIN_REPORTS)} />
-            <NavItem icon={Brain} label="Giám sát AI" active={active === "settings" && window.location.pathname === PATHS.ADMIN_AI} onClick={() => navigate(PATHS.ADMIN_AI)} />
-            <NavItem icon={Shield} label="Phân quyền RBAC" active={active === "settings" && window.location.pathname === PATHS.ADMIN_RBAC} onClick={() => navigate(PATHS.ADMIN_RBAC)} />
+            <NavItem icon={Flag} label="Báo cáo" active={active === "admin-reports"} onClick={() => navigate(PATHS.ADMIN_REPORTS)} />
+            <NavItem icon={Brain} label="Giám sát AI" active={active === "admin-ai"} onClick={() => navigate(PATHS.ADMIN_AI)} />
+            <NavItem icon={Shield} label="Phân quyền RBAC" active={active === "admin-rbac"} onClick={() => navigate(PATHS.ADMIN_RBAC)} />
           </nav>
         </div>
       )}

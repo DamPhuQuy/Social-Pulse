@@ -41,7 +41,7 @@ export default function AiModelDashboard() {
       <AppHeader />
 
       <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
-        <AppSidebar active="settings" />
+        <AppSidebar active="admin-ai" />
 
         <div className="min-w-0 space-y-6 pb-10">
           <div className="flex flex-wrap items-center justify-between gap-4 bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm">
