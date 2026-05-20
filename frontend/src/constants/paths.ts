@@ -14,6 +14,7 @@ export const PATHS = {
   NOTIFICATIONS: "/notifications",
   BOOKMARKS: "/bookmarks",
   SETTINGS: "/settings",
+  CHAT: "/chat",
   PROFILE: "/profile",
   USER_PROFILE: "/profile/:username",
   POST_DETAIL: "/posts/:postId",

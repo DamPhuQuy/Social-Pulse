@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.dto.response.ApiResponse;
@@ -29,10 +30,12 @@ import com.socialpulse.app.user.application.dto.response.UserSummary;
 
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/follows")
 @Tag(name = "Follows", description = "Follow management APIs")
+@Validated
 public class FollowController {
 
     private final FollowUserUseCase followUserUseCase;
@@ -118,7 +121,7 @@ public class FollowController {
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowers(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserSummary>>builder()
                 .data(getFollowersUseCase.getFollowers(userId, page, size))
                 .build());
@@ -130,7 +133,7 @@ public class FollowController {
     public ResponseEntity<ApiResponse<PageResponse<UserSummary>>> getFollowing(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserSummary>>builder()
                 .data(getFollowingUseCase.getFollowing(userId, page, size))
                 .build());

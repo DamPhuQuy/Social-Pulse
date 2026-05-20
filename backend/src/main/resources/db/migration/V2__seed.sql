@@ -37,6 +37,10 @@ INSERT INTO topics (name, slug) VALUES
     ('Nhiếp ảnh',  'nhiep-anh')
 ON CONFLICT DO NOTHING;
 
+DO $$
+BEGIN
+IF ${seedDemoData} THEN
+
 -- ============================================================
 -- USERS
 -- ============================================================
@@ -281,3 +285,6 @@ FROM (
     GROUP BY c.post_id
 ) AS stats
 WHERE p.id = stats.post_id;
+
+END IF;
+END $$;

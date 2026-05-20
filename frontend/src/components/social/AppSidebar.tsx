@@ -1,4 +1,4 @@
-import { Bookmark, Compass, Home, LogOut, Settings, User, Bell, Flag, Brain, Shield } from "lucide-react";
+import { Bookmark, Compass, Home, LogOut, Settings, User, Bell, Flag, Brain, Shield, MessageSquare } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
@@ -7,7 +7,7 @@ import { logoutUser } from "@/services/auth/authService";
 import { getUnreadNotificationCount } from "@/services/social/notificationService";
 import { isAdminToken } from "@/lib/jwtUtils";
 
-type SidebarKey = "home" | "discovery" | "notifications" | "bookmarks" | "profile" | "settings";
+type SidebarKey = "home" | "discovery" | "notifications" | "chat" | "bookmarks" | "profile" | "settings";
 
 interface AppSidebarProps {
   active: SidebarKey;
@@ -50,6 +50,7 @@ export default function AppSidebar({ active }: AppSidebarProps) {
         <NavItem icon={Home} label="Trang chủ" active={active === "home"} onClick={() => navigate(PATHS.HOME)} />
         <NavItem icon={Compass} label="Khám phá" active={active === "discovery"} onClick={() => navigate(PATHS.DISCOVERY)} />
         <NavItem icon={Bell} label={unreadCount > 0 ? `Thông báo (${unreadCount})` : "Thông báo"} active={active === "notifications"} onClick={() => navigate(PATHS.NOTIFICATIONS)} />
+        <NavItem icon={MessageSquare} label="Tin nhắn" active={active === "chat"} onClick={() => navigate(PATHS.CHAT)} />
         <NavItem icon={Bookmark} label="Đã lưu" active={active === "bookmarks"} onClick={() => navigate(PATHS.BOOKMARKS)} />
         <NavItem icon={User} label="Hồ sơ" active={active === "profile"} onClick={() => navigate(PATHS.PROFILE)} />
         <NavItem icon={Settings} label="Cài đặt" active={active === "settings"} onClick={() => navigate(PATHS.SETTINGS)} />

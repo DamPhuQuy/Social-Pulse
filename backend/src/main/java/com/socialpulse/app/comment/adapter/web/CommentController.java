@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
 import com.socialpulse.app.comment.application.dto.request.CommentReactionRequest;
@@ -34,10 +35,12 @@ import org.springframework.web.bind.annotation.RequestParam;
 import com.socialpulse.app.comment.application.usecase.GetTopLevelCommentsUseCase;
 import com.socialpulse.app.comment.application.dto.response.CommentResponse;
 import java.util.List;
+import jakarta.validation.constraints.Max;
 
 @Controller
 @RequestMapping("/api/v1/posts/{postId}/comments")
 @Tag(name = "Comments", description = "Comment management APIs")
+@Validated
 public class CommentController {
     private final CreateCommentUseCase createCommentUseCase;
     private final UpdateCommentUseCase updateCommentUseCase;
@@ -108,7 +111,7 @@ public class CommentController {
     public ResponseEntity<ApiResponse<List<CommentResponse>>> getTopLevelComments(
             @PathVariable Long postId,
             @RequestParam(defaultValue = "0") Long lastId,
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "10") @Max(100) int limit,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         List<CommentResponse> responses = getTopLevelCommentsUseCase.getTopLevelComments(
@@ -131,7 +134,7 @@ public class CommentController {
             @PathVariable Long postId,
             @PathVariable Long commentId,
             @RequestParam(defaultValue = "0") Long lastId,
-            @RequestParam(defaultValue = "10") int limit,
+            @RequestParam(defaultValue = "10") @Max(100) int limit,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
 
         List<CommentResponse> responses = getCommentRepliesUseCase.getReplies(

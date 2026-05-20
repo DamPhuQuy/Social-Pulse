@@ -15,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.admin.application.dto.AdminUserResponse;
 import com.socialpulse.app.admin.application.dto.AiStatusResponse;
@@ -39,10 +40,12 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/admin")
-@RequiresPermission.AdminAccessRole
+@RequiresPermission.AdminAccess
+@Validated
 @Tag(name = "Admin", description = "Admin management APIs")
 public class AdminController {
     private final GetSystemMetricsUseCase getSystemMetricsUseCase;
@@ -96,7 +99,7 @@ public class AdminController {
     public ResponseEntity<ApiResponse<PageResponse<AdminUserResponse>>> getUsers(
             @RequestParam(required = false) String query,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         var pageable = PageRequest.of(page, size, Sort.by("createdAt").descending());
         Page<User> result = (query != null && !query.isBlank())
                 ? userRepository.searchByQuery(query, pageable)
