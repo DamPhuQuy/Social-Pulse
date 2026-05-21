@@ -13,6 +13,7 @@ _SUBMISSIONS = _BASE / "data" / "RS_2019-04.zst"
 _COMMENTS = _BASE / "data" / "RC_2019-04.zst"
 _OUTPUT = _BASE / "model" / "model.json"
 _METRICS_OUTPUT = _BASE / "model" / "metrics.json"
+_PLOTS_OUTPUT = _BASE / "model" / "plots"
 
 
 def main(args: list[str] | None = None) -> None:
@@ -23,6 +24,7 @@ def main(args: list[str] | None = None) -> None:
             "--comments", str(_COMMENTS),
             "--output", str(_OUTPUT),
             "--metrics-output", str(_METRICS_OUTPUT),
+            "--plots-output-dir", str(_PLOTS_OUTPUT),
         ]
     arguments = TrainingArguments.parse(argv)
     result = PushshiftTrainingPipeline().run(arguments)
@@ -30,10 +32,19 @@ def main(args: list[str] | None = None) -> None:
     output = {
         "output": str(result.output_path),
         "trained_at": result.trained_at,
+        "model_backend": result.model_backend,
         "train_rmse": js.round6(result.metrics.train_rmse),
         "validation_rmse": js.round6(result.metrics.validation_rmse),
+        "test_rmse": js.round6(result.metrics.test_rmse),
+        "train_mae": js.round6(result.metrics.train_mae),
+        "validation_mae": js.round6(result.metrics.validation_mae),
+        "test_mae": js.round6(result.metrics.test_mae),
         "validation_ndcg_k": js.round6(result.metrics.validation_ndcg_k),
-        "rows": {"train": result.train_rows, "validation": result.validation_rows},
+        "test_ndcg_k": js.round6(result.metrics.test_ndcg_k),
+        "validation_r2": js.round6(result.metrics.validation_r2),
+        "test_r2": js.round6(result.metrics.test_r2),
+        "rows": {"train": result.train_rows, "validation": result.validation_rows, "test": result.test_rows},
+        "evaluation_warnings": result.evaluation_warnings,
     }
     print(js.to_pretty_json(output))
 

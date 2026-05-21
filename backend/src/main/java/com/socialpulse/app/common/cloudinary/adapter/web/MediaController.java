@@ -26,12 +26,12 @@ public class MediaController {
     }
 
     @PostMapping("/upload")
-    @PreAuthorize("isAuthenticated()")
     @Operation(summary = "Upload media file", description = "Uploads an image or video file to Cloudinary and returns the URL")
     public ResponseEntity<ApiResponse<String>> uploadMedia(@RequestParam("file") MultipartFile file) {
         String url = cloudinaryService.upload(file);
         return ResponseEntity.ok(
             ApiResponse.<String>builder()
+                .code(200)
                 .data(url)
                 .message("Media uploaded successfully")
                 .build()

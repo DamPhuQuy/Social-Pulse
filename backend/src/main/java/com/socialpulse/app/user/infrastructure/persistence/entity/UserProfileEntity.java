@@ -53,6 +53,9 @@ public class UserProfileEntity {
     private String avatarUrl;
     private String avatarPublicId;
 
+    private String coverImageUrl;
+    private String coverImagePublicId;
+
     private LocalDateTime updatedAt;
 
     @PrePersist

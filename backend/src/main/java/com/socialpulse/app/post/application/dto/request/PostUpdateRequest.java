@@ -1,8 +1,11 @@
 package com.socialpulse.app.post.application.dto.request;
 
+import java.util.List;
+
 import com.socialpulse.app.post.domain.enums.Privacy;
 
 import jakarta.validation.constraints.NotBlank;
+import jakarta.validation.constraints.NotEmpty;
 import jakarta.validation.constraints.NotNull;
 import jakarta.validation.constraints.Size;
 import lombok.AllArgsConstructor;
@@ -25,9 +28,12 @@ public class PostUpdateRequest {
     @Size(max = 255, message = "Image public ID must not exceed 255 characters")
     private String imagePublicId;
 
+    @NotEmpty(message = "At least one topic must be selected")
+    @Size(max = 5, message = "A post can have at most 5 topics")
+    private List<@NotBlank(message = "Topic must not be blank") @Size(max = 80, message = "Topic must not exceed 80 characters") String> topicSlugs;
+
     @NotNull(message = "Privacy setting must not be null")
     private Privacy privacy;
 
-    @NotNull(message = "Topic ID is required")
     private Long topicId;
 }

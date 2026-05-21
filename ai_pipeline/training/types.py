@@ -1,7 +1,7 @@
 """Training data types - Python equivalents of Java records."""
 from __future__ import annotations
 
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
 
@@ -65,28 +65,50 @@ class ScanResult:
 class TrainingDataset:
     rows: list[TrainingRow]
     feature_stats: dict[str, Any]
+    preprocessing: dict[str, Any]
 
 
 @dataclass(frozen=True)
 class DatasetSplit:
     train_rows: list[TrainingRow]
     validation_rows: list[TrainingRow]
+    test_rows: list[TrainingRow]
 
 
 @dataclass(frozen=True)
 class Metrics:
     train_rmse: float
     validation_rmse: float
+    test_rmse: float
     train_mae: float
     validation_mae: float
+    test_mae: float
     train_ndcg_k: float
     validation_ndcg_k: float
+    test_ndcg_k: float
+    train_r2: float
+    validation_r2: float
+    test_r2: float
 
 
 @dataclass(frozen=True)
-class GradientBoostedModel:
-    model_dump: dict[str, Any]
+class TrainingHistoryPoint:
+    iteration: int
+    train_rmse: float | None = None
+    validation_rmse: float | None = None
+    train_mae: float | None = None
+    validation_mae: float | None = None
+
+
+@dataclass(frozen=True)
+class TrainedRankingModel:
+    backend: str
+    runtime_model: Any
+    model_dump: dict[str, Any] | None
     metrics: Metrics
+    history: list[TrainingHistoryPoint]
+    feature_importances: dict[str, float]
+    best_iteration: int | None = None
 
 
 @dataclass(frozen=True)
@@ -96,6 +118,9 @@ class TrainingRunResult:
     metrics: Metrics
     train_rows: int
     validation_rows: int
+    test_rows: int
+    model_backend: str
+    evaluation_warnings: list[str]
 
 
 @dataclass(frozen=True)

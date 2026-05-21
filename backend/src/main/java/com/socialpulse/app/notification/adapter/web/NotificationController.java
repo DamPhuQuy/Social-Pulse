@@ -10,6 +10,7 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.PageResponse;
@@ -22,10 +23,12 @@ import com.socialpulse.app.notification.application.usecase.MarkNotificationRead
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 import io.swagger.v3.oas.annotations.tags.Tag;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/notifications")
 @Tag(name = "Notifications", description = "Database-backed notification APIs")
+@Validated
 public class NotificationController {
     private final GetNotificationsUseCase getNotificationsUseCase;
     private final GetUnreadNotificationCountUseCase getUnreadNotificationCountUseCase;
@@ -47,7 +50,7 @@ public class NotificationController {
     @RequiresPermission.NotificationRead
     public ResponseEntity<ApiResponse<PageResponse<NotificationResponse>>> getNotifications(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<NotificationResponse>>builder()
                 .data(getNotificationsUseCase.getNotifications(page, size, currentUser))

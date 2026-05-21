@@ -11,6 +11,7 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.post.domain.model.Post;
@@ -24,12 +25,13 @@ import com.socialpulse.app.user.domain.model.User;
 class DeletePostServiceTest {
 
     @Mock private PostRepository postRepository;
+    @Mock private StringRedisTemplate redisTemplate;
 
     private DeletePostService service;
 
     @BeforeEach
     void setUp() {
-        service = new DeletePostService(postRepository);
+        service = new DeletePostService(postRepository, redisTemplate);
     }
 
     private CustomUserDetails userDetails(Long id) {
@@ -52,6 +54,7 @@ class DeletePostServiceTest {
         service.deletePost(1L, userDetails(10L));
 
         verify(postRepository).deleteById(1L);
+        verify(redisTemplate).delete("user:feed:10");
     }
 
     @Test
@@ -62,6 +65,7 @@ class DeletePostServiceTest {
         service.deletePost(1L, adminDetails());
 
         verify(postRepository).deleteById(1L);
+        verify(redisTemplate).delete("user:feed:99");
     }
 
     @Test

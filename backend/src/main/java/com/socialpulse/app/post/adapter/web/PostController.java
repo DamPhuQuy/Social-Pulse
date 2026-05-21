@@ -1,7 +1,8 @@
 package com.socialpulse.app.post.adapter.web;
 
-import com.socialpulse.app.security.permission.RequiresPermission;
+import java.util.List;
 
+import com.socialpulse.app.security.permission.RequiresPermission;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -14,6 +15,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.dto.response.ApiResponse;
@@ -22,9 +24,11 @@ import com.socialpulse.app.post.application.dto.request.PostReactionRequest;
 import com.socialpulse.app.post.application.dto.request.PostUpdateRequest;
 import com.socialpulse.app.post.application.dto.response.PostCreationResponse;
 import com.socialpulse.app.post.application.dto.response.PostReactionResponse;
+import com.socialpulse.app.post.application.dto.response.PostTopicResponse;
 import com.socialpulse.app.post.application.dto.response.PostUpdateResponse;
 import com.socialpulse.app.post.application.dto.response.UserPostResponse;
 import com.socialpulse.app.post.application.dto.response.ViewPostResponse;
+import com.socialpulse.app.post.application.service.PostTopicCatalog;
 import com.socialpulse.app.post.application.usecase.CreatePostUseCase;
 import com.socialpulse.app.post.application.usecase.DeletePostUseCase;
 import com.socialpulse.app.post.application.usecase.EditPostUseCase;
@@ -36,10 +40,12 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/v1/posts")
 @Tag(name = "Posts", description = "Post management APIs")
+@Validated
 public class PostController {
     private final CreatePostUseCase createPostUseCase;
     private final ViewPostUseCase viewPostUseCase;
@@ -106,10 +112,19 @@ public class PostController {
     public ResponseEntity<ApiResponse<PageResponse<UserPostResponse>>> getUserPosts(
             @PathVariable Long userId,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<UserPostResponse>>builder()
                 .data(getUserPostsUseCase.getUserPosts(userId, page, size, currentUser))
+                .build());
+    }
+
+    @GetMapping("/topics")
+    @RequiresPermission.PostRead
+    @Operation(summary = "List post topics", description = "List selectable post topics used by create/edit post flows")
+    public ResponseEntity<ApiResponse<List<PostTopicResponse>>> getPostTopics() {
+        return ResponseEntity.ok(ApiResponse.<List<PostTopicResponse>>builder()
+                .data(PostTopicCatalog.all())
                 .build());
     }
 
@@ -139,5 +154,4 @@ public class PostController {
         PostUpdateResponse response = editPostUseCase.editPost(postId, request, currentUser);
         return ResponseEntity.ok(ApiResponse.<PostUpdateResponse>builder().data(response).message("Post updated successfully").build());
     }
-
 }

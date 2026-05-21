@@ -1,41 +1,26 @@
 import { PATHS } from "@/constants/paths";
-import { getMeAuth } from "@/services/auth/authService";
-import { useEffect, useState } from "react";
-import { Navigate } from "react-router";
+import { useAuth } from "@/hooks/useAuth";
+import { isAdminToken } from "@/lib/jwtUtils";
+import { Navigate } from "react-router-dom";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
+  requiresAdmin?: boolean;
 }
 
-export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children }) => {
-  const [isChecking, setIsChecking] = useState(true);
-  const [isAuthenticated, setIsAuthenticated] = useState(false);
+export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, requiresAdmin = false }) => {
+  const { accessToken, isLoading } = useAuth();
 
-  useEffect(() => {
-    let isMounted = true;
-
-    const validateSession = async () => {
-      const result = await getMeAuth();
-
-      if (isMounted) {
-        setIsAuthenticated(result.ok);
-        setIsChecking(false);
-      }
-    };
-
-    validateSession();
-
-    return () => {
-      isMounted = false;
-    };
-  }, []);
-
-  if (isChecking) {
+  if (isLoading) {
     return null;
   }
 
-  if (!isAuthenticated) {
+  if (!accessToken) {
     return <Navigate to={PATHS.LOGIN} replace />;
+  }
+
+  if (requiresAdmin && !isAdminToken(accessToken)) {
+    return <Navigate to={PATHS.HOME} replace />;
   }
 
   return <>{children}</>;

@@ -18,10 +18,13 @@ public class UserViewProfileResponse {
     private String displayName;
     private String bio;
     private String avatarUrl;
+    private String coverImageUrl;
     private LocalDate dob;
     private UserGender gender;
     private long postCount;
     private long followers;
     private long following;
     private boolean isFollowing;
+    private String avatarPublicId;
+    private String coverImagePublicId;
 }

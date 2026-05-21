@@ -27,6 +27,10 @@ public class DeleteCommentService implements DeleteCommentUseCase {
         Comment comment = commentRepository.findById(commentId)
                 .orElseThrow(() -> new AppException(CommentCode.COMMENT_NOT_FOUND));
 
+        Post post = postRepository.findById(postId)
+                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
+        validatePostAccessible(post, currentUser);
+
         if (!comment.getPostId().equals(postId)) {
             throw new AppException(CommentCode.COMMENT_NOT_BELONG_TO_POST);
         }
@@ -45,10 +49,22 @@ public class DeleteCommentService implements DeleteCommentUseCase {
 
         comment.markDeleted();
         commentRepository.save(comment);
-
-        Post post = postRepository.findById(postId)
-                .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
         post.decrementCommentCount();
         postRepository.save(post);
+    }
+
+    private void validatePostAccessible(Post post, CustomUserDetails currentUser) {
+        if (post.getDeletedAt() != null) {
+            throw new AppException(PostCode.POST_NOT_FOUND);
+        }
+
+        boolean canAccess = post.isPublic()
+                || post.getUserId().equals(currentUser.getId())
+                || currentUser.getAuthorities().stream()
+                        .anyMatch(authority -> authority.getAuthority().equals("post:manage"));
+
+        if (!canAccess) {
+            throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+        }
     }
 }

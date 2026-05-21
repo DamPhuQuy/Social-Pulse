@@ -46,7 +46,7 @@ The model learns to predict content popularity based on:
 ## Feature alignment guarantees
 
 Both training and inference use the same:
-- Feature names and order (`LightGbmFeatureSchema.FEATURE_ORDER`)
+- Feature names and order (`RankingFeatureSchema.FEATURE_ORDER`)
 - Hot score formula (Reddit-style: sign * log10(|score|) + time_component)
 - Upvote ratio semantics (real ratio, not hardcoded)
 - Default values for unimplemented behavior slots (0.0 for interactions, 999.0 for hours_since_last_interaction)

@@ -40,6 +40,8 @@ public interface PostMapper {
     @Mapping(target = "type", source = "post.type")
     @Mapping(target = "content", source = "post.content")
     @Mapping(target = "imageUrl", source = "post.imageUrl")
+    @Mapping(target = "topicSlugs", source = "post.topicSlugs")
+    @Mapping(target = "privacy", source = "post.privacy")
     @Mapping(target = "userId", source = "post.userId")
     @Mapping(target = "username", source = "author.username")
     @Mapping(target = "userAvatar", source = "author.profile.avatarUrl")
@@ -49,6 +51,7 @@ public interface PostMapper {
     @Mapping(target = "shareCount", source = "post.shareCount")
     @Mapping(target = "myVote", source = "myVote")
     @Mapping(target = "createdAt", source = "post.createdAt")
+    @Mapping(target = "updatedAt", source = "post.updatedAt")
     ViewPostResponse toViewPostResponse(Post post, User author, Integer myVote);
 
     PostUpdateResponse toPostUpdateResponse(Post post);

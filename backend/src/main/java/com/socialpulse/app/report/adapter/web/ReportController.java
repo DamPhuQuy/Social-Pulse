@@ -14,6 +14,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.dto.response.ApiResponse;
@@ -32,10 +33,12 @@ import com.socialpulse.app.report.domain.enums.ReportStatus;
 import com.socialpulse.app.report.domain.model.Report;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 
 @RestController
 @RequestMapping("/api/reports")
 @Tag(name = "Report API", description = "API for submitting reports on posts or comments")
+@Validated
 public class ReportController {
 
     private final CreateReportUseCase createReportUseCase;
@@ -82,7 +85,7 @@ public class ReportController {
     public ResponseEntity<ApiResponse<PageResponse<ReportResponse>>> getReports(
             @RequestParam(required = false) ReportStatus status,
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size) {
+            @RequestParam(defaultValue = "20") @Max(100) int size) {
         return ResponseEntity.ok(ApiResponse.<PageResponse<ReportResponse>>builder()
                 .data(getReportsUseCase.getReports(status, page, size))
                 .build());

@@ -29,7 +29,7 @@ Stack chinh dang dung:
 - Spring Mail
 - Cloudinary
 - springdoc OpenAPI + Scalar page
-- LightGBM local scorer cho feed ranking
+- XGBoost local scorer cho feed ranking
 
 Kieu thuc thi hien tai chu yeu la dong bo, request-response. Hai ngoai le du kien:
 
@@ -57,14 +57,14 @@ Tuy nhien, theo code hien tai chua thay `@EnableAsync` va chua thay `@EnableSche
   - Redis host/port
   - SMTP config
   - JWT secret va TTL
-  - LightGBM toggle va model location
+  - XGBoost toggle va model location
   - Cloudinary config
 
 ### 2.3. Resources
 
 - `db/migration`
   - 12 migration tu `V1__init.sql` den `V12__add_edited_to_comments.sql`
-- `ai/lightgbm-ranking-model.json`
+- `ai/ranking-model.json`
   - artifact model duoc backend load de score feed
 
 ## 3. Ban do package hien tai
@@ -247,7 +247,7 @@ Trach nhiem:
 - chon candidate posts
 - trich xuat feature
 - ranking fallback
-- ranking bang LightGBM neu bat
+- ranking bang XGBoost neu bat
 - cache feed theo user
 - paginate ket qua
 
@@ -284,7 +284,7 @@ Trach nhiem:
 
 Trach nhiem:
 
-- bind LightGBM config
+- bind XGBoost config
 - vectorize feature
 - load JSON artifact
 - local score cho feed ranking
@@ -545,7 +545,7 @@ Flow:
 14. cache `user:features:<userId>` trong Redis 10 phut
 15. tao `RankingRequest`
 16. goi `PredictRankingUseCase`
-17. neu LightGBM duoc bat va model hop le thi score tung post bang local scorer
+17. neu XGBoost duoc bat va model hop le thi score tung post bang local scorer
 18. neu prediction khong hop le thi giu fallback ranking
 19. sort score giam dan
 20. map thanh `FeedItem`
@@ -565,17 +565,17 @@ Y nghia kien truc:
 - nhung du lieu behavior realtime van rat han che
 - neu ML fail, he thong van co deterministic ranking
 
-### 7.10. LightGBM local scoring pipeline
+### 7.10. XGBoost local scoring pipeline
 
-1. doc config `ai.lightgbm.*`
+1. doc config `ai.pipeline.*`
 2. neu `enabled=false` thi bo qua model, feed dung fallback
-3. neu bat, `LightGbmRankingService` se lazy-load model tu `classpath:ai/lightgbm-ranking-model.json`
+3. neu bat, `RankingService` se lazy-load model tu `classpath:ai/ranking-model.json`
 4. chap nhan 2 format:
    - raw `Booster.dump_model()`
    - wrapped artifact co `model_dump`
 5. validate `feature_schema_version`
-6. `LightGbmFeatureVectorizer` chuyen `RankingFeatures` thanh feature map
-7. `LightGbmModelScorer` duyet tree JSON va tinh score
+6. `FeatureVectorizer` chuyen `RankingFeatures` thanh feature map
+7. `TreeModelScorer` duyet tree JSON va tinh score
 8. tra `RankingResponse` ve cho `FeedRankingService`
 
 ## 8. Data va state hien tai
@@ -667,8 +667,8 @@ Controller dang expose cac nhom endpoint:
 Test hien co trong `src/test/java`:
 
 - `AppApplicationTests`
-- `LightGbmModelScorerTest`
-- `LightGbmRankingServiceTest`
+- `TreeModelScorerTest`
+- `RankingServiceTest`
 - `FeedRankingServiceTest`
 - `GetFeedServiceTest`
 
@@ -691,5 +691,5 @@ Nhan xet:
 Neu tom tat codebase hien tai trong 3 cau:
 
 - Day la Spring Boot modular monolith, nghiêng ve ports/adapters, voi user/auth/post/comment/follow/report/feed tach thanh module rieng.
-- Pipeline quan trong nhat la pipeline feed: cache -> candidate selection -> feature extraction -> LightGBM prediction hoac deterministic fallback -> cache -> paginate.
+- Pipeline quan trong nhat la pipeline feed: cache -> candidate selection -> feature extraction -> XGBoost prediction hoac deterministic fallback -> cache -> paginate.
 - He thong da co dat nen cho ML ranking va background syncing bang Redis, nhung mot vai background capability hien van can xac minh wiring de dam bao chay dung trong runtime.

@@ -5,14 +5,9 @@ import math
 from dataclasses import dataclass
 from typing import Any
 
-from ai_pipeline.shared.schema import LightGbmFeatureSchema
+from ai_pipeline.shared.schema import RankingFeatureSchema
 
-# Must match the log-transform set in training/feature_engineering.py
-_LOG_TRANSFORM_FEATURES = {
-    "upvote_count", "downvote_count", "comment_count",
-    "share_count", "view_count", "popularity",
-    "interaction_count_7d", "interaction_count_30d",
-}
+_LOG_TRANSFORM_FEATURES = set(RankingFeatureSchema.LOG_TRANSFORM_FEATURES)
 
 
 @dataclass
@@ -54,52 +49,72 @@ class RankingFeatures:
     interaction_features: InteractionFeatures | None = None
 
 
-class LightGbmFeatureVectorizer:
-    FEATURE_ORDER = LightGbmFeatureSchema.FEATURE_ORDER
-    _DEFAULT = LightGbmFeatureSchema.DEFAULT_NUMERIC_VALUE
-    _DEFAULT_RATIO = LightGbmFeatureSchema.DEFAULT_UPVOTE_RATIO
-    _DEFAULT_HOURS = LightGbmFeatureSchema.DEFAULT_LAST_INTERACTION_HOURS
+class FeatureVectorizer:
+    FEATURE_ORDER = RankingFeatureSchema.FEATURE_ORDER
+    _DEFAULT_RATIO = RankingFeatureSchema.DEFAULT_UPVOTE_RATIO
+    _DEFAULT_HOURS = RankingFeatureSchema.DEFAULT_LAST_INTERACTION_HOURS
+
+    def __init__(self):
+        self._preprocessing: dict[str, Any] = {}
+
+    def set_preprocessing(self, preprocessing: dict[str, Any] | None) -> None:
+        self._preprocessing = preprocessing or {}
 
     def to_feature_map(self, features: RankingFeatures) -> dict[str, float]:
-        pf = features.post_features
-        af = features.author_features
-        inf = features.interaction_features
+        post_features = features.post_features
+        author_features = features.author_features
+        interaction_features = features.interaction_features
 
-        v: dict[str, float] = {}
-        v["content_length"] = _safe_int(pf.content_length if pf else None)
-        v["has_multimedia"] = _to_binary(pf.has_multimedia if pf else None)
-        v["is_share_post"] = _to_binary(pf.is_share_post if pf else None)
-        v["post_age_hours"] = _safe(pf.post_age_hours if pf else None)
-        v["hot_score"] = _safe(pf.hot_score if pf else None)
-        v["upvote_ratio"] = _safe(pf.upvote_ratio if pf else None, self._DEFAULT_RATIO)
+        values: dict[str, float] = {}
+        values["content_length"] = _safe_int(post_features.content_length if post_features else None)
+        values["has_multimedia"] = _to_binary(post_features.has_multimedia if post_features else None)
+        values["is_share_post"] = _to_binary(post_features.is_share_post if post_features else None)
+        values["post_age_hours"] = _safe(post_features.post_age_hours if post_features else None)
+        values["hot_score"] = _safe(post_features.hot_score if post_features else None)
+        values["upvote_ratio"] = _safe(post_features.upvote_ratio if post_features else None, self._DEFAULT_RATIO)
 
-        v["author_seniority"] = _safe(af.seniority_years if af else None)
-        v["author_post_count"] = _safe_int(af.post_count if af else None)
-        v["author_engagement_rate"] = _safe(af.average_popularity if af else None)
+        values["author_seniority"] = _safe(author_features.seniority_years if author_features else None)
+        values["author_post_count"] = _safe_int(author_features.post_count if author_features else None)
+        values["author_engagement_rate"] = _safe(author_features.average_popularity if author_features else None)
 
-        v["interaction_count_7d"] = _safe_int(inf.interaction_count_7d if inf else None)
-        v["interaction_count_30d"] = _safe_int(inf.interaction_count_30d if inf else None)
-        v["hours_since_last_interaction"] = _safe(inf.hours_since_last_interaction if inf else None, self._DEFAULT_HOURS)
-        v["affinity_score"] = _safe(inf.affinity_score if inf else None)
+        values["interaction_count_7d"] = _safe_int(interaction_features.interaction_count_7d if interaction_features else None)
+        values["interaction_count_30d"] = _safe_int(interaction_features.interaction_count_30d if interaction_features else None)
+        values["hours_since_last_interaction"] = _safe(
+            interaction_features.hours_since_last_interaction if interaction_features else None,
+            self._DEFAULT_HOURS,
+        )
+        values["affinity_score"] = _safe(interaction_features.affinity_score if interaction_features else None)
 
-        up = _safe_int(pf.upvote_count if pf else None)
-        down = _safe_int(pf.downvote_count if pf else None)
-        cmt = _safe_int(pf.comment_count if pf else None)
-        share = _safe_int(pf.share_count if pf else None)
-        view = _safe_int(pf.view_count if pf else None)
+        upvote_count = _safe_int(post_features.upvote_count if post_features else None)
+        downvote_count = _safe_int(post_features.downvote_count if post_features else None)
+        comment_count = _safe_int(post_features.comment_count if post_features else None)
+        share_count = _safe_int(post_features.share_count if post_features else None)
+        view_count = _safe_int(post_features.view_count if post_features else None)
 
-        v["upvote_count"] = up
-        v["downvote_count"] = down
-        v["comment_count"] = cmt
-        v["share_count"] = share
-        v["view_count"] = view
-        v["popularity"] = _safe(pf.popularity if pf else None, up + cmt + share)
+        values["upvote_count"] = upvote_count
+        values["downvote_count"] = downvote_count
+        values["comment_count"] = comment_count
+        values["share_count"] = share_count
+        values["view_count"] = view_count
+        values["popularity"] = _safe(post_features.popularity if post_features else None, upvote_count + comment_count + share_count)
 
-        # Apply same log-transform as training preprocessing to avoid train-serve skew
-        for key in _LOG_TRANSFORM_FEATURES:
-            v[key] = math.log1p(max(v[key], 0.0))
+        self._apply_preprocessing(values)
+        return values
 
-        return v
+    def to_ordered_vector(self, features: RankingFeatures) -> list[float]:
+        feature_map = self.to_feature_map(features)
+        return [feature_map[name] for name in self.FEATURE_ORDER]
+
+    def _apply_preprocessing(self, values: dict[str, float]) -> None:
+        cap_values = self._preprocessing.get("cap_values", {})
+        for name, cap in cap_values.items():
+            if name in values:
+                values[name] = min(values[name], float(cap))
+
+        log_features = self._preprocessing.get("log_transform_features") or list(_LOG_TRANSFORM_FEATURES)
+        for name in log_features:
+            if name in values:
+                values[name] = math.log1p(max(values[name], 0.0))
 
 
 def _to_binary(value: bool | None) -> float:

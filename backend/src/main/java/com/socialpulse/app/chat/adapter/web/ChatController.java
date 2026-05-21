@@ -12,6 +12,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.validation.annotation.Validated;
 
 import com.socialpulse.app.chat.application.dto.request.CreateConversationRequest;
 import com.socialpulse.app.chat.application.dto.response.ConversationListResponse;
@@ -25,11 +26,13 @@ import com.socialpulse.app.security.permission.RequiresPermission;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 import jakarta.validation.Valid;
+import jakarta.validation.constraints.Max;
 import lombok.RequiredArgsConstructor;
 
 @RestController
 @RequestMapping("/api/v1/chat")
 @RequiredArgsConstructor
+@Validated
 public class ChatController {
 
     private final CreateConversationUseCase createConversationUseCase;
@@ -53,7 +56,7 @@ public class ChatController {
     @RequiresPermission.ChatRead
     public ResponseEntity<ApiResponse<List<ConversationListResponse>>> getConversations(
             @RequestParam(defaultValue = "0") int page,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         List<ConversationListResponse> conversations = getConversationsUseCase.getConversations(page, size, currentUser);
         return ResponseEntity.ok(ApiResponse.<List<ConversationListResponse>>builder()
@@ -66,7 +69,7 @@ public class ChatController {
     public ResponseEntity<ApiResponse<MessageHistoryResponse>> getMessages(
             @PathVariable Long conversationId,
             @RequestParam(required = false) String cursor,
-            @RequestParam(defaultValue = "20") int size,
+            @RequestParam(defaultValue = "20") @Max(100) int size,
             @AuthenticationPrincipal CustomUserDetails currentUser) {
         MessageHistoryResponse history = getMessageHistoryUseCase.getHistory(conversationId, cursor, size, currentUser);
         return ResponseEntity.ok(ApiResponse.<MessageHistoryResponse>builder()

@@ -36,20 +36,27 @@ services:
     networks:
       - app-network
 
-  pgadmin:
-    image: dpage/pgadmin4:latest
+  ai-pipeline:
+    build: ./ai_pipeline
     restart: unless-stopped
-    environment:
-      PGADMIN_DEFAULT_EMAIL: ${PGADMIN_DEFAULT_EMAIL:-admin@socialpulse.com}
-      PGADMIN_DEFAULT_PASSWORD: ${PGADMIN_DEFAULT_PASSWORD:-admin}
     ports:
-      - "5050:80"
-    depends_on:
-      db:
-        condition: service_healthy
+      - "8001:8000"
+    environment:
+      AI_PIPELINE_ENABLED: "true"
+      AI_PIPELINE_MODEL_LOCATION: /app/model/model.json
+      AI_PIPELINE_FEATURE_SCHEMA_VERSION: ${AI_PIPELINE_FEATURE_SCHEMA_VERSION:-v1}
+      AI_PIPELINE_INFERENCE_DEVICE: cpu
+    healthcheck:
+      test:
+        [
+          "CMD-SHELL",
+          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()\"",
+        ]
+      interval: 30s
+      timeout: 5s
+      retries: 3
     networks:
       - app-network
-
 
   backend:
     build: ./backend
@@ -62,10 +69,13 @@ services:
     environment:
       DB_HOST: db
       REDIS_HOST: redis
+      AI_PIPELINE_BASE_URL: http://ai-pipeline:8000
     depends_on:
       db:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      ai-pipeline:
         condition: service_healthy
     networks:
       - app-network

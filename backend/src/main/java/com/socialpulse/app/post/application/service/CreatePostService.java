@@ -84,6 +84,7 @@ public class CreatePostService implements CreatePostUseCase {
                 .content(request.getContent())
                 .imageUrl(request.getImageUrl())
                 .imagePublicId(request.getImagePublicId())
+                .topicSlugs(PostTopicCatalog.normalizeAndValidate(request.getTopicSlugs()))
                 .userId(currentUser.getId())
                 .privacy(request.getPrivacy())
                 .parentPostId(parentPostId)

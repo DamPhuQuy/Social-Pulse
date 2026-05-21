@@ -1,10 +1,10 @@
-from .schema import LightGbmFeatureSchema
-from .model import LightGbmModel, LightGbmModelArtifact, TreeNode, TreeInfo, parse_model, parse_artifact
-from .scorer import LightGbmModelScorer
+from .schema import RankingFeatureSchema
+from .model import TreeModel, RankingModelArtifact, TreeNode, TreeInfo, parse_model, parse_artifact
+from .scorer import TreeModelScorer
 
 __all__ = [
-    "LightGbmFeatureSchema",
-    "LightGbmModel", "LightGbmModelArtifact", "TreeNode", "TreeInfo",
+    "RankingFeatureSchema",
+    "TreeModel", "RankingModelArtifact", "TreeNode", "TreeInfo",
     "parse_model", "parse_artifact",
-    "LightGbmModelScorer",
+    "TreeModelScorer",
 ]

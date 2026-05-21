@@ -10,6 +10,17 @@ export const PATHS = {
   TERMS: "/terms",
   PRIVACY: "/privacy",
   HOME: "/home",
+  DISCOVERY: "/discovery",
+  NOTIFICATIONS: "/notifications",
+  BOOKMARKS: "/bookmarks",
+  SETTINGS: "/settings",
+  CHAT: "/chat",
+  PROFILE: "/profile",
+  USER_PROFILE: "/profile/:username",
+  POST_DETAIL: "/posts/:postId",
+  ADMIN_REPORTS: "/admin/reports",
+  ADMIN_AI: "/admin/ai",
+  ADMIN_RBAC: "/admin/rbac",
 } as const;
 
 export type AppPaths = (typeof PATHS)[keyof typeof PATHS];

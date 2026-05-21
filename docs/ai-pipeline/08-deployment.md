@@ -37,9 +37,9 @@ CMD ["uvicorn", "ai_pipeline.server:app", "--host", "0.0.0.0", "--port", "8000"]
 docker build -t social-pulse-ai .
 
 # Run
-docker run -p 8000:8000 \
-  -e AI_ENABLED=true \
-  -e AI_MODEL_LOCATION=ai_pipeline/model/model.json \
+docker run -p 8001:8000 \
+  -e AI_PIPELINE_ENABLED=true \
+  -e AI_PIPELINE_MODEL_LOCATION=/app/model/model.json \
   social-pulse-ai
 ```
 
@@ -49,19 +49,27 @@ Trong `docker-compose.yaml` của project:
 
 ```yaml
 services:
-  ai:
+  ai-pipeline:
     build: ./ai_pipeline
     ports:
-      - "8000:8000"
+      - "8001:8000"
     environment:
-      - AI_ENABLED=true
-      - AI_MODEL_LOCATION=ai_pipeline/model/model.json
-      - AI_FEATURE_SCHEMA_VERSION=v1
+      - AI_PIPELINE_ENABLED=true
+      - AI_PIPELINE_MODEL_LOCATION=/app/model/model.json
+      - AI_PIPELINE_FEATURE_SCHEMA_VERSION=v1
+      - AI_PIPELINE_INFERENCE_DEVICE=cpu
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      test: ["CMD-SHELL", "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()\""]
       interval: 30s
       timeout: 10s
       retries: 3
+
+  backend:
+    environment:
+      AI_PIPELINE_BASE_URL: http://ai-pipeline:8000
+    depends_on:
+      ai-pipeline:
+        condition: service_healthy
 ```
 
 ## Kết nối với Backend
@@ -97,9 +105,12 @@ uv run train \
   --comments data/RC_2019-04.zst \
   --output model/model.json \
   --metrics-output model/metrics.json \
+  --plots-output-dir model/plots \
   --sample-size 100000 \
-  --n-estimators 200 \
-  --learning-rate 0.18 \
+  --n-estimators 1200 \
+  --learning-rate 0.05 \
+  --device cuda \
+  --n-jobs 0 \
   --seed 42
 ```
 
@@ -107,8 +118,13 @@ uv run train \
 
 ```
 model/
-├── model.json      # Model artifact (trees + metadata)
-└── metrics.json    # Training metrics + feature stats
+├── model.json      # Metadata artifact
+├── model.ubj       # XGBoost booster sidecar
+├── metrics.json    # Training metrics + feature stats
+└── plots/
+    ├── feature_importance.png
+    ├── label_distribution.png
+    └── training_curves.png
 ```
 
 ### Retrain cycle
@@ -125,9 +141,10 @@ model/
 
 | Variable | Default | Production | Mô tả |
 |----------|---------|-----------|--------|
-| `AI_ENABLED` | `true` | `true` | Kill switch |
-| `AI_MODEL_LOCATION` | `ai_pipeline/model/model.json` | `/app/model/model.json` | Model path |
-| `AI_FEATURE_SCHEMA_VERSION` | `v1` | `v1` | Schema compatibility |
+| `AI_PIPELINE_ENABLED` | `true` | `true` | Kill switch |
+| `AI_PIPELINE_MODEL_LOCATION` | `ai_pipeline/model/model.json` | `/app/model/model.json` | Model path |
+| `AI_PIPELINE_FEATURE_SCHEMA_VERSION` | `v1` | `v1` | Schema compatibility |
+| `AI_PIPELINE_INFERENCE_DEVICE` | `cpu` | `cpu` | XGBoost inference device |
 
 ## Health Check
 

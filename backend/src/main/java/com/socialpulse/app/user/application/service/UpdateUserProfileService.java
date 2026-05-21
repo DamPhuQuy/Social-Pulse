@@ -49,8 +49,10 @@ public class UpdateUserProfileService implements UpdateUserProfileUseCase {
                 .bio(request.getBio() != null ? request.getBio() : existingProfile.getBio())
                 .dob(request.getDob() != null ? request.getDob() : existingProfile.getDob())
                 .gender(request.getGender() != null ? request.getGender() : existingProfile.getGender())
-                .avatarUrl(request.getAvatarUrl() != null ? request.getAvatarUrl() : existingProfile.getAvatarUrl())
-                .avatarPublicId(request.getAvatarPublicId() != null ? request.getAvatarPublicId() : existingProfile.getAvatarPublicId())
+                .avatarUrl(request.getAvatarUrl() != null ? (request.getAvatarUrl().equals("DELETE") ? null : request.getAvatarUrl()) : existingProfile.getAvatarUrl())
+                .avatarPublicId(request.getAvatarPublicId() != null ? (request.getAvatarPublicId().equals("DELETE") ? null : request.getAvatarPublicId()) : existingProfile.getAvatarPublicId())
+                .coverImageUrl(request.getCoverImageUrl() != null ? (request.getCoverImageUrl().equals("DELETE") ? null : request.getCoverImageUrl()) : existingProfile.getCoverImageUrl())
+                .coverImagePublicId(request.getCoverImagePublicId() != null ? (request.getCoverImagePublicId().equals("DELETE") ? null : request.getCoverImagePublicId()) : existingProfile.getCoverImagePublicId())
                 .updatedAt(existingProfile.getUpdatedAt())
                 .build());
 

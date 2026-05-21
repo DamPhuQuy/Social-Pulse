@@ -35,4 +35,10 @@ public class UserProfileMutationRequest {
 
     @Size(max = 255, message = "Avatar public ID must not exceed 255 characters")
     private String avatarPublicId;
+
+    @Size(max = 2048, message = "Cover image URL must not exceed 2048 characters")
+    private String coverImageUrl;
+
+    @Size(max = 255, message = "Cover image public ID must not exceed 255 characters")
+    private String coverImagePublicId;
 }

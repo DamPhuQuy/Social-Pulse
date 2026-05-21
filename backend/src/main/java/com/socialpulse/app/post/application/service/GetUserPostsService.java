@@ -45,7 +45,7 @@ public class GetUserPostsService implements GetUserPostsUseCase {
                 : postRepository.findActiveByUserIdAndPrivacy(userId, Privacy.PUBLIC, pageable);
 
         return PageResponse.<UserPostResponse>builder()
-                .items(postSummaryAssembler.assemble(posts.getContent()))
+                .items(postSummaryAssembler.assemble(posts.getContent(), currentUser.getId()))
                 .page(posts.getNumber())
                 .size(posts.getSize())
                 .totalElements(posts.getTotalElements())

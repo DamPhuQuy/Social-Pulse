@@ -1,6 +1,7 @@
 package com.socialpulse.app.common.cloudinary.service;
 
 import java.util.Map;
+import java.util.Set;
 
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -15,6 +16,17 @@ import org.slf4j.LoggerFactory;
 @Service
 public class CloudinaryService {
     private static final Logger logger = LoggerFactory.getLogger(CloudinaryService.class);
+    private static final long MAX_UPLOAD_BYTES = 50L * 1024 * 1024;
+    private static final Set<String> ALLOWED_CONTENT_TYPES = Set.of(
+            "image/jpeg",
+            "image/png",
+            "image/gif",
+            "image/webp",
+            "image/avif",
+            "video/mp4",
+            "video/quicktime",
+            "video/webm"
+    );
     private final Cloudinary cloudinary;
 
     public CloudinaryService(Cloudinary cloudinary) {
@@ -23,6 +35,14 @@ public class CloudinaryService {
 
     public String upload(MultipartFile file) {
         if (file == null || file.isEmpty()) {
+            throw new AppException(SystemCode.UPLOAD_FAILED);
+        }
+        if (file.getSize() > MAX_UPLOAD_BYTES) {
+            throw new AppException(SystemCode.UPLOAD_FAILED);
+        }
+
+        String contentType = file.getContentType();
+        if (contentType == null || ALLOWED_CONTENT_TYPES.stream().noneMatch(contentType::equalsIgnoreCase)) {
             throw new AppException(SystemCode.UPLOAD_FAILED);
         }
 
