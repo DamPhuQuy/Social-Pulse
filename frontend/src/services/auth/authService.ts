@@ -199,7 +199,7 @@ export async function getCurrentUser(accessToken: string): Promise<MeResponse> {
       ok: true,
       status: response.status,
       message: readMessage(response.data) ?? `Session check succeeded (${response.status}).`,
-      data: response.data,
+      data: response.data.data,
     };
   }, "Failed to fetch current user.");
 }

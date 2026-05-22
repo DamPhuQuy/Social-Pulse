@@ -258,6 +258,7 @@ export default function ChatPage() {
       ) ?? null,
     [conversations, selectedConversationId],
   );
+  const hasSelectedConversation = !!selectedConversation;
 
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -679,34 +680,39 @@ export default function ChatPage() {
 
     let cancelled = false;
     const bootstrap = async () => {
-      const [meRes, conversationsRes] = await Promise.all([
-        getCurrentUser(accessToken),
-        getConversations(0, 100),
-      ]);
+      try {
+        const [meRes, conversationsRes] = await Promise.all([
+          getCurrentUser(accessToken),
+          getConversations(0, 100),
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (meRes.ok && meRes.data) {
-        setCurrentUserId(meRes.data.id);
-        setCurrentUserEmail(meRes.data.email);
-      } else {
-        toast.error(meRes.message ?? "Không thể tải thông tin tài khoản.");
-      }
-
-      if (conversationsRes.ok && conversationsRes.data) {
-        const ordered = sortConversations(conversationsRes.data);
-        setConversations(ordered);
-        if (ordered.length > 0) {
-          setSelectedConversationId((current) => current ?? ordered[0].id);
+        if (meRes.ok && meRes.data) {
+          setCurrentUserId(meRes.data.id);
+          setCurrentUserEmail(meRes.data.email);
+        } else {
+          toast.error(meRes.message ?? "Không thể tải thông tin tài khoản.");
         }
-      } else {
-        toast.error(
-          conversationsRes.message ??
-            "Không thể tải danh sách cuộc trò chuyện.",
-        );
-      }
 
-      setBootstrapping(false);
+        if (conversationsRes.ok && conversationsRes.data) {
+          const ordered = sortConversations(conversationsRes.data);
+          setConversations(ordered);
+          if (ordered.length > 0) {
+            setSelectedConversationId((current) => current ?? ordered[0].id);
+          }
+        } else {
+          toast.error(
+            conversationsRes.message ??
+              "Không thể tải danh sách cuộc trò chuyện.",
+          );
+        }
+      } catch (err) {
+        console.error("Error during bootstrap:", err);
+      } finally {
+        setConversationsLoading(false);
+        setBootstrapping(false);
+      }
     };
 
     void bootstrap();
@@ -754,7 +760,7 @@ export default function ChatPage() {
       ),
     );
     sendReadAck(selectedConversation.id);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, hasSelectedConversation]);
 
   useEffect(() => {
     if (!selectedConversationId || socketStatus !== "connected") {
@@ -1245,6 +1251,8 @@ export default function ChatPage() {
                   <footer className="border-t border-slate-200/80 px-5 py-4 dark:border-neutral-800">
                     <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                       <textarea
+                        id="chat-message-input"
+                        name="message"
                         value={draft}
                         onChange={(event) => setDraft(event.target.value)}
                         onKeyDown={(event) => {
