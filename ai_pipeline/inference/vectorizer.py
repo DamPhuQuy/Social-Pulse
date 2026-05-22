@@ -96,7 +96,6 @@ class FeatureVectorizer:
         values["comment_count"] = comment_count
         values["share_count"] = share_count
         values["view_count"] = view_count
-        values["popularity"] = _safe(post_features.popularity if post_features else None, upvote_count + comment_count + share_count)
 
         self._apply_preprocessing(values)
         return values

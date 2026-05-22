@@ -39,8 +39,8 @@ public class FeedConfig {
     }
 
     @Bean
-    public UserInteractionRepository userInteractionRepository(JdbcTemplate jdbcTemplate) {
-        return new UserInteractionRepositoryAdapter(jdbcTemplate);
+    public UserInteractionRepository userInteractionRepository(com.socialpulse.app.feed.infrastructure.persistence.repository.JpaUserInteractionRepository jpaUserInteractionRepository) {
+        return new UserInteractionRepositoryAdapter(jpaUserInteractionRepository);
     }
 
     @Bean

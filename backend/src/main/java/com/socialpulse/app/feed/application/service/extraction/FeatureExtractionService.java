@@ -53,14 +53,17 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
         Map<Long, Long> postCountMap = postRepository.countByUserIds(authorIds);
         Map<Long, Double> avgPopularityMap = postRepository.averagePopularityByUserIds(authorIds);
         long viewerTotal = userInteractionRepository.countTotalByViewerSince(viewerId, now.minusDays(30));
-
+        java.util.Map<Long, com.socialpulse.app.feed.domain.model.UserInteractionAggregate> aggregates =
+                userInteractionRepository.findAggregatesByViewerAndAuthors(viewerId, authorIds, now.minusDays(30), now.minusDays(7));
+ 
         return candidates.stream().map(candidate -> {
             Post post = candidate.getPost();
+            com.socialpulse.app.feed.domain.model.UserInteractionAggregate agg = aggregates.get(post.getUserId());
             return RankingFeatures.builder()
                     .postId(post.getId())
                     .postFeatures(postFeatureExtractor.extract(post, now))
                     .authorFeatures(authorFeatureExtractor.extract(post.getUserId(), userMap, postCountMap, avgPopularityMap))
-                    .interactionFeatures(interactionFeatureExtractor.extract(viewerId, post.getUserId(), now, viewerTotal))
+                    .interactionFeatures(interactionFeatureExtractor.extractFromAggregate(agg, now, viewerTotal))
                     .build();
         }).toList();
     }

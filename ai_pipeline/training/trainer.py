@@ -416,7 +416,7 @@ def _ndcg(rows: list[TrainingRow], predictions: np.ndarray, k: int = 10) -> floa
 
     groups: dict[str, list[int]] = defaultdict(list)
     for idx, row in enumerate(rows):
-        groups[row.post_id].append(idx)
+        groups[row.viewer_id].append(idx)
 
     if not groups:
         return 0.0
@@ -468,7 +468,7 @@ def _ranking_diagnostics(rows: list[TrainingRow], predictions: np.ndarray) -> di
 
     groups: dict[str, list[int]] = defaultdict(list)
     for idx, row in enumerate(rows):
-        groups[row.post_id].append(idx)
+        groups[row.viewer_id].append(idx)
 
     ranked_groups = 0
     comparable_pairs = 0

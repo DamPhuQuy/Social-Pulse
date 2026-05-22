@@ -89,6 +89,16 @@ class FeatureExtractionServiceTest {
                 .build()));
         when(postRepository.countByUserIds(Set.of(7L))).thenReturn(Map.of(7L, 11L));
         when(postRepository.averagePopularityByUserIds(Set.of(7L))).thenReturn(Map.of(7L, 18.5));
+        when(userInteractionRepository.countTotalByViewerSince(
+                org.mockito.ArgumentMatchers.eq(42L),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)
+        )).thenReturn(10L);
+        when(userInteractionRepository.findAggregatesByViewerAndAuthors(
+                org.mockito.ArgumentMatchers.eq(42L),
+                org.mockito.ArgumentMatchers.eq(Set.of(7L)),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class),
+                org.mockito.ArgumentMatchers.any(LocalDateTime.class)
+        )).thenReturn(Map.of(7L, new com.socialpulse.app.feed.domain.model.UserInteractionAggregate(7L, 2L, 5L, LocalDateTime.now().minusHours(1))));
 
         var features = service.extractFeatures(42L, List.of(candidate));
 
@@ -97,6 +107,9 @@ class FeatureExtractionServiceTest {
         assertEquals(27.0, features.get(0).getPostFeatures().getPopularity(), 1e-9);
         assertEquals(18.5, features.get(0).getAuthorFeatures().getAveragePopularity(), 1e-9);
         assertEquals(11L, features.get(0).getAuthorFeatures().getPostCount());
+        assertEquals(2L, features.get(0).getInteractionFeatures().getInteractionCount7d());
+        assertEquals(5L, features.get(0).getInteractionFeatures().getInteractionCount30d());
+        assertEquals(0.5, features.get(0).getInteractionFeatures().getAffinityScore(), 1e-9);
         verify(postRepository).averagePopularityByUserIds(Set.of(7L));
     }
 }

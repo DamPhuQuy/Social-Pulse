@@ -27,7 +27,6 @@ class RankingFeatureSchema:
         "comment_count",
         "share_count",
         "view_count",
-        "popularity",
     ]
 
     LOG_TRANSFORM_FEATURES: tuple[str, ...] = (
@@ -36,7 +35,6 @@ class RankingFeatureSchema:
         "comment_count",
         "share_count",
         "view_count",
-        "popularity",
         "interaction_count_7d",
         "interaction_count_30d",
     )
