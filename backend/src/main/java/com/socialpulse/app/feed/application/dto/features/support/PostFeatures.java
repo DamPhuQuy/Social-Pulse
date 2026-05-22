@@ -26,5 +26,4 @@ public class PostFeatures {
     private Long commentCount;
     private Long viewCount;
     private Long shareCount;
-    private Double popularity;
 }

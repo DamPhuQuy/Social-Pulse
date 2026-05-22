@@ -3,7 +3,7 @@ import {
   Search, MoreHorizontal,
   MessageCircle, Share2, Bookmark,
   Activity, Moon, Sun, Loader2, Plus, Edit3, Trash2,
-  ChevronDown, X
+  ChevronDown, X, UserX
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -13,6 +13,7 @@ import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type Priv
 import { getMyProfile, type UserPost, type UserProfile } from "@/services/user/userService";
 import { getTrendingHashtags, type TrendingHashtagResponse } from "@/services/social/discoveryService";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
+import { blockUser } from "@/services/social/blockService";
 
 import ReportModal from "@/components/social/ReportModal";
 import CreatePostModal from "@/components/post/CreatePostModal";
@@ -329,11 +330,29 @@ export default function HomePage() {
     });
   };
 
-  const handleReportSuccess = (options: { hidePost: boolean; hideUser: boolean }) => {
+  const handleBlockUser = async (userId: number, username: string) => {
+    if (!window.confirm(`Bạn có chắc chắn muốn chặn người dùng @${username}? Họ sẽ không thể xem bài viết của bạn và bạn sẽ không thấy nội dung của họ.`)) {
+      return;
+    }
+    const res = await blockUser(userId);
+    if (res.ok) {
+      toast.success(`Đã chặn @${username} thành công.`);
+      setFeed((prev) => prev.filter((post) => post.userId !== userId));
+    } else {
+      toast.error(res.message ?? "Chặn người dùng thất bại.");
+    }
+  };
+
+  const handleReportSuccess = async (options: { hidePost: boolean; hideUser: boolean }) => {
     if (reportPostId === null) return;
     
     const reportedPost = feed.find((p) => p.postId === reportPostId);
     if (!reportedPost) return;
+
+    if (options.hideUser) {
+      await blockUser(reportedPost.userId);
+      toast.success(`Đã chặn @${reportedPost.username} thành công.`);
+    }
 
     setFeed((prevFeed) => {
       let nextFeed = prevFeed;
@@ -507,6 +526,7 @@ export default function HomePage() {
                   isBookmarked={bookmarkedPostIds.has(post.postId)}
                   onToggleBookmark={handleToggleBookmark}
                   onReport={setReportPostId}
+                  onBlockUser={handleBlockUser}
                 />
               ))}
               {hasMore && (
@@ -590,6 +610,7 @@ function FeedPost({
   isBookmarked,
   onToggleBookmark,
   onReport,
+  onBlockUser,
 }: {
   post: FeedItem;
   onReact: (id: number, type: PulseReaction) => void;
@@ -600,6 +621,7 @@ function FeedPost({
   isBookmarked: boolean;
   onToggleBookmark: (postId: number) => void;
   onReport: (postId: number) => void;
+  onBlockUser?: (userId: number, username: string) => void;
 }) {
   const navigate = useNavigate();
   const isUpvoted = post.myVote === 1;
@@ -645,9 +667,14 @@ function FeedPost({
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => { setShowMenu(false); onReport(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
-                      <Trash2 className="w-4 h-4" /> Báo cáo
-                    </button>
+                    <>
+                      <button onClick={() => { setShowMenu(false); onReport(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 border-b border-slate-100 dark:border-neutral-800">
+                        <Trash2 className="w-4 h-4" /> Báo cáo
+                      </button>
+                      <button onClick={() => { setShowMenu(false); onBlockUser?.(post.userId, post.username); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                        <UserX className="w-4 h-4" /> Chặn người dùng
+                      </button>
+                    </>
                   )}
                 </div>
               )}

@@ -526,7 +526,7 @@ export default function ProfilePage() {
     });
   };
 
-  const handleReportSuccess = (options: {
+  const handleReportSuccess = async (options: {
     hidePost: boolean;
     hideUser: boolean;
   }) => {
@@ -534,6 +534,13 @@ export default function ProfilePage() {
 
     const reportedPost = posts.find((p) => p.postId === reportPostId);
     if (!reportedPost) return;
+
+    if (options.hideUser) {
+      await blockUser(reportedPost.userId);
+      setIsBlocked(true);
+      setProfile((prev) => (prev ? { ...prev, isFollowing: false } : null));
+      toast.success("Đã chặn người dùng này.");
+    }
 
     setPosts((prevPosts) => {
       let nextPosts = prevPosts;

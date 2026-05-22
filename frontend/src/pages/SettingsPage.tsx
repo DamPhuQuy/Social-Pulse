@@ -7,8 +7,9 @@ import AppSidebar from "@/components/social/AppSidebar";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/services/auth/authService";
-import { changePassword, deleteProfile } from "@/services/user/userService";
+import { changePassword, deleteProfile, getUserProfileById, type UserProfile } from "@/services/user/userService";
 import { getBlockedUserIds, unblockUser } from "@/services/social/blockService";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 type ActiveTab = "password" | "blocks" | "danger";
 
@@ -27,16 +28,41 @@ export default function SettingsPage() {
   const [passwordLoading, setPasswordLoading] = useState(false);
 
   // Blocked Users States
-  const [blockedIds, setBlockedIds] = useState<number[]>([]);
+  const [blockedUsers, setBlockedUsers] = useState<UserProfile[]>([]);
   const [blocksLoading, setBlocksLoading] = useState(false);
 
   const loadBlockedUsers = async () => {
     setBlocksLoading(true);
     const res = await getBlockedUserIds();
-    setBlocksLoading(false);
     if (res.ok && res.data) {
-      setBlockedIds(res.data);
+      const ids = res.data;
+      const profiles = await Promise.all(
+        ids.map(async (id) => {
+          const uRes = await getUserProfileById(id);
+          if (uRes.ok && uRes.data) {
+            return uRes.data;
+          }
+          return {
+            userId: id,
+            username: `user_${id}`,
+            displayName: `Người dùng ${id}`,
+            bio: null,
+            avatarUrl: null,
+            coverImageUrl: null,
+            dob: null,
+            gender: null,
+            postCount: 0,
+            followers: 0,
+            following: 0,
+            isFollowing: false,
+            avatarPublicId: null,
+            coverImagePublicId: null,
+          } as UserProfile;
+        })
+      );
+      setBlockedUsers(profiles);
     }
+    setBlocksLoading(false);
   };
 
   useEffect(() => {
@@ -49,7 +75,7 @@ export default function SettingsPage() {
     const res = await unblockUser(userId);
     if (res.ok) {
       toast.success("Đã bỏ chặn người dùng này!");
-      setBlockedIds(prev => prev.filter(id => id !== userId));
+      setBlockedUsers(prev => prev.filter(u => u.userId !== userId));
     } else {
       toast.error(res.message ?? "Bỏ chặn thất bại.");
     }
@@ -226,25 +252,27 @@ export default function SettingsPage() {
                       <Loader2 className="w-6 h-6 animate-spin mx-auto mb-2 text-blue-500" />
                       Đang tải danh sách chặn...
                     </div>
-                  ) : blockedIds.length === 0 ? (
+                  ) : blockedUsers.length === 0 ? (
                     <div className="text-center py-10 text-slate-400">
                       Không có người dùng nào bị chặn.
                     </div>
                   ) : (
                     <div className="divide-y divide-slate-100 dark:divide-neutral-800">
-                      {blockedIds.map((id) => (
-                        <div key={id} className="flex items-center justify-between py-3">
+                      {blockedUsers.map((user) => (
+                        <div key={user.userId} className="flex items-center justify-between py-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-red-500/10 text-red-500 flex items-center justify-center font-bold text-xs">
-                              #
+                            <div className="w-10 h-10 rounded-full overflow-hidden shrink-0 bg-slate-100 dark:bg-neutral-850">
+                              <SafeAvatar src={user.avatarUrl} alt={user.username} />
                             </div>
                             <div>
-                              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">ID Người dùng: {id}</span>
-                              <p className="text-xs text-slate-450">Tài khoản này đã bị chặn nội dung.</p>
+                              <span className="font-bold text-sm text-slate-800 dark:text-slate-200">
+                                {user.displayName || user.username}
+                              </span>
+                              <p className="text-xs text-slate-450">@{user.username}</p>
                             </div>
                           </div>
                           <button
-                            onClick={() => handleUnblock(id)}
+                            onClick={() => handleUnblock(user.userId)}
                             className="px-3 py-1.5 bg-slate-100 dark:bg-neutral-850 hover:bg-red-50 dark:hover:bg-red-500/10 text-xs font-semibold text-slate-700 dark:text-neutral-300 hover:text-red-600 rounded-lg transition"
                           >
                             Bỏ chặn

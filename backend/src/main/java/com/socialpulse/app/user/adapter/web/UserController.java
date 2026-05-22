@@ -127,6 +127,29 @@ public class UserController {
         return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder().data(getUserProfileUseCase.getProfileByUsername(username, currentUser.getId())).build());
     }
 
+    @GetMapping("/profile/id/{userId}")
+    @RequiresPermission.UserRead
+    @Operation(
+            summary = "Get user profile by userId",
+            description = "Return public profile by userId",
+            responses = {
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "200", description = "Profile retrieved successfully"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "401", description = "Unauthorized"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "403", description = "Forbidden"),
+                    @io.swagger.v3.oas.annotations.responses.ApiResponse(responseCode = "404", description = "User profile not found")
+            }
+    )
+    public ResponseEntity<ApiResponse<UserViewProfileResponse>> getProfileById(
+            @PathVariable Long userId,
+            @AuthenticationPrincipal CustomUserDetails currentUser) {
+        var request = UserViewProfileRequest.builder()
+                .targetUserId(userId)
+                .build();
+        return ResponseEntity.ok(ApiResponse.<UserViewProfileResponse>builder()
+                .data(getUserProfileUseCase.getProfile(request, currentUser.getId()))
+                .build());
+    }
+
     @PutMapping("/me/topics")
     @RequiresPermission.UserUpdate
     @Operation(summary = "Update user topics")

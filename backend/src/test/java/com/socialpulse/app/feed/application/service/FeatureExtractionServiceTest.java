@@ -104,7 +104,6 @@ class FeatureExtractionServiceTest {
 
         assertEquals(1, features.size());
         assertEquals(100L, features.get(0).getPostId());
-        assertEquals(27.0, features.get(0).getPostFeatures().getPopularity(), 1e-9);
         assertEquals(18.5, features.get(0).getAuthorFeatures().getAveragePopularity(), 1e-9);
         assertEquals(11L, features.get(0).getAuthorFeatures().getPostCount());
         assertEquals(2L, features.get(0).getInteractionFeatures().getInteractionCount7d());
