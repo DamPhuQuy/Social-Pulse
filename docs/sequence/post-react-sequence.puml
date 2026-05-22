@@ -1,0 +1,74 @@
+@startuml
+!theme plain
+
+title Post Reaction Endpoint Sequence - POST /api/v1/posts/react
+
+autonumber
+
+actor Member
+participant PostController
+participant ReactPostUseCase
+participant ReactPostService
+database PostRepository
+database UserRepository
+database PostReactionsRepository
+participant NotificationCommandService
+participant SseEmitterRegistry
+database UserInteractionRepository
+
+Member -> PostController: POST /api/v1/posts/react\nPostReactionRequest
+PostController -> ReactPostUseCase: react(request, currentUser)
+ReactPostUseCase -> ReactPostService: react()
+
+ReactPostService -> PostRepository: findById(postId)
+PostRepository --> ReactPostService: Post
+
+ReactPostService -> ReactPostService: verify canAccessPost
+
+ReactPostService -> UserRepository: findById(userId)
+UserRepository --> ReactPostService: User
+
+ReactPostService -> PostReactionsRepository: findByPostIdAndUserId(postId, userId)
+PostReactionsRepository --> ReactPostService: currentReaction (optional)
+
+alt currentReaction == null (New Reaction)
+  ReactPostService -> PostReactionsRepository: save(newReaction)
+  ReactPostReactionsRepository --> ReactPostService: savedReaction
+  
+  ReactPostService -> ReactPostService: incrementReactionCount(post, reactionType)
+  ReactPostService -> PostRepository: save(post)
+  PostRepository --> ReactPostService: updatedPost
+  
+  ReactPostService -> NotificationCommandService: notifyPostReaction(userId, authorId, postId, type)
+  ReactPostService -> SseEmitterRegistry: broadcast("post_stats", stats)
+  
+  alt Reaction is UPVOTE & not own post
+    ReactPostService -> UserInteractionRepository: save(userId, authorId, "UPVOTE")
+    note right: Logged for recommendation system\nranking feedback loop
+  end
+  
+else currentReaction != null & currentReaction.type == targetReaction (Toggle Off)
+  ReactPostService -> PostReactionsRepository: delete(currentReaction)
+  ReactPostService -> ReactPostService: decrementReactionCount(post, reactionType)
+  ReactPostService -> PostRepository: save(post)
+  PostRepository --> ReactPostService: updatedPost
+  ReactPostService -> SseEmitterRegistry: broadcast("post_stats", stats)
+
+else currentReaction != null & currentReaction.type != targetReaction (Change Type)
+  ReactPostService -> ReactPostService: decrementReactionCount(post, oldType)
+  ReactPostService -> ReactPostService: incrementReactionCount(post, targetReaction)
+  ReactPostService -> currentReaction: changeReactionType(targetReaction)
+  ReactPostService -> PostReactionsRepository: save(currentReaction)
+  PostReactionsRepository --> ReactPostService: updatedReaction
+  ReactPostService -> PostRepository: save(post)
+  PostRepository --> ReactPostService: updatedPost
+  
+  ReactPostService -> NotificationCommandService: notifyPostReaction(userId, authorId, postId, targetReaction)
+  ReactPostService -> SseEmitterRegistry: broadcast("post_stats", stats)
+end
+
+ReactPostService --> ReactPostUseCase: PostReactionResponse
+ReactPostUseCase --> PostController: PostReactionResponse
+PostController --> Member: 200 OK\nApiResponse<PostReactionResponse>
+
+@enduml
