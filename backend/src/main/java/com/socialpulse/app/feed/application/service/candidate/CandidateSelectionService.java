@@ -10,7 +10,8 @@ import java.util.stream.Collectors;
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
 
-import com.socialpulse.app.block.JpaBlockRepository;
+import com.socialpulse.app.block.domain.model.Block;
+import com.socialpulse.app.block.domain.repository.BlockRepository;
 import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
@@ -20,7 +21,7 @@ import com.socialpulse.app.post.domain.model.Post;
 public class CandidateSelectionService implements SelectCandidatesUseCase {
     private final FeedRepository feedRepository;
     private final StringRedisTemplate redisTemplate;
-    private final JpaBlockRepository blockRepository;
+    private final BlockRepository blockRepository;
 
     private static final int RECENT_COUNT = 200;
     private static final int FOLLOWING_COUNT = 100;
@@ -32,7 +33,7 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
 
     public CandidateSelectionService(FeedRepository feedRepository, 
                                      StringRedisTemplate redisTemplate,
-                                     JpaBlockRepository blockRepository) {
+                                     BlockRepository blockRepository) {
         this.feedRepository = feedRepository;
         this.redisTemplate = redisTemplate;
         this.blockRepository = blockRepository;
@@ -66,12 +67,12 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
         if (userId != null) {
             blockedUserIds.addAll(
                 blockRepository.findByBlockerId(userId).stream()
-                    .map(b -> b.getBlocked().getId())
+                    .map(Block::getBlockedId)
                     .collect(Collectors.toSet())
             );
             blockedUserIds.addAll(
                 blockRepository.findByBlockedId(userId).stream()
-                    .map(b -> b.getBlocker().getId())
+                    .map(Block::getBlockerId)
                     .collect(Collectors.toSet())
             );
         }

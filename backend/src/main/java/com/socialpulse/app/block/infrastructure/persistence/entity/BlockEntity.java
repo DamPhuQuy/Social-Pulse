@@ -1,4 +1,4 @@
-package com.socialpulse.app.block;
+package com.socialpulse.app.block.infrastructure.persistence.entity;
 
 import java.time.LocalDateTime;
 
