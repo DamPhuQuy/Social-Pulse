@@ -32,7 +32,10 @@ class PushshiftFeatureEngineering:
         rows: list[TrainingRow] = []
 
         for record in sampled_posts:
-            aggregate = author_aggregates.get(record.author, AuthorAggregate.empty())
+            # Use the pre-increment snapshot attached by the scanner.
+            # Falls back to the final aggregate (or empty) when snapshot is absent
+            # (e.g. during unit tests or when running older scan results).
+            aggregate = record.author_snapshot or author_aggregates.get(record.author, AuthorAggregate.empty())
             popularity = PushshiftDatasetScanner.popularity(record.score, record.num_comments, record.num_crossposts)
 
             author_interactors = self._find_viewers_for_author(interactions, record.author)
@@ -178,38 +181,41 @@ class PushshiftFeatureEngineering:
         aggregate: AuthorAggregate,
         query_utc: float,
     ) -> list[float]:
+        """Build 13 base features matching RankingFeatureSchema.FEATURE_ORDER.
+
+        Interaction features (indices 9-12) are placeholders filled to zero here
+        and merged later by _merge(). Count-based features (upvote_count,
+        comment_count, share_count, view_count, downvote_count) are deliberately
+        excluded: Pushshift provides final-snapshot counts that correlate directly
+        with the training label, which would cause severe target leakage.
+        """
         author_seniority = 0.0
         if record.author_created_utc and record.author_created_utc > 0:
             author_seniority = max(record.created_utc - record.author_created_utc, 0.0) / _SECONDS_PER_YEAR
-        popularity = PushshiftDatasetScanner.popularity(record.score, record.num_comments, record.num_crossposts)
         return [
-            record.title_length + record.body_length,
-            1.0 if record.has_multimedia else 0.0,
-            1.0 if record.is_share_post else 0.0,
-            max(query_utc - record.created_utc, 0.0) / _SECONDS_PER_HOUR,
-            record.hot_score,
-            record.upvote_ratio,
-            author_seniority,
-            aggregate.post_count,
-            aggregate.average_popularity,
-            0.0,
-            0.0,
-            0.0,
-            0.0,
-            max(record.score, 0),
-            0.0,
-            record.num_comments,
-            record.num_crossposts,
-            0.0,
+            record.title_length + record.body_length,   # content_length
+            1.0 if record.has_multimedia else 0.0,       # has_multimedia
+            1.0 if record.is_share_post else 0.0,        # is_share_post
+            max(query_utc - record.created_utc, 0.0) / _SECONDS_PER_HOUR,  # post_age_hours
+            record.hot_score,                            # hot_score
+            record.upvote_ratio,                         # upvote_ratio  (Laplace-smoothed)
+            author_seniority,                            # author_seniority
+            aggregate.post_count,                        # author_post_count
+            aggregate.average_popularity,                # author_engagement_rate
+            0.0,                                         # interaction_count_7d  (placeholder)
+            0.0,                                         # interaction_count_30d (placeholder)
+            0.0,                                         # hours_since_last_interaction (placeholder)
+            0.0,                                         # affinity_score (placeholder)
         ]
 
     @staticmethod
     def _merge(base: list[float], interaction_features: list[float]) -> list[float]:
+        """Fill in the 4 interaction-feature slots (indices 9-12) into the base vector."""
         merged = list(base)
-        merged[9] = interaction_features[0]
-        merged[10] = interaction_features[1]
-        merged[11] = interaction_features[2]
-        merged[12] = interaction_features[3]
+        merged[9]  = interaction_features[0]   # interaction_count_7d
+        merged[10] = interaction_features[1]   # interaction_count_30d
+        merged[11] = interaction_features[2]   # hours_since_last_interaction
+        merged[12] = interaction_features[3]   # affinity_score
         return merged
 
     @staticmethod

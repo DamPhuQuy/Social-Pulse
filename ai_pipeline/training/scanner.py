@@ -63,7 +63,28 @@ class PushshiftDatasetScanner:
                 accepted += 1
                 popularity = self.popularity(record.score, record.num_comments, record.num_crossposts)
                 agg = author_aggregates.setdefault(record.author, AuthorAggregate())
+                # Snapshot BEFORE incrementing so the attached aggregate reflects
+                # only posts the author had published prior to this one.
+                author_snapshot = agg.snapshot()
                 agg.increment(popularity)
+                # Re-attach the pre-increment snapshot to the immutable record.
+                record = SubmissionRecord(
+                    post_id=record.post_id,
+                    author=record.author,
+                    author_created_utc=record.author_created_utc,
+                    created_utc=record.created_utc,
+                    retrieved_on=record.retrieved_on,
+                    title_length=record.title_length,
+                    body_length=record.body_length,
+                    score=record.score,
+                    num_comments=record.num_comments,
+                    num_crossposts=record.num_crossposts,
+                    has_multimedia=record.has_multimedia,
+                    is_share_post=record.is_share_post,
+                    hot_score=record.hot_score,
+                    upvote_ratio=record.upvote_ratio,
+                    author_snapshot=author_snapshot,
+                )
 
                 if arguments.sample_size > 0:
                     if len(reservoir) < arguments.sample_size:
@@ -228,7 +249,17 @@ class PushshiftDatasetScanner:
             return None, "missing_post_id", None
 
         raw_ratio = js.optional_double_value(payload, "upvote_ratio")
-        upvote_ratio = raw_ratio if (raw_ratio is not None and 0.0 <= raw_ratio <= 1.0) else RankingFeatureSchema.DEFAULT_UPVOTE_RATIO
+        if raw_ratio is not None and 0.0 <= raw_ratio <= 1.0:
+            # Apply Laplace smoothing (α=2) to pull low-confidence ratios toward 0.5.
+            # At serving time a brand-new post defaults to 0.5 (no votes yet), so
+            # smoothing here reduces the training↔serving distribution gap.
+            # We use |score| as a proxy for total vote count since Pushshift
+            # does not expose separate upvote/downvote fields.
+            _SMOOTHING_ALPHA = 2.0
+            total_proxy = max(abs(score), 0)
+            upvote_ratio = (raw_ratio * total_proxy + _SMOOTHING_ALPHA * 0.5) / (total_proxy + _SMOOTHING_ALPHA)
+        else:
+            upvote_ratio = RankingFeatureSchema.DEFAULT_UPVOTE_RATIO
         content_signature = self._content_signature(title, body)
 
         return (

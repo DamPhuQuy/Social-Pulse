@@ -23,7 +23,6 @@ class PostFeatures:
     comment_count: int | None = None
     share_count: int | None = None
     view_count: int | None = None
-    popularity: float | None = None
 
 
 @dataclass

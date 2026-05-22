@@ -8,6 +8,11 @@ class RankingFeatureSchema:
     DEFAULT_LAST_INTERACTION_HOURS = 999.0
     DEFAULT_CAP_PERCENTILE = 99.0
 
+    # NOTE: upvote_count, downvote_count, comment_count, share_count, view_count are intentionally
+    # excluded from training. Pushshift provides these as final-snapshot values (at crawl time),
+    # which are monotonically correlated with the label (log1p popularity). Including them would
+    # cause the model to memorise rather than generalise. They remain in the inference vectorizer
+    # since serving-time values reflect real current state.
     FEATURE_ORDER: list[str] = [
         "content_length",
         "has_multimedia",
@@ -22,19 +27,9 @@ class RankingFeatureSchema:
         "interaction_count_30d",
         "hours_since_last_interaction",
         "affinity_score",
-        "upvote_count",
-        "downvote_count",
-        "comment_count",
-        "share_count",
-        "view_count",
     ]
 
     LOG_TRANSFORM_FEATURES: tuple[str, ...] = (
-        "upvote_count",
-        "downvote_count",
-        "comment_count",
-        "share_count",
-        "view_count",
         "interaction_count_7d",
         "interaction_count_30d",
     )
