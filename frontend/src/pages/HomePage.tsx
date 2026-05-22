@@ -18,6 +18,7 @@ import { blockUser } from "@/services/social/blockService";
 import ReportModal from "@/components/social/ReportModal";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import CommentSection from "@/components/comment/CommentSection";
 
@@ -425,22 +426,22 @@ export default function HomePage() {
         </div>
       </header>
 
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
 
         {/* LEFT SIDEBAR */}
         <AppSidebar active="home" />
 
         {/* FEED */}
-        <main className="flex flex-col gap-6 pb-10 min-w-0">
+        <main className="flex flex-col gap-6 pb-24 lg:pb-10 min-w-0">
 
           {/* Topic Selector & Search Dropdown */}
-          <div className="flex gap-3 items-center relative z-30 pb-2">
+          <div className="flex gap-3 items-center relative z-30 pb-2 overflow-x-auto scrollbar-none">
             <button
               onClick={() => {
                 setSelectedTopic(null);
                 setIsDropdownOpen(false);
               }}
-              className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
+              className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all shadow-sm ${
                 selectedTopic === null
                   ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                   : "bg-white text-slate-600 hover:bg-slate-50 dark:bg-[#1e1e1e] dark:text-neutral-400 dark:hover:bg-neutral-850 border border-slate-200/60 dark:border-[#2a2a2a]"
@@ -668,6 +669,7 @@ export default function HomePage() {
         onClose={() => setReportPostId(null)}
         onReportSuccess={handleReportSuccess}
       />
+      <BottomNavBar active="home" />
     </div>
   );
 }

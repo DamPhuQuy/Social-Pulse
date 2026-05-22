@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/services/auth/authService";
@@ -132,10 +133,10 @@ export default function SettingsPage() {
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="settings" />
 
-        <div className="min-w-0 space-y-6">
+        <div className="min-w-0 space-y-6 pb-24 lg:pb-10">
           {/* Header Card */}
           <div className="flex items-center space-x-3 bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm">
             <div className="p-3 bg-blue-500/10 text-blue-500 rounded-xl">
@@ -311,6 +312,7 @@ export default function SettingsPage() {
           </div>
         </div>
       </div>
+      <BottomNavBar active="settings" />
     </div>
   );
 }

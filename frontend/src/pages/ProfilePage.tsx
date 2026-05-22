@@ -2,6 +2,7 @@ import CommentSection from "@/components/comment/CommentSection";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import ReportModal from "@/components/social/ReportModal";
 import UserListModal from "@/components/social/UserListModal";
 import { PATHS } from "@/constants/paths";
@@ -895,7 +896,7 @@ export default function ProfilePage() {
     return (
       <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
         <AppHeader />
-        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
           <AppSidebar active="profile" />
           <div className="flex justify-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -909,7 +910,7 @@ export default function ProfilePage() {
     return (
       <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
         <AppHeader />
-        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
           <AppSidebar active="profile" />
           <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-neutral-500">
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
@@ -940,12 +941,12 @@ export default function ProfilePage() {
       <AppHeader />
 
       {/* 3-COLUMN GRID */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         {/* LEFT COLUMN: SIDEBAR */}
         <AppSidebar active="profile" />
 
         {/* MIDDLE COLUMN: PROFILE HEADER & TIMELINE */}
-        <div className="flex flex-col gap-6 min-w-0">
+        <div className="flex flex-col gap-6 min-w-0 pb-24 lg:pb-10">
           {/* PROFILE CARD: COVER & AVATAR & BASIC DETAILS */}
           <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] overflow-hidden">
             {/* COVER */}
@@ -1521,6 +1522,7 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+      <BottomNavBar active="profile" />
     </div>
   );
 }

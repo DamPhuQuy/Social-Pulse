@@ -46,16 +46,16 @@ export default function AppHeader() {
 
   return (
     <>
-      <header className="fixed top-0 left-0 w-full h-16 bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-[#2a2a2a] z-40 flex items-center justify-between px-6 shadow-sm dark:shadow-none">
+      <header className="fixed top-0 left-0 w-full h-16 bg-white/95 dark:bg-[#1e1e1e]/95 backdrop-blur-xl border-b border-slate-200/80 dark:border-[#2a2a2a] z-40 flex items-center justify-between px-4 sm:px-6 shadow-sm dark:shadow-none">
         <div className="flex items-center gap-8">
           <div className="flex items-center gap-3 cursor-pointer group" onClick={() => navigate(PATHS.HOME)}>
-            <div className="w-10 h-10 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 group-active:scale-95 transition-all duration-300">
-              <Activity className="text-white dark:text-slate-900 w-5 h-5 stroke-[2.5px]" />
+            <div className="w-9 h-9 sm:w-10 sm:h-10 bg-slate-900 dark:bg-white rounded-xl flex items-center justify-center shadow-md group-hover:scale-110 group-active:scale-95 transition-all duration-300">
+              <Activity className="text-white dark:text-slate-900 w-4 h-4 sm:w-5 sm:h-5 stroke-[2.5px]" />
             </div>
-            <span className="text-xl font-extrabold tracking-tight text-slate-900 dark:text-white hidden md:block">SocialPulse</span>
+            <span className="text-lg sm:text-xl font-extrabold tracking-tight text-slate-900 dark:text-white hidden sm:block">SocialPulse</span>
           </div>
         </div>
-        <div className="flex items-center gap-4">
+        <div className="flex items-center gap-2 sm:gap-4">
           <button onClick={() => setIsDark((value) => !value)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-850 text-slate-500 dark:text-slate-400 transition-all">
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
@@ -68,7 +68,7 @@ export default function AppHeader() {
               }
               setShowModal(true);
             }}
-            className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity"
+            className="hidden lg:flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" /> Đăng bài
           </button>
