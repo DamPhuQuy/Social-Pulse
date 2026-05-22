@@ -435,7 +435,7 @@ export default function HomePage() {
         <main className="flex flex-col gap-6 pb-24 lg:pb-10 min-w-0">
 
           {/* Topic Selector & Search Dropdown */}
-          <div className="flex gap-3 items-center relative z-30 pb-2 overflow-x-auto scrollbar-none">
+          <div className="flex gap-2 items-center relative z-30 pb-2 overflow-x-auto scrollbar-none flex-nowrap">
             <button
               onClick={() => {
                 setSelectedTopic(null);
@@ -480,7 +480,9 @@ export default function HomePage() {
 
               {/* Popover Dropdown Panel */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full mt-2 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
+                  style={{ width: 'min(320px, calc(100vw - 2rem))', left: 0, maxWidth: 'calc(100vw - 2rem)' }}
+                >
                   {/* Search Header */}
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />

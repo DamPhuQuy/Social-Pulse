@@ -1,12 +1,14 @@
-import { Bell, Compass, Home, Plus, User } from "lucide-react";
+import { Bell, Compass, Home, LogOut, Plus, Settings, User } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { getUnreadNotificationCount } from "@/services/social/notificationService";
+import { logoutUser } from "@/services/auth/authService";
 import { toast } from "sonner";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import { getMyProfile, type UserProfile } from "@/services/user/userService";
+import { SafeAvatar } from "@/components/ui/SafeAvatar";
 
 type SidebarKey =
   | "home"
@@ -26,9 +28,10 @@ interface BottomNavBarProps {
 
 export default function BottomNavBar({ active }: BottomNavBarProps) {
   const navigate = useNavigate();
-  const { accessToken } = useAuth();
+  const { accessToken, logout, setAccessToken } = useAuth();
   const [unreadCount, setUnreadCount] = useState(0);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [showProfileSheet, setShowProfileSheet] = useState(false);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
 
   useEffect(() => {
@@ -67,6 +70,27 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
       return;
     }
     setShowCreateModal(true);
+  };
+
+  const handleProfileTap = () => {
+    if (!accessToken) {
+      navigate(PATHS.LOGIN);
+      return;
+    }
+    // If already on profile, show quick sheet; otherwise navigate
+    if (active === "profile") {
+      setShowProfileSheet(true);
+    } else {
+      navigate(PATHS.PROFILE);
+    }
+  };
+
+  const handleLogout = async () => {
+    setShowProfileSheet(false);
+    await logoutUser();
+    setAccessToken(null);
+    logout();
+    navigate(PATHS.LOGIN);
   };
 
   return (
@@ -118,12 +142,24 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
 
           {/* Profile or Login */}
           {accessToken ? (
-            <NavBtn
-              icon={User}
-              label="Hồ sơ"
-              active={active === "profile"}
-              onClick={() => handleNav(PATHS.PROFILE, "Hồ sơ")}
-            />
+            <button
+              onClick={handleProfileTap}
+              aria-label="Hồ sơ"
+              className={`flex flex-col items-center justify-center gap-0.5 px-3 py-1 rounded-xl transition-all duration-200 min-w-[44px] ${
+                active === "profile"
+                  ? "text-slate-900 dark:text-white"
+                  : "text-slate-400 dark:text-neutral-500"
+              }`}
+            >
+              {currentUser?.avatarUrl ? (
+                <div className={`w-6 h-6 rounded-full overflow-hidden border-2 transition-all ${active === "profile" ? "border-slate-900 dark:border-white" : "border-transparent"}`}>
+                  <SafeAvatar src={currentUser.avatarUrl} alt="me" />
+                </div>
+              ) : (
+                <User className={`w-5 h-5 transition-all ${active === "profile" ? "stroke-[2.5px]" : "stroke-2"}`} />
+              )}
+              <span className="text-[9px] font-semibold tracking-tight leading-none">Hồ sơ</span>
+            </button>
           ) : (
             <NavBtn
               icon={User}
@@ -134,6 +170,66 @@ export default function BottomNavBar({ active }: BottomNavBarProps) {
           )}
         </div>
       </nav>
+
+      {/* Profile Quick Actions Sheet */}
+      {showProfileSheet && (
+        <>
+          {/* Backdrop */}
+          <div
+            className="lg:hidden fixed inset-0 z-[60] bg-black/40 backdrop-blur-[2px]"
+            onClick={() => setShowProfileSheet(false)}
+          />
+          {/* Sheet */}
+          <div className="lg:hidden fixed bottom-0 left-0 right-0 z-[70] bg-white dark:bg-[#1e1e1e] rounded-t-2xl border-t border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_-8px_40px_rgba(0,0,0,0.15)] dark:shadow-[0_-8px_40px_rgba(0,0,0,0.5)] animate-in slide-in-from-bottom-4 duration-200"
+            style={{ paddingBottom: "calc(env(safe-area-inset-bottom, 0px) + 1rem)" }}
+          >
+            {/* Handle */}
+            <div className="flex justify-center pt-3 pb-2">
+              <div className="w-10 h-1 bg-slate-200 dark:bg-neutral-700 rounded-full" />
+            </div>
+
+            {/* User info */}
+            {currentUser && (
+              <div className="flex items-center gap-3 px-5 py-3 border-b border-slate-100 dark:border-neutral-800">
+                <div className="w-10 h-10 rounded-full overflow-hidden border border-slate-200 dark:border-neutral-700">
+                  <SafeAvatar src={currentUser.avatarUrl} alt={currentUser.username} />
+                </div>
+                <div className="min-w-0">
+                  <p className="font-bold text-slate-900 dark:text-white text-sm truncate">
+                    {currentUser.displayName || currentUser.username}
+                  </p>
+                  <p className="text-xs text-slate-500 dark:text-neutral-400 truncate">@{currentUser.username}</p>
+                </div>
+              </div>
+            )}
+
+            {/* Actions */}
+            <div className="flex flex-col py-2">
+              <button
+                onClick={() => { setShowProfileSheet(false); navigate(PATHS.PROFILE); }}
+                className="flex items-center gap-3 px-5 py-3.5 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800/60 transition-colors"
+              >
+                <User className="w-5 h-5 text-slate-500 dark:text-neutral-400" />
+                <span className="font-medium text-sm">Xem hồ sơ</span>
+              </button>
+              <button
+                onClick={() => { setShowProfileSheet(false); navigate(PATHS.SETTINGS); }}
+                className="flex items-center gap-3 px-5 py-3.5 text-slate-700 dark:text-neutral-200 hover:bg-slate-50 dark:hover:bg-neutral-800/60 transition-colors"
+              >
+                <Settings className="w-5 h-5 text-slate-500 dark:text-neutral-400" />
+                <span className="font-medium text-sm">Cài đặt</span>
+              </button>
+              <button
+                onClick={handleLogout}
+                className="flex items-center gap-3 px-5 py-3.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 transition-colors"
+              >
+                <LogOut className="w-5 h-5" />
+                <span className="font-medium text-sm">Đăng xuất</span>
+              </button>
+            </div>
+          </div>
+        </>
+      )}
 
       {/* Create Post Modal */}
       <CreatePostModal

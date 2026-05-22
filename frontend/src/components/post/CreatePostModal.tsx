@@ -280,9 +280,9 @@ export default function CreatePostModal({
   };
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
+    <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={handleClose} />
-      <div className="relative w-full max-w-2xl h-[620px] bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
+      <div className="relative w-full sm:max-w-2xl h-[92dvh] sm:h-[620px] bg-white dark:bg-[#1a1a1a] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
         <div className="flex h-full w-[300%] transition-transform duration-300 ease-in-out" style={{ transform: view === "COMPOSER" ? "translateX(0)" : view === "PRIVACY" ? "translateX(-33.3333%)" : "translateX(-66.6666%)" }}>
           <div className="w-1/3 shrink-0 flex flex-col h-full relative">
             <ModalHeader title={mode === "edit" ? "Chỉnh sửa bài viết" : parentPostId ? "Chia sẻ bài viết" : "Tạo bài viết"} onClose={handleClose} />
