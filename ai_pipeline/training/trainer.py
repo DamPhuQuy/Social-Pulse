@@ -29,8 +29,8 @@ class GradientBoostedTreeTrainer:
         _validate_data(x_train, y_train, "train")
         _validate_data(x_val, y_val, "validation")
 
-        if arguments.trainer_backend == "xgboost":
-            return self._train_xgboost(arguments, train_rows, validation_rows, x_train, y_train, x_val, y_val)
+        if arguments.trainer_backend == "lightgbm":
+            return self._train_lightgbm(arguments, train_rows, validation_rows, x_train, y_train, x_val, y_val)
         return self._train_sklearn(arguments, train_rows, validation_rows, x_train, y_train, x_val, y_val)
 
     @staticmethod
@@ -146,7 +146,7 @@ class GradientBoostedTreeTrainer:
             best_iteration=best_n_estimators,
         )
 
-    def _train_xgboost(
+    def _train_lightgbm(
         self,
         arguments: TrainingArguments,
         train_rows: list[TrainingRow],
@@ -157,77 +157,88 @@ class GradientBoostedTreeTrainer:
         y_val: np.ndarray,
     ) -> TrainedRankingModel:
         try:
-            import xgboost as xgb
+            import lightgbm as lgb
         except ImportError as exc:
             if arguments.allow_cpu_fallback:
-                print("xgboost is not installed; falling back to sklearn GradientBoostingRegressor.")
+                print("lightgbm is not installed; falling back to sklearn GradientBoostingRegressor.")
                 fallback_args = TrainingArguments(**{**arguments.__dict__, "trainer_backend": "sklearn", "device": "cpu"})
                 return self._train_sklearn(fallback_args, train_rows, validation_rows, x_train, y_train, x_val, y_val)
-            raise RuntimeError("xgboost is required for GPU training. Install dependencies first.") from exc
+            raise RuntimeError("lightgbm is required. Install dependencies first.") from exc
 
         feature_names = list(RankingFeatureSchema.FEATURE_ORDER)
-        params = dict(
+        n_jobs = self._resolve_n_jobs(arguments)
+
+        # LightGBM maps "cuda" → "gpu"; CPU training uses the default.
+        device_type = "gpu" if arguments.device == "cuda" else "cpu"
+
+        params: dict[str, Any] = dict(
+            objective="regression",
+            metric=["rmse", "mae"],
             n_estimators=arguments.n_estimators,
             max_depth=arguments.max_depth,
+            num_leaves=max(2, 2 ** arguments.max_depth - 1),
+            min_child_samples=arguments.min_samples_leaf,
+            min_child_weight=arguments.min_child_weight,
             learning_rate=arguments.learning_rate,
             subsample=arguments.subsample,
+            subsample_freq=1,
             colsample_bytree=arguments.colsample_bytree,
-            min_child_weight=arguments.min_child_weight,
             reg_lambda=arguments.reg_lambda,
             reg_alpha=arguments.reg_alpha,
             max_bin=arguments.max_bin,
-            objective="reg:squarederror",
-            tree_method="hist",
             random_state=arguments.seed,
-            device=arguments.device,
-            n_jobs=self._resolve_n_jobs(arguments),
-            eval_metric=["rmse", "mae"],
-            early_stopping_rounds=arguments.early_stopping_rounds,
+            n_jobs=n_jobs,
+            device_type=device_type,
+            verbose=-1,
         )
 
-        model = xgb.XGBRegressor(**params)
+        dtrain = lgb.Dataset(x_train, label=y_train, feature_name=feature_names, free_raw_data=False)
+        dval   = lgb.Dataset(x_val,   label=y_val,   feature_name=feature_names, free_raw_data=False, reference=dtrain)
+
+        eval_log: dict[str, dict[str, list[float]]] = {}
+        callbacks = [
+            lgb.early_stopping(stopping_rounds=arguments.early_stopping_rounds, verbose=True),
+            lgb.log_evaluation(period=25),
+            lgb.record_evaluation(eval_log),
+        ]
+
         active_device = arguments.device
         try:
-            model.fit(
-                x_train,
-                y_train,
-                eval_set=[(x_train, y_train), (x_val, y_val)],
-                verbose=25,
+            booster = lgb.train(
+                params,
+                dtrain,
+                num_boost_round=arguments.n_estimators,
+                valid_sets=[dtrain, dval],
+                valid_names=["train", "valid"],
+                callbacks=callbacks,
             )
-        except xgb.core.XGBoostError as exc:
+        except Exception as exc:
             if not arguments.allow_cpu_fallback or arguments.device != "cuda":
                 raise
             print(f"GPU training unavailable ({exc}); retrying on CPU.")
             active_device = "cpu"
-            params["device"] = "cpu"
-            model = xgb.XGBRegressor(**params)
-            model.fit(
-                x_train,
-                y_train,
-                eval_set=[(x_train, y_train), (x_val, y_val)],
-                verbose=25,
+            params["device_type"] = "cpu"
+            eval_log.clear()
+            booster = lgb.train(
+                params,
+                dtrain,
+                num_boost_round=arguments.n_estimators,
+                valid_sets=[dtrain, dval],
+                valid_names=["train", "valid"],
+                callbacks=callbacks,
             )
 
-        best_iteration = getattr(model, "best_iteration", None)
-        if best_iteration is None:
-            best_iteration = arguments.n_estimators - 1
+        best_iteration = booster.best_iteration or arguments.n_estimators
+        train_pred = booster.predict(x_train, num_iteration=best_iteration)
+        val_pred   = booster.predict(x_val,   num_iteration=best_iteration)
 
-        booster = model.get_booster()
-        booster.set_param({"device": "cpu"})
-        iteration_range = (0, best_iteration + 1)
-        train_pred = booster.inplace_predict(x_train, iteration_range=iteration_range)
-        val_pred = booster.inplace_predict(x_val, iteration_range=iteration_range)
-        booster = _slice_booster_to_best_iteration(booster, best_iteration + 1)
+        history = _build_lgb_history(eval_log)
 
-        evals_result = model.evals_result()
-        history = _build_xgboost_history(evals_result)
-        raw_importances = booster.get_score(importance_type="gain")
-        feature_importances = {
-            name: float(raw_importances.get(f"f{idx}", 0.0))
-            for idx, name in enumerate(feature_names)
-        }
+        raw_importances = booster.feature_importance(importance_type="gain")
+        feature_importances = dict(zip(feature_names, raw_importances.tolist()))
 
-        print(f"Training backend: xgboost ({'GPU' if active_device == 'cuda' else 'CPU fallback'})")
+        print(f"Training backend: lightgbm ({'GPU' if active_device == 'cuda' else 'CPU'})")
+        print(f"Best iteration: {best_iteration}")
         print("\nFeature importance (top 10):")
         for name, importance in sorted(feature_importances.items(), key=lambda item: item[1], reverse=True)[:10]:
             print(f"  {name}: {importance:.4f}")
@@ -248,13 +259,13 @@ class GradientBoostedTreeTrainer:
         )
 
         return TrainedRankingModel(
-            backend="xgboost",
+            backend="lightgbm",
             runtime_model=booster,
             model_dump=None,
             metrics=metrics,
             history=history,
             feature_importances=feature_importances,
-            best_iteration=best_iteration + 1,
+            best_iteration=best_iteration,
         )
 
     def evaluate(
@@ -270,9 +281,8 @@ class GradientBoostedTreeTrainer:
         y = np.array([row.label for row in rows], dtype=np.float32)
         _validate_data(x, y, "test")
 
-        if backend == "xgboost":
-            runtime_model.set_param({"device": "cpu"})
-            predictions = runtime_model.inplace_predict(x)
+        if backend == "lightgbm":
+            predictions = runtime_model.predict(x)
         else:
             predictions = runtime_model.predict(x)
 
@@ -326,9 +336,8 @@ class GradientBoostedTreeTrainer:
 
         x = np.array([row.features for row in rows], dtype=np.float32)
         y = np.array([row.label for row in rows], dtype=np.float32)
-        if backend == "xgboost":
-            runtime_model.set_param({"device": "cpu"})
-            predictions = runtime_model.inplace_predict(x)
+        if backend == "lightgbm":
+            predictions = runtime_model.predict(x)
         else:
             predictions = runtime_model.predict(x)
 
@@ -502,12 +511,13 @@ def _ranking_diagnostics(rows: list[TrainingRow], predictions: np.ndarray) -> di
     }
 
 
-def _build_xgboost_history(evals_result: dict[str, dict[str, list[float]]]) -> list[TrainingHistoryPoint]:
-    train_rmse = evals_result.get("validation_0", {}).get("rmse", [])
-    validation_rmse = evals_result.get("validation_1", {}).get("rmse", [])
-    train_mae = evals_result.get("validation_0", {}).get("mae", [])
-    validation_mae = evals_result.get("validation_1", {}).get("mae", [])
-    count = max(len(train_rmse), len(validation_rmse), len(train_mae), len(validation_mae))
+def _build_lgb_history(eval_log: dict[str, dict[str, list[float]]]) -> list[TrainingHistoryPoint]:
+    """Convert LightGBM eval_log (recorded by lgb.record_evaluation) to history points."""
+    train_rmse = eval_log.get("train", {}).get("rmse", [])
+    valid_rmse = eval_log.get("valid", {}).get("rmse", [])
+    train_mae  = eval_log.get("train", {}).get("mae",  [])
+    valid_mae  = eval_log.get("valid", {}).get("mae",  [])
+    count = max(len(train_rmse), len(valid_rmse), len(train_mae), len(valid_mae))
 
     history: list[TrainingHistoryPoint] = []
     for idx in range(count):
@@ -515,9 +525,9 @@ def _build_xgboost_history(evals_result: dict[str, dict[str, list[float]]]) -> l
             TrainingHistoryPoint(
                 iteration=idx + 1,
                 train_rmse=train_rmse[idx] if idx < len(train_rmse) else None,
-                validation_rmse=validation_rmse[idx] if idx < len(validation_rmse) else None,
-                train_mae=train_mae[idx] if idx < len(train_mae) else None,
-                validation_mae=validation_mae[idx] if idx < len(validation_mae) else None,
+                validation_rmse=valid_rmse[idx] if idx < len(valid_rmse) else None,
+                train_mae=train_mae[idx]  if idx < len(train_mae)  else None,
+                validation_mae=valid_mae[idx]  if idx < len(valid_mae)  else None,
             )
         )
     return history

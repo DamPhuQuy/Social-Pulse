@@ -273,19 +273,19 @@ class PushshiftTrainingPipeline:
             "preprocessing": preprocessing,
             "training_summary": summary,
         }
-        if model_backend == "xgboost":
-            artifact["model_file"] = "model.ubj"
+        if model_backend == "lightgbm":
+            artifact["model_file"] = "model.txt"
         else:
             artifact["model_dump"] = model_dump
         return artifact
 
     @staticmethod
     def _persist_runtime_model(output_path: Path, model_backend: str, runtime_model) -> None:
-        if model_backend != "xgboost":
+        if model_backend != "lightgbm":
             return
-        sidecar_path = output_path.with_suffix(".ubj")
+        sidecar_path = output_path.with_suffix(".txt")
         sidecar_path.parent.mkdir(parents=True, exist_ok=True)
-        runtime_model.save_model(sidecar_path)
+        runtime_model.save_model(str(sidecar_path))
 
 
 def _metrics_to_test_dict(metrics: Metrics) -> dict[str, float]:
