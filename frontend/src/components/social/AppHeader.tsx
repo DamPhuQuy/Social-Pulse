@@ -4,10 +4,13 @@ import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { getMyProfile, type UserProfile } from "@/services/user/userService";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
+import { useAuth } from "@/hooks/useAuth";
+import { toast } from "sonner";
 import CreatePostModal from "@/components/post/CreatePostModal";
 
 export default function AppHeader() {
   const navigate = useNavigate();
+  const { accessToken } = useAuth();
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [showModal, setShowModal] = useState(false);
   const [isDark, setIsDark] = useState(() => {
@@ -19,12 +22,17 @@ export default function AppHeader() {
   });
 
   useEffect(() => {
+    if (!accessToken) {
+      setCurrentUser(null);
+      return;
+    }
+
     getMyProfile().then((res) => {
       if (res.ok && res.data) {
         setCurrentUser(res.data);
       }
     });
-  }, []);
+  }, [accessToken]);
 
   useEffect(() => {
     if (isDark) {
@@ -52,12 +60,29 @@ export default function AppHeader() {
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
           <button
-            onClick={() => setShowModal(true)}
+            onClick={() => {
+              if (!accessToken) {
+                toast.error("Vui lòng đăng nhập để đăng bài.");
+                navigate(PATHS.LOGIN);
+                return;
+              }
+              setShowModal(true);
+            }}
             className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity"
           >
             <Plus className="w-4 h-4" /> Đăng bài
           </button>
-          <div onClick={() => navigate(PATHS.PROFILE)} className="w-9 h-9 rounded-full overflow-hidden cursor-pointer border border-slate-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
+          <div
+            onClick={() => {
+              if (!accessToken) {
+                toast.error("Vui lòng đăng nhập để xem hồ sơ.");
+                navigate(PATHS.LOGIN);
+                return;
+              }
+              navigate(PATHS.PROFILE);
+            }}
+            className="w-9 h-9 rounded-full overflow-hidden cursor-pointer border border-slate-200 dark:border-neutral-700 hover:opacity-80 transition-opacity"
+          >
             <SafeAvatar src={currentUser?.avatarUrl} alt="me" />
           </div>
         </div>

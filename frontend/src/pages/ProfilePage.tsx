@@ -79,6 +79,7 @@ interface ProfilePostProps {
   isBookmarked: boolean;
   onToggleBookmark: (postId: number) => void;
   onReport: (postId: number) => void;
+  onShare?: (post: UserPost) => void;
 }
 
 function ProfilePost({
@@ -92,10 +93,12 @@ function ProfilePost({
   isBookmarked,
   onToggleBookmark,
   onReport,
+  onShare,
 }: ProfilePostProps) {
   const [showComments, setShowComments] = useState(false);
   const [cmtCount, setCmtCount] = useState(post.cmtCount);
   const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
   const isUpvoted = post.myVote === 1;
   const isAuthor = currentUserId === post.userId;
 
@@ -230,11 +233,14 @@ function ProfilePost({
             </button>
 
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/posts/${post.postId}`,
-                );
-                toast.success("Đã sao chép liên kết bài viết.");
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!currentUserId) {
+                  toast.error("Vui lòng đăng nhập để chia sẻ bài viết.");
+                  navigate(PATHS.LOGIN);
+                  return;
+                }
+                onShare?.(post);
               }}
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
@@ -278,6 +284,7 @@ export default function ProfilePage() {
     () => new Set(),
   );
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
+  const [sharingPost, setSharingPost] = useState<UserPost | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [followersList, setFollowersList] = useState<UserSummary[]>([]);
   const [followingList, setFollowingList] = useState<UserSummary[]>([]);
@@ -1206,6 +1213,7 @@ export default function ProfilePage() {
                   isBookmarked={bookmarkedPostIds.has(post.postId)}
                   onToggleBookmark={handleToggleBookmark}
                   onReport={setReportPostId}
+                  onShare={setSharingPost}
                 />
               ))
             )}
@@ -1338,6 +1346,20 @@ export default function ProfilePage() {
         currentUserAvatar={myProfile?.avatarUrl || undefined}
         currentUsername={myProfile?.displayName || myProfile?.username}
         onPostUpdated={handlePostUpdated}
+      />
+      <CreatePostModal
+        isOpen={!!sharingPost}
+        mode="create"
+        parentPostId={sharingPost?.postId}
+        parentPostAuthor={sharingPost?.username}
+        parentPostContent={sharingPost?.content}
+        onClose={() => setSharingPost(null)}
+        currentUserAvatar={myProfile?.avatarUrl || undefined}
+        currentUsername={myProfile?.displayName || myProfile?.username}
+        onPostCreated={() => {
+          setSharingPost(null);
+          loadData();
+        }}
       />
       <UserListModal
         isOpen={showFollowersModal}

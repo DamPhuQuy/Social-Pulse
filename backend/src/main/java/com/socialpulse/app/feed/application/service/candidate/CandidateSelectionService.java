@@ -78,13 +78,15 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
         }
 
         // Initialize seenIds with the user's view history to filter out seen posts
-        String seenKey = "user:seen:" + userId;
-        Set<String> history = redisTemplate.opsForSet().members(seenKey);
-        if (history != null) {
-            for (String idStr : history) {
-                try {
-                    seenIds.add(Long.parseLong(idStr));
-                } catch (NumberFormatException ignored) {}
+        if (userId != null) {
+            String seenKey = "user:seen:" + userId;
+            Set<String> history = redisTemplate.opsForSet().members(seenKey);
+            if (history != null) {
+                for (String idStr : history) {
+                    try {
+                        seenIds.add(Long.parseLong(idStr));
+                    } catch (NumberFormatException ignored) {}
+                }
             }
         }
 
@@ -101,16 +103,18 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
             }
         }
 
-        List<Post> followingPosts = feedRepository.findFollowingPosts(userId, since, PageRequest.of(0, FOLLOWING_COUNT));
-        for (Post post : followingPosts) {
-            if (blockedUserIds.contains(post.getUserId())) {
-                continue;
-            }
-            if (seenIds.add(post.getId())) {
-                candidates.add(CandidatePost.builder()
-                        .post(post)
-                        .source(Source.FOLLOWING)
-                        .build());
+        if (userId != null) {
+            List<Post> followingPosts = feedRepository.findFollowingPosts(userId, since, PageRequest.of(0, FOLLOWING_COUNT));
+            for (Post post : followingPosts) {
+                if (blockedUserIds.contains(post.getUserId())) {
+                    continue;
+                }
+                if (seenIds.add(post.getId())) {
+                    candidates.add(CandidatePost.builder()
+                            .post(post)
+                            .source(Source.FOLLOWING)
+                            .build());
+                }
             }
         }
 

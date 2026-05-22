@@ -59,9 +59,10 @@ public class FeedItemResponseAssembler {
         Map<Long, User> userById = userRepository.findByIds(authorIds).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        Map<Long, ReactionType> reactionByPostId = postReactionsRepository
-                .findByUserIdAndPostIds(viewerUserId, postIds).stream()
-                .collect(Collectors.toMap(PostReactions::getPostId, PostReactions::getReactionType));
+        Map<Long, ReactionType> reactionByPostId = viewerUserId != null
+                ? postReactionsRepository.findByUserIdAndPostIds(viewerUserId, postIds).stream()
+                        .collect(Collectors.toMap(PostReactions::getPostId, PostReactions::getReactionType))
+                : java.util.Collections.emptyMap();
 
         return feedItems.stream()
                 .map(item -> toResponse(item, postById.get(item.getPostId()), userById, reactionByPostId))

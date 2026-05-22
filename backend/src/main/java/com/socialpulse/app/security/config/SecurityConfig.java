@@ -46,6 +46,7 @@ public class SecurityConfig {
                 .authorizeHttpRequests(auth -> {
                     auth.requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
                         .requestMatchers("/api/v1/auth/**", "/api/v1/topics").permitAll()
+                        .requestMatchers(HttpMethod.GET, "/api/v1/feed", "/api/v1/posts/topics", "/api/v1/discovery/hashtags/trending").permitAll()
                         .requestMatchers("/actuator/health").permitAll()
                         .requestMatchers("/ws/**").permitAll();
 

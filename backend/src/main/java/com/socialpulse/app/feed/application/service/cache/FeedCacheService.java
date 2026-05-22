@@ -24,6 +24,7 @@ public class FeedCacheService implements CacheFeedUseCase {
 
     @Override
     public void cacheFeed(Long userId, List<FeedItem> feedItems) {
+        if (userId == null) return;
         String key = FEED_CACHE_PREFIX + userId;
         try {
             String json = objectMapper.writeValueAsString(feedItems);
@@ -35,6 +36,7 @@ public class FeedCacheService implements CacheFeedUseCase {
 
     @Override
     public List<FeedItem> getCachedFeed(Long userId) {
+        if (userId == null) return null;
         String key = FEED_CACHE_PREFIX + userId;
         try {
             String json = redisTemplate.opsForValue().get(key);
@@ -49,6 +51,7 @@ public class FeedCacheService implements CacheFeedUseCase {
 
     @Override
     public void invalidateFeed(Long userId) {
+        if (userId == null) return;
         String key = FEED_CACHE_PREFIX + userId;
         redisTemplate.delete(key);
     }

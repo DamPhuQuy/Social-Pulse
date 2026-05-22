@@ -48,6 +48,9 @@ interface CreatePostModalProps {
     privacy: Privacy;
     updatedAt: string;
   }) => void;
+  parentPostId?: number | null;
+  parentPostAuthor?: string | null;
+  parentPostContent?: string | null;
 }
 
 const PRIVACY_OPTIONS: { value: Privacy; label: string; description: string; icon: React.FC<{ className?: string }> }[] = [
@@ -70,6 +73,9 @@ export default function CreatePostModal({
   initialPost,
   onPostCreated,
   onPostUpdated,
+  parentPostId,
+  parentPostAuthor,
+  parentPostContent,
 }: CreatePostModalProps) {
   const [view, setView] = useState<"COMPOSER" | "PRIVACY" | "TOPICS">("COMPOSER");
   const [content, setContent] = useState("");
@@ -228,6 +234,7 @@ export default function CreatePostModal({
         imagePublicId: null,
         topicSlugs,
         privacy,
+        parentPostId: parentPostId || null,
       };
 
       if (mode === "edit" && initialPost) {
@@ -278,7 +285,7 @@ export default function CreatePostModal({
       <div className="relative w-full max-w-2xl h-[620px] bg-white dark:bg-[#1a1a1a] rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in zoom-in-95 duration-200">
         <div className="flex h-full w-[300%] transition-transform duration-300 ease-in-out" style={{ transform: view === "COMPOSER" ? "translateX(0)" : view === "PRIVACY" ? "translateX(-33.3333%)" : "translateX(-66.6666%)" }}>
           <div className="w-1/3 shrink-0 flex flex-col h-full relative">
-            <ModalHeader title={mode === "edit" ? "Chỉnh sửa bài viết" : "Tạo bài viết"} onClose={handleClose} />
+            <ModalHeader title={mode === "edit" ? "Chỉnh sửa bài viết" : parentPostId ? "Chia sẻ bài viết" : "Tạo bài viết"} onClose={handleClose} />
 
             <div className="flex-1 overflow-y-auto px-6 pb-6">
               <div className="py-3 flex items-center gap-3">
@@ -306,11 +313,23 @@ export default function CreatePostModal({
               <textarea
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
-                placeholder="Bạn đang nghĩ gì thế?"
+                placeholder={parentPostId ? "Thêm bình luận cho chia sẻ này..." : "Bạn đang nghĩ gì thế?"}
                 rows={4}
                 style={{ fontSize: `${dynamicFontSize}px`, overflowWrap: "anywhere", wordBreak: "break-word" }}
                 className="w-full min-h-[120px] bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 leading-normal outline-none border-none resize-none"
               />
+
+              {parentPostId && (
+                <div className="mt-1 mb-4 p-4 rounded-xl border border-slate-200/80 dark:border-neutral-800 bg-slate-50/50 dark:bg-neutral-900/30">
+                  <div className="flex items-center gap-2 mb-1.5">
+                    <span className="text-xs font-bold text-slate-700 dark:text-neutral-300">@{parentPostAuthor}</span>
+                    <span className="text-[10px] text-slate-400">Bài viết gốc</span>
+                  </div>
+                  <p className="text-sm text-slate-600 dark:text-neutral-400 line-clamp-3 whitespace-pre-line break-words leading-relaxed">
+                    {parentPostContent}
+                  </p>
+                </div>
+              )}
 
               {selectedTopicLabels && (
                 <div className="mb-3 flex flex-wrap gap-2">

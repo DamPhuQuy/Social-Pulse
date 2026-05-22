@@ -33,7 +33,6 @@ public class FeedController {
     }
 
     @GetMapping
-    @RequiresPermission.FeedRead
     @Operation(summary = "Get feed", description = "Get personalized home feed or topic feed when topicSlug is provided")
     public ResponseEntity<ApiResponse<List<FeedItemResponse>>> getFeed(
             @RequestParam(defaultValue = "0") int page,

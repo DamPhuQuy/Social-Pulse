@@ -65,7 +65,7 @@ Machine Learning (ML) đã chứng minh hiệu quả trong việc cá nhân hóa
 **Hybrid Approaches:**
 - Kết hợp nhiều phương pháp
 - Sử dụng features từ cả nội dung, người dùng, và tương tác
-- Gradient Boosting, Neural Networks cho ranking
+- LightGBM, Gradient Boosting, Neural Networks cho ranking
 - Cân bằng giữa exploitation và exploration
 
 #### 1.2.2. Feature Engineering cho Social Media
@@ -117,7 +117,7 @@ Machine Learning (ML) đã chứng minh hiệu quả trong việc cá nhân hóa
 - **Hạn chế**: Model được train offline trên Reddit data, chưa có online learning
 
 **2. Feature-Rich Ranking:**
-- 19 features từ nhiều nguồn khác nhau (đã implement)
+- Sử dụng 13 đặc trưng cốt lõi từ nhiều nguồn (sau khi loại bỏ 5 count features và 1 popularity feature nhằm tránh rò rỉ dữ liệu - data leakage)
 - Kết hợp post, author, và interaction features
 - **Hạn chế**: Một số features như affinity_score còn đơn giản, chưa tối ưu
 
@@ -180,10 +180,10 @@ Machine Learning (ML) đã chứng minh hiệu quả trong việc cá nhân hóa
 *Chưa thực hiện:*
 - Toxic score chưa được tính toán tự động (field tồn tại nhưng chưa có model)
 - Chưa có content quality scoring ngoài engagement metrics
-- Ranking vẫn phụ thuộc nhiều vào engagement (upvote_count, comment_count, etc.)
+- Mặc dù live counters (upvote_count, comment_count, vv.) được dùng khi phục vụ (serving time), chúng đã bị loại hoàn toàn khỏi quá trình huấn luyện ngoại tuyến (offline training) để tránh rò rỉ dữ liệu (target leakage) từ dataset Reddit của Pushshift, buộc model học từ các thuộc tính cấu trúc (structural features) và thuộc tính tác giả (rolling snapshot).
 - Chưa có mechanism để penalize clickbait hoặc low-quality viral content
 
-*Đánh giá:* Vẫn chủ yếu optimize cho engagement. Toxic detection và quality scoring là planned features chưa implement.
+*Đánh giá:* Đã giải quyết triệt để rò rỉ dữ liệu bằng cách loại bỏ các đặc trưng đếm tích lũy trong quá trình huấn luyện, tập trung vào đặc trưng cấu trúc bài viết và uy tín tác giả thực tế.
 
 ---
 
@@ -238,7 +238,7 @@ Social Pulse đã implement một số giải pháp cơ bản cho các vấn đ�
 #### 1.4.2. Giới hạn kỹ thuật
 
 **AI Model:**
-- Sử dụng Gradient Boosting (không phải Deep Learning)
+- Sử dụng LightGBM / Gradient Boosting (không phải Deep Learning)
 - Training trên Reddit data (không phải data thực của platform)
 - Chưa có online learning (model không tự update)
 
@@ -251,9 +251,112 @@ Social Pulse đã implement một số giải pháp cơ bản cho các vấn đ�
 - WebSocket cho chat (không phải video call)
 - Notifications đơn giản (không có push notifications cho mobile)
 
+
+### 1.5. Yêu cầu Hệ thống (System Requirements)
+
+#### 1.5.1. Yêu cầu Chức năng (Functional Requirements)
+
+Hệ thống phân chia chi tiết các quyền lợi và chức năng cho 3 nhóm đối tượng người dùng chính:
+
+**1. Khách viếng thăm (Guest):**
+- **Đăng ký tài khoản:** Cho phép tạo tài khoản mới với thông tin email, mật khẩu, và bắt buộc xác thực qua OTP gửi đến email.
+- **Đăng nhập / Đăng xuất:** Xác thực người dùng bằng JWT Token. Hỗ trợ cơ chế tự động khóa tài khoản tạm thời nếu đăng nhập sai nhiều lần.
+- **Khôi phục mật khẩu:** Cho phép đặt lại mật khẩu an toàn bằng cách gửi mã OTP xác nhận qua email.
+- **Xem bài viết thịnh hành (Trending Feed):** Cho phép xem các bài viết có xu hướng nổi bật công khai sắp xếp theo tần suất xuất hiện và hashtag phổ biến mà không cần đăng nhập.
+
+**2. Thành viên (Member):**
+- **Quản lý nội dung cá nhân:** Tạo, sửa, và xóa bài viết của chính mình (chấp nhận đính kèm hình ảnh/video qua Cloudinary CDN).
+- **Chia sẻ bài viết (Share Post):** Cho phép chia sẻ lại bài viết công khai của thành viên khác dưới dạng liên kết kế thừa (parent_post_id).
+- **Tương tác phản hồi (Reactions):** Bày tỏ thái độ Upvote/Downvote đối với bài viết hoặc bình luận.
+- **Bình luận đa cấp (Comments Thread):** Tạo bình luận và trả lời bình luận (replies) theo cấu trúc cây lồng nhau không giới hạn độ sâu.
+- **Nhắn tin tức thời (Real-time Chat):** Chat 1-1 trực tiếp với thành viên khác, lưu trữ lịch sử tin nhắn và đếm số lượng tin nhắn chưa đọc.
+- **Hệ thống Theo dõi (Follow System):** Theo dõi hoặc bỏ theo dõi người dùng khác để cá nhân hóa nguồn cấp tin.
+- **Hệ thống Chặn (Block System):** Chặn người dùng khác nhằm bảo vệ không gian riêng tư. Việc chặn sẽ tự động hủy liên kết follow giữa hai bên.
+- **Lưu trữ bài viết (Bookmarks):** Lưu các bài viết ưa thích vào danh sách bookmark cá nhân.
+- **Tìm kiếm & Khám phá:** Tìm kiếm bài viết bằng từ khóa, hashtag hoặc tìm kiếm thông tin người dùng khác.
+
+**3. Quản trị viên (Admin):**
+- **Quản lý tài khoản:** Khóa (Ban) hoặc kích hoạt lại (Unban) tài khoản của thành viên vi phạm. Gán hoặc thu hồi vai trò đặc quyền (RBAC).
+- **Kiểm duyệt nội dung (Content Moderation):** Duyệt danh sách bài viết/bình luận bị thành viên báo cáo (Reports). Ẩn hoặc xóa bỏ nội dung chứa mã độc hại hoặc có điểm độc hại (toxic_score) vượt ngưỡng.
+- **Theo dõi chỉ số hệ thống (Metrics):** Xem bảng thống kê số lượng người dùng mới, số bài viết đăng tải, lượng bài viết bị báo cáo/độc hại theo các khoảng thời gian và xuất báo cáo định dạng CSV.
+
+#### 1.5.2. Yêu cầu Phi chức năng (Non-functional Requirements)
+
+- **Hiệu năng (Performance):**
+  - Thời gian phản hồi API lấy bảng tin cá nhân hóa (Feed API) phải dưới 500ms đối với các lượt truy cập trúng cache (Redis cache hit).
+  - Tốc độ suy luận của mô hình LightGBM trên FastAPI server phải dưới 100ms cho mỗi lượt tính toán xếp hạng vector.
+- **Bảo mật (Security):**
+  - Mật khẩu người dùng bắt buộc mã hóa một chiều bằng thuật toán BCrypt với độ muối (work factor) là 12.
+  - Sử dụng cơ chế xác thực không trạng thái (stateless JWT) nhưng kết hợp lưu trữ whitelist/blacklist phiên đăng nhập trong Redis để hỗ trợ thu hồi token tức thì khi đổi mật khẩu hoặc đăng xuất.
+  - Phân quyền nghiêm ngặt tới cấp độ phương thức (Method-level security) và kiểm tra tính sở hữu tài nguyên (Ownership check) tại tầng nghiệp vụ.
+- **Độ tin cậy & Sẵn sàng (Reliability & Availability):**
+  - Hệ thống phải duy trì cơ chế "AI Toggle" và "Graceful Degradation". Nếu AI pipeline ngoại tuyến (FastAPI server mất kết nối), hệ thống tự động hạ cấp xuống cơ chế xếp hạng deterministic dựa trên điểm số `hot_score` và thời gian thực để người dùng không bị gián đoạn trải nghiệm.
+- **Khả năng mở rộng (Scalability):**
+  - Kiến trúc backend tổ chức theo hướng Modular Monolith, chia ranh giới rõ ràng giữa 17 module để có thể tách thành các microservices độc lập dễ dàng khi quy mô người dùng tăng lên.
+  - Tích hợp Redis làm bộ đệm trung gian cho các chỉ số đếm delta (ví dụ share_count delta) để giảm thiểu số lượng truy vấn ghi dồn dập vào cơ sở dữ liệu PostgreSQL.
+
+---
+
+### 1.6. Wireframes & Phác thảo Giao diện (UI Wireframes)
+
+Để hình dung rõ luồng tương tác và giao diện người dùng của Social Pulse, dưới đây là các bản phác thảo cấu trúc và hình ảnh wireframe thực tế:
+
+#### 1.6.1. Wireframe Giao diện Bảng tin cá nhân hóa (Personalized Feed UI)
+
+Giao diện trang chủ được chia làm 3 cột chính chuẩn phong cách mạng xã hội hiện đại:
+- **Cột Trái (Sidebar):** Logo, các tab hướng điều hướng nhanh (Trang chủ, Khám phá, Cá nhân hóa - For You, Tin nhắn, Đánh dấu, Cấu hình) và thẻ hồ sơ người dùng đăng nhập.
+- **Cột Giữa (Main Feed):** Khung tạo bài viết nhanh ở trên cùng và danh sách các bài viết đã được xếp hạng thông minh bởi mô hình LightGBM ở dưới. Mỗi thẻ bài viết hiển thị tiêu đề, nội dung rút gọn, hình ảnh/video đi kèm, các tag chủ đề (Topics) và các nút tương tác (Upvote/Downvote, Bình luận, Chia sẻ).
+- **Cột Phải (Widgets):** Các mục thông tin mở rộng bao gồm Hashtag thịnh hành (#TrendingHashtags) và danh sách bạn bè đang online để kết nối nhanh.
+
+![Personalized Feed Wireframe Mockup](file:///home/phuquydam/Documents/Social-Pulse/docs/images/feed_wireframe.png)
+
+*Hình 1.1: Wireframe thiết kế giao diện trang chủ Bảng tin cá nhân hóa (For You Feed)*
+
+#### 1.6.2. Phác thảo Cấu trúc Màn hình Chat (Real-time Chat UI)
+
+```
++-------------------------------------------------------------------------+
+| [Search Chat]       | Chat: Sarah Chen                                  |
++---------------------+---------------------------------------------------+
+|                     | [Sarah Chen] (Active now)                         |
+| * Sarah Chen (2m)   |                                                   |
+|   "Hey, how is..."  |        [Sarah] Hi! Did you see the new AI post?   |
+|                     | 10:30                                             |
+| * Mark Lee (1h)     |                                                   |
+|   "Let's meet tomorrow"     |  You: Not yet, let me check my For You feed.  |
+|                     | 10:31 [Delivered]                                 |
+| * Chloe B. (1d)     |                                                   |
+|   "Thanks for the link"     |                                           |
+|                     |                                                   |
+|                     |                                                   |
++---------------------+---------------------------------------------------+
+|                     | [ Type your message here...                  ] [>]|
++-------------------------------------------------------------------------+
+```
+
+#### 1.6.3. Phác thảo Cấu trúc Bảng quản trị (Admin Dashboard UI)
+
+```
++-------------------------------------------------------------------------+
+| [ADMIN PORTAL]                                      Welcome, Admin Alex |
++-------------------------------------------------------------------------+
+| Dashboard           | SYSTEM METRICS OVERVIEW (Last 7 Days)             |
+|                     |                                                   |
+| User Management     |  +-------------+  +-------------+  +-------------+ |
+|                     |  | Total Users |  | Total Posts |  | Toxic Posts | |
+| Post Moderation     |  |   12,450    |  |   84,120    |  |     320     | |
+|                     |  +-------------+  +-------------+  +-------------+ |
+| AI Model Settings   |                                                   |
+|                     |  AI Ranking Backend: [X] Enable (LightGBM)        |
+| Reports Queue       |  [Export Metrics CSV Report]                      |
+|                     |                                                   |
++---------------------+---------------------------------------------------+
+```
+
 ---
 
 ## 2. KỸ THUẬT VÀ CÔNG NGHỆ SỬ DỤNG
+
 
 ### 2.1. Kiến trúc Phần mềm
 
@@ -404,7 +507,7 @@ TTL: 10 minutes
 **2. Feature Caching:**
 ```
 Key: features:post:{postId}
-Value: JSON of 19 features
+Value: JSON of 13 features
 TTL: 10 minutes
 ```
 - Tránh tính toán lại features
@@ -623,90 +726,102 @@ public void deletePost(Long postId, Long userId) {
 
 ### 2.5. Machine Learning
 
-#### 2.5.1. Gradient Boosting
+#### 2.5.1. LightGBM (Light Gradient Boosting Machine)
 
 **Khái niệm:**
-Gradient Boosting là ensemble learning method xây dựng model từ nhiều weak learners (thường là decision trees) theo cách tuần tự, mỗi tree học từ errors của tree trước.
+LightGBM là một framework gradient boosting dựa trên cây quyết định (Decision Tree) phát triển bởi Microsoft. Social Pulse sử dụng LightGBM làm mô hình xếp hạng chính nhờ vào hiệu năng vượt trội, tốc độ huấn luyện nhanh và lượng tài nguyên RAM tiêu thụ cực thấp khi suy luận thời gian thực (inference).
 
-**Thuật toán:**
+**Thuật toán & Điểm cải tiến cốt lõi:**
 
-1. **Initialize** với prediction đơn giản (mean)
-2. **For** each iteration:
-   - Tính residuals (errors) của model hiện tại
-   - Train một tree mới để predict residuals
-   - Add tree vào ensemble với learning rate
-3. **Final prediction** = sum of all trees
+1. **Leaf-wise (Best-first) Tree Growth:**
+   - Khác với hầu hết các thư viện Gradient Boosting thông thường (mọc cây theo chiều ngang - level-wise), LightGBM phát triển cây theo chiều sâu (leaf-wise). Nó chọn node có loss giảm nhiều nhất để phân tách tiếp.
+   - Giúp giảm sai số (loss) tốt hơn, tăng độ chính xác nhưng cần kiểm soát `max_depth` nghiêm ngặt để tránh quá khớp (overfitting).
 
-**Công thức:**
+2. **Histogram-based Algorithm:**
+   - Nhóm các giá trị đặc trưng liên tục vào các thùng (bins) rời rạc.
+   - Giúp giảm đáng kể chi phí tìm điểm phân tách tối ưu trên tập dữ liệu lớn.
+
+3. **Cơ chế Fallback:**
+   - Nhằm tối ưu hóa khả năng tương thích và chạy thử nghiệm, hệ thống hỗ trợ cơ chế tự động hạ cấp xuống mô hình `GradientBoostingRegressor` của thư viện `scikit-learn` trên CPU nếu môi trường chạy không cài đặt hoặc không hỗ trợ LightGBM.
+
+**Công thức cập nhật mô hình:**
 ```
 F_m(x) = F_{m-1}(x) + η * h_m(x)
 ```
 Trong đó:
-- F_m(x): Model sau m iterations
-- η: Learning rate
-- h_m(x): Tree thứ m
+- $F_m(x)$ là dự đoán của ensemble sau $m$ cây.
+- $\eta$ là Learning rate (tốc độ học).
+- $h_m(x)$ là cây thứ $m$ được huấn luyện trên residual của bước trước.
 
-**Hyperparameters:**
-- **n_estimators**: Số lượng trees (100-500)
-- **learning_rate**: Tốc độ học (0.01-0.1)
-- **max_depth**: Độ sâu của mỗi tree (3-10)
-- **min_samples_split**: Số samples tối thiểu để split node
-- **subsample**: Tỷ lệ samples dùng cho mỗi tree
+**Các Hyperparameters quan trọng cấu hình trong dự án:**
+- **num_leaves**: Số lượng lá tối đa trong một cây ($2^{max\_depth} - 1$). Giới hạn độ phức tạp của cây để chống overfitting.
+- **learning_rate**: Hệ số co hẹp của mỗi cây (thường cấu hình từ $0.01$ đến $0.1$).
+- **max_depth**: Chiều sâu tối đa của cây nhằm giới hạn độ sâu leaf-wise.
+- **min_child_samples**: Số lượng mẫu tối thiểu cần có tại một node lá (tương đương `min_samples_leaf`).
+- **reg_lambda / reg_alpha**: Các tham số chuẩn hóa L1/L2 chống overfitting.
+- **early_stopping_rounds**: Dừng sớm quá trình huấn luyện nếu metric đánh giá trên tập validation (RMSE, MAE hoặc NDCG@10) không cải thiện sau số lượt chỉ định.
 
-**Lý do chọn Gradient Boosting:**
-- **Performance**: Thường outperform linear models và single trees
-- **Feature importance**: Có thể analyze feature importance
-- **Robustness**: Ít bị overfit hơn deep learning với data nhỏ
-- **Interpretability**: Dễ hiểu hơn neural networks
-- **Efficiency**: Inference nhanh, phù hợp cho real-time ranking
+**Lý do chọn LightGBM:**
+- **Inference Speed**: Tốc độ suy luận cực nhanh, phù hợp cho luồng xử lý thời gian thực của feed API.
+- **Memory Efficiency**: Tiết kiệm RAM đáng kể nhờ histogram-based binning.
+- **Gain-Based Feature Importance**: Cho phép phân tích tầm quan trọng của các đặc trưng đóng góp vào điểm xếp hạng dựa trên tổng lượng Gain tăng lên khi chia tách cây.
 
-#### 2.5.2. Feature Engineering
+
+#### 2.5.2. Feature Engineering & Ngăn ngừa Rò rỉ Dữ liệu (Data Leakage)
 
 **Khái niệm:**
-Feature Engineering là quá trình tạo ra features (đặc trưng) từ raw data để cải thiện model performance.
+Feature Engineering là quá trình chuyển đổi dữ liệu thô (raw data) thành các đặc trưng đầu vào có ý nghĩa để tối ưu hóa hiệu năng mô hình LightGBM. Trong Social Pulse, quá trình này được cải tiến để giải quyết triệt để hai bẫy dữ liệu lớn nhất trong các tập dữ liệu cào offline (như Pushshift Reddit): **Rò rỉ mục tiêu (Target Leakage)** và **Rò rỉ thời gian (Temporal Leakage/Feature Skew)**.
 
-**Techniques sử dụng:**
+**1. Bẫy Rò rỉ Mục tiêu (Target Leakage):**
+- **Vấn đề:** Tập dữ liệu Pushshift Reddit cung cấp các số liệu tương tác (`upvote_count`, `downvote_count`, `comment_count`, `share_count`, `view_count`) tại thời điểm cào dữ liệu (thường là nhiều ngày/tháng sau khi bài viết được đăng). Nếu đưa các đặc trưng đếm tích lũy này vào huấn luyện offline, mô hình sẽ học vẹt dựa trên các số liệu tương tác cuối cùng để đoán nhãn (log1p popularity), thay vì học cách xếp hạng từ các yếu tố nội tại của bài viết. Khi đưa vào suy luận thực tế (inference) cho bài viết mới đăng, các số đếm này bằng 0 hoặc rất nhỏ, dẫn đến mô hình hoạt động kém hiệu quả.
+- **Giải pháp:** Loại bỏ hoàn toàn 5 đặc trưng đếm tương tác tích lũy này cùng với đặc trưng `popularity` ra khỏi vector huấn luyện offline. Mô hình bị buộc phải học cách xếp hạng từ các thuộc tính cấu trúc nội tại và độ uy tín của tác giả.
 
-**1. Temporal Features:**
+**2. Bẫy Rò rỉ Thời gian (Temporal Leakage) & Feature Skew:**
+- **Sai lệch tuổi bài viết (post_age_hours):** Trong huấn luyện offline, tuổi của bài viết phải được tính tương đối theo thời điểm truy vấn tương tác ảo của người dùng thay vì tính theo mốc cố định cuối dataset. Điều này được điều chỉnh để khớp chính xác logic tính toán thời gian thực khi đưa vào sản xuất.
+- **Sai lệch độ uy tín tác giả (author_engagement_rate):** Việc quét toàn bộ file dữ liệu để tính tỷ lệ tương tác trung bình (`average_popularity`) trước khi train khiến bài viết từ quá khứ (ví dụ: tháng 1) lại được thừa hưởng độ nổi tiếng của tác giả ở tương lai (ví dụ: tháng 12). 
+- **Giải pháp:** Sử dụng cơ chế cập nhật trạng thái rolling (**Sequential Rolling Snapshot**). Khi duyệt qua tập dữ liệu theo thứ tự thời gian tuyến tính, số liệu của tác giả chỉ được cập nhật dựa trên những bài viết trước thời điểm bài viết hiện tại được đăng, bảo đảm không có thông tin tương lai nào bị rò rỉ vào đặc trưng huấn luyện.
+
+**Danh sách 13 đặc trưng cốt lõi (Core Feature Schema):**
+
+| STT | Tên Đặc Trưng | Thể Loại | Mô Tả |
+|---|---|---|---|
+| 1 | `content_length` | Post (Cấu trúc) | Tổng độ dài tiêu đề và nội dung bài viết. |
+| 2 | `has_multimedia` | Post (Cấu trúc) | Nhị phân (0 hoặc 1), chỉ ra bài viết có chứa hình ảnh hoặc video. |
+| 3 | `is_share_post` | Post (Cấu trúc) | Nhị phân (0 hoặc 1), bài viết là bài chia sẻ (share post) lại từ bài khác. |
+| 4 | `post_age_hours` | Post (Thời gian) | Số giờ trôi qua kể từ khi đăng đến lúc truy vấn. |
+| 5 | `hot_score` | Post (Chất lượng) | Điểm "hot" suy giảm theo thời gian dựa trên tương tác thời gian thực. |
+| 6 | `upvote_ratio` | Post (Chất lượng) | Tỷ lệ upvote trên tổng số reaction (được làm mượt Laplace). |
+| 7 | `author_seniority` | Author (Tác giả) | Thâm niên của tác giả (tính bằng năm) kể từ ngày tạo tài khoản. |
+| 8 | `author_post_count` | Author (Tác giả) | Tổng số bài viết của tác giả tính đến trước thời điểm hiện tại. |
+| 9 | `author_engagement_rate` | Author (Tác giả) | Điểm tương tác trung bình của các bài viết trước đó của tác giả (Snapshot rolling). |
+| 10 | `interaction_count_7d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 7 ngày qua. |
+| 11 | `interaction_count_30d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 30 ngày qua. |
+| 12 | `hours_since_last_interaction` | Interaction (Tương tác) | Số giờ kể từ lần tương tác cuối của người xem với tác giả. |
+| 13 | `affinity_score` | Interaction (Tương tác) | Điểm thân thiết tính bằng tỷ lệ tương tác với tác giả trên tổng tương tác của người xem. |
+
+**Techniques tiền xử lý toán học (Preprocessing):**
+
+**1. Log Transforms (Biến đổi logarit):**
+Áp dụng đối với các đặc trưng tương tác có phân phối lệch (skewed distribution) như `interaction_count_7d` và `interaction_count_30d` để đưa về phân phối chuẩn hơn:
 ```python
-post_age_hours = (current_time - post_created_at).total_seconds() / 3600
+x_transformed = log(x + 1)
 ```
-- Capture tính thời sự của nội dung
 
-**2. Ratio Features:**
-```python
-upvote_ratio = upvotes / (upvotes + downvotes + 1)
-```
-- Normalize engagement metrics
-
-**3. Aggregation Features:**
-```python
-author_engagement_rate = total_interactions / total_posts
-```
-- Summarize author quality
-
-**4. Interaction Features:**
-```python
-affinity_score = interaction_count / days_since_first_interaction
-```
-- Capture user-author relationship
-
-**5. Log Transforms:**
-```python
-log_view_count = log(view_count + 1)
-```
-- Handle skewed distributions
-
-**6. Outlier Capping:**
+**2. Outlier Capping (Giới hạn ngoại lai):**
+Các đặc trưng có khoảng giá trị quá rộng (`content_length`, `post_age_hours`, `hot_score`, `author_seniority`, `author_post_count`, `author_engagement_rate`, `hours_since_last_interaction`) được giới hạn ở phân vị thứ 99 (99th percentile) để hạn chế ảnh hưởng tiêu cực của nhiễu dữ liệu:
 ```python
 capped_value = min(value, percentile_99)
 ```
-- Reduce impact of outliers
 
-**Importance:**
-- Good features > complex models
-- Domain knowledge crucial
-- Iterative process
+**3. Laplace Smoothing:**
+Làm mượt tỷ lệ upvote tránh trường hợp bài viết mới có quá ít tương tác:
+```python
+upvote_ratio = upvotes / (upvotes + downvotes + 1)
+```
+
+**Tầm quan trọng:**
+Sự kết hợp giữa ngăn ngừa rò rỉ dữ liệu thông qua cấu trúc 13 đặc trưng và áp dụng các biến đổi phân phối giúp LightGBM đạt NDCG@10 ổn định hơn, mô hình tổng quát hóa tốt hơn khi gặp các dữ liệu mới trong môi trường thực tế.
+
 
 ### 2.6. Real-time Communication
 
@@ -1032,7 +1147,7 @@ Phần cơ sở lý thuyết đã trình bày:
 - **Backend**: Spring Boot, PostgreSQL, Redis
 - **Frontend**: React, TypeScript, Tailwind CSS
 - **Security**: JWT, RBAC, OWASP mitigations
-- **AI**: Gradient Boosting, Feature Engineering
+- **AI**: LightGBM, Ngăn ngừa Rò rỉ Dữ liệu (Target/Temporal Leakage)
 - **Real-time**: WebSocket, STOMP protocol
 - **DevOps**: Docker, Flyway migrations
 - **API**: RESTful principles, OpenAPI documentation

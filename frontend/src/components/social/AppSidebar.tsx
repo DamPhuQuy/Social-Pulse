@@ -6,6 +6,8 @@ import { useAuth } from "@/hooks/useAuth";
 import { logoutUser } from "@/services/auth/authService";
 import { getUnreadNotificationCount } from "@/services/social/notificationService";
 import { isAdminToken } from "@/lib/jwtUtils";
+import { toast } from "sonner";
+
 
 type SidebarKey =
   | "home"
@@ -31,6 +33,8 @@ export default function AppSidebar({ active }: AppSidebarProps) {
   const isAdmin = isAdminToken(accessToken);
 
   useEffect(() => {
+    if (!accessToken) return;
+
     getUnreadNotificationCount().then(res => {
       if (res.ok && res.data) {
         setUnreadCount(res.data.unreadCount);
@@ -45,7 +49,7 @@ export default function AppSidebar({ active }: AppSidebarProps) {
     return () => {
       window.removeEventListener("realtime:notification", handleRealtimeNotification);
     };
-  }, []);
+  }, [accessToken]);
 
   const handleLogout = async () => {
     await logoutUser();
@@ -54,16 +58,31 @@ export default function AppSidebar({ active }: AppSidebarProps) {
     navigate(PATHS.LOGIN);
   };
 
+  const handleNav = (path: string, label: string) => {
+    if (path === PATHS.HOME) {
+      navigate(path);
+      return;
+    }
+
+    if (!accessToken) {
+      toast.error(`Vui lòng đăng nhập để truy cập ${label.toLowerCase()}.`);
+      navigate(PATHS.LOGIN);
+      return;
+    }
+
+    navigate(path);
+  };
+
   return (
     <aside className="hidden lg:flex flex-col gap-6 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-2">
       <nav className="flex flex-col gap-1">
-        <NavItem icon={Home} label="Trang chủ" active={active === "home"} onClick={() => navigate(PATHS.HOME)} />
-        <NavItem icon={Compass} label="Khám phá" active={active === "discovery"} onClick={() => navigate(PATHS.DISCOVERY)} />
-        <NavItem icon={Bell} label={unreadCount > 0 ? `Thông báo (${unreadCount})` : "Thông báo"} active={active === "notifications"} onClick={() => navigate(PATHS.NOTIFICATIONS)} />
-        <NavItem icon={MessageSquare} label="Tin nhắn" active={active === "chat"} onClick={() => navigate(PATHS.CHAT)} />
-        <NavItem icon={Bookmark} label="Đã lưu" active={active === "bookmarks"} onClick={() => navigate(PATHS.BOOKMARKS)} />
-        <NavItem icon={User} label="Hồ sơ" active={active === "profile"} onClick={() => navigate(PATHS.PROFILE)} />
-        <NavItem icon={Settings} label="Cài đặt" active={active === "settings"} onClick={() => navigate(PATHS.SETTINGS)} />
+        <NavItem icon={Home} label="Trang chủ" active={active === "home"} onClick={() => handleNav(PATHS.HOME, "Trang chủ")} />
+        <NavItem icon={Compass} label="Khám phá" active={active === "discovery"} onClick={() => handleNav(PATHS.DISCOVERY, "Khám phá")} />
+        <NavItem icon={Bell} label={unreadCount > 0 ? `Thông báo (${unreadCount})` : "Thông báo"} active={active === "notifications"} onClick={() => handleNav(PATHS.NOTIFICATIONS, "Thông báo")} />
+        <NavItem icon={MessageSquare} label="Tin nhắn" active={active === "chat"} onClick={() => handleNav(PATHS.CHAT, "Tin nhắn")} />
+        <NavItem icon={Bookmark} label="Đã lưu" active={active === "bookmarks"} onClick={() => handleNav(PATHS.BOOKMARKS, "Đã lưu")} />
+        <NavItem icon={User} label="Hồ sơ" active={active === "profile"} onClick={() => handleNav(PATHS.PROFILE, "Hồ sơ")} />
+        <NavItem icon={Settings} label="Cài đặt" active={active === "settings"} onClick={() => handleNav(PATHS.SETTINGS, "Cài đặt")} />
       </nav>
 
       {/* ADMIN CONTROL PANEL SECTION — only rendered for ADMIN role */}
@@ -79,12 +98,21 @@ export default function AppSidebar({ active }: AppSidebarProps) {
       )}
 
       <div className="mt-auto pt-4 pb-2 border-t border-slate-200/80 dark:border-neutral-800">
-        <button
-          onClick={handleLogout}
-          className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors w-full rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900"
-        >
-          <LogOut className="w-5 h-5" /> Đăng xuất
-        </button>
+        {accessToken ? (
+          <button
+            onClick={handleLogout}
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors w-full rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900"
+          >
+            <LogOut className="w-5 h-5" /> Đăng xuất
+          </button>
+        ) : (
+          <button
+            onClick={() => navigate(PATHS.LOGIN)}
+            className="flex items-center gap-3 px-3 py-2.5 text-sm font-medium text-slate-500 dark:text-neutral-400 hover:text-slate-900 dark:hover:text-white transition-colors w-full rounded-xl hover:bg-slate-100 dark:hover:bg-neutral-900"
+          >
+            <LogOut className="w-5 h-5" /> Đăng nhập
+          </button>
+        )}
       </div>
     </aside>
   );
