@@ -54,9 +54,9 @@ public class PostConfig {
     public CreatePostUseCase createPostUseCase(PostRepository postRepository,
                                                UserRepository userRepository,
                                                PostMapper postMapper,
-                                               PostPersistenceMapper postPersistenceMapper,
-                                               StringRedisTemplate redisTemplate) {
-        return new CreatePostService(postRepository, userRepository, postMapper, postPersistenceMapper, redisTemplate);
+                                               StringRedisTemplate redisTemplate,
+                                               SseEmitterRegistry sseEmitterRegistry) {
+        return new CreatePostService(postRepository, userRepository, postMapper, redisTemplate, sseEmitterRegistry);
     }
 
     @Bean
@@ -68,13 +68,13 @@ public class PostConfig {
     }
 
     @Bean
-    public DeletePostUseCase deletePostUseCase(PostRepository postRepository, StringRedisTemplate redisTemplate) {
-        return new DeletePostService(postRepository, redisTemplate);
+    public DeletePostUseCase deletePostUseCase(PostRepository postRepository, StringRedisTemplate redisTemplate, SseEmitterRegistry sseEmitterRegistry) {
+        return new DeletePostService(postRepository, redisTemplate, sseEmitterRegistry);
     }
 
     @Bean
-    public EditPostUseCase editPostUseCase(PostRepository postRepository, PostMapper postMapper, StringRedisTemplate redisTemplate) {
-        return new EditPostService(postRepository, postMapper, redisTemplate);
+    public EditPostUseCase editPostUseCase(PostRepository postRepository, PostMapper postMapper, StringRedisTemplate redisTemplate, SseEmitterRegistry sseEmitterRegistry) {
+        return new EditPostService(postRepository, postMapper, redisTemplate, sseEmitterRegistry);
     }
 
     @Bean

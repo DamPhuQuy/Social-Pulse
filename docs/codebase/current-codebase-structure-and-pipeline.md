@@ -29,7 +29,7 @@ Stack chinh dang dung:
 - Spring Mail
 - Cloudinary
 - springdoc OpenAPI + Scalar page
-- XGBoost local scorer cho feed ranking
+- LightGBM AI service cho feed ranking
 
 Kieu thuc thi hien tai chu yeu la dong bo, request-response. Hai ngoai le du kien:
 
@@ -57,15 +57,15 @@ Tuy nhien, theo code hien tai chua thay `@EnableAsync` va chua thay `@EnableSche
   - Redis host/port
   - SMTP config
   - JWT secret va TTL
-  - XGBoost toggle va model location
+  - AI pipeline toggle, base URL, va feature schema version
   - Cloudinary config
 
 ### 2.3. Resources
 
 - `db/migration`
   - 12 migration tu `V1__init.sql` den `V12__add_edited_to_comments.sql`
-- `ai/ranking-model.json`
-  - artifact model duoc backend load de score feed
+- AI model artifacts nam trong `ai_pipeline/model`
+  - backend goi FastAPI AI service, khong load artifact truc tiep
 
 ## 3. Ban do package hien tai
 
@@ -247,7 +247,7 @@ Trach nhiem:
 - chon candidate posts
 - trich xuat feature
 - ranking fallback
-- ranking bang XGBoost neu bat
+- ranking bang AI service neu bat
 - cache feed theo user
 - paginate ket qua
 
@@ -284,10 +284,10 @@ Trach nhiem:
 
 Trach nhiem:
 
-- bind XGBoost config
-- vectorize feature
-- load JSON artifact
-- local score cho feed ranking
+- bind AI pipeline config
+- goi Python AI service de lay ranking score
+- validate response schema
+- fallback an toan neu AI service loi
 
 ## 6. Pipeline thuc thi tong quat
 
@@ -545,8 +545,8 @@ Flow:
 14. cache `user:features:<userId>` trong Redis 10 phut
 15. tao `RankingRequest`
 16. goi `PredictRankingUseCase`
-17. neu XGBoost duoc bat va model hop le thi score tung post bang local scorer
-18. neu prediction khong hop le thi giu fallback ranking
+17. neu AI service duoc bat va response hop le thi lay score tung post tu LightGBM service
+18. neu prediction khong hop le thi dung fallback ranking
 19. sort score giam dan
 20. map thanh `FeedItem`
 21. cache toan bo feed vao Redis 10 phut
@@ -554,10 +554,9 @@ Flow:
 
 Feature hien tai:
 
-- `PostFeatures`: content length, image flag, share flag, age, hot score, vote counts, comment/share/view counts...
-- `AuthorFeatures`: post count, account age, engagement rate mac dinh 0.0
-- `ViewerFeatures`: post count, account age
-- `InteractionFeatures`: interaction count 7d/30d hien dang hardcode 0, affinity dua tren follow
+- `PostFeatures`: content length, image flag, share flag, age
+- `AuthorFeatures`: post count, account age, historical engagement rate
+- `InteractionFeatures`: interaction count 7d/30d, last interaction recency, affinity score
 
 Y nghia kien truc:
 
@@ -565,17 +564,15 @@ Y nghia kien truc:
 - nhung du lieu behavior realtime van rat han che
 - neu ML fail, he thong van co deterministic ranking
 
-### 7.10. XGBoost local scoring pipeline
+### 7.10. LightGBM AI scoring pipeline
 
 1. doc config `ai.pipeline.*`
-2. neu `enabled=false` thi bo qua model, feed dung fallback
-3. neu bat, `RankingService` se lazy-load model tu `classpath:ai/ranking-model.json`
-4. chap nhan 2 format:
-   - raw `Booster.dump_model()`
-   - wrapped artifact co `model_dump`
+2. neu `enabled=false` thi feed dung fallback
+3. neu bat, backend gui `RankingRequest` toi FastAPI AI service
+4. AI service load `model.json` va `model.txt`
 5. validate `feature_schema_version`
-6. `FeatureVectorizer` chuyen `RankingFeatures` thanh feature map
-7. `TreeModelScorer` duyet tree JSON va tinh score
+6. `FeatureVectorizer` chuyen `RankingFeatures` thanh vector theo schema v2
+7. LightGBM booster tinh score
 8. tra `RankingResponse` ve cho `FeedRankingService`
 
 ## 8. Data va state hien tai
@@ -667,7 +664,6 @@ Controller dang expose cac nhom endpoint:
 Test hien co trong `src/test/java`:
 
 - `AppApplicationTests`
-- `TreeModelScorerTest`
 - `RankingServiceTest`
 - `FeedRankingServiceTest`
 - `GetFeedServiceTest`
@@ -691,5 +687,5 @@ Nhan xet:
 Neu tom tat codebase hien tai trong 3 cau:
 
 - Day la Spring Boot modular monolith, nghiêng ve ports/adapters, voi user/auth/post/comment/follow/report/feed tach thanh module rieng.
-- Pipeline quan trong nhat la pipeline feed: cache -> candidate selection -> feature extraction -> XGBoost prediction hoac deterministic fallback -> cache -> paginate.
+- Pipeline quan trong nhat la pipeline feed: cache -> candidate selection -> feature extraction -> LightGBM AI service hoac deterministic fallback -> cache -> paginate.
 - He thong da co dat nen cho ML ranking va background syncing bang Redis, nhung mot vai background capability hien van can xac minh wiring de dam bao chay dung trong runtime.

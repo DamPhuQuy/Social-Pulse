@@ -145,6 +145,8 @@ public class FeedItemResponseAssembler {
                 .myVote(toVote(myReaction))
                 .aiScore(item.getAiScore())
                 .source(item.getSource() != null ? item.getSource().name() : null)
+                .rankingProvider(item.getRankingProvider() != null ? item.getRankingProvider().name() : null)
+                .featureSchemaVersion(item.getFeatureSchemaVersion())
                 .rankedAt(item.getRankedAt())
                 .privacy(post.getPrivacy())
                 .createdAt(post.getCreatedAt())

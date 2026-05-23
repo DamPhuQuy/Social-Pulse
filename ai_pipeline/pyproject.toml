@@ -27,6 +27,7 @@ package = true
 [tool.setuptools]
 packages = [
     "ai_pipeline",
+    "ai_pipeline.api",
     "ai_pipeline.inference",
     "ai_pipeline.shared",
     "ai_pipeline.training",

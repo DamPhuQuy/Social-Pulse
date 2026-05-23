@@ -39,7 +39,7 @@ public class AiPipelineRankingClient implements PredictRankingUseCase {
                     .uri("/api/ranking/predict")
                     .body(request)
                     .retrieve()
-                    .body(new ParameterizedTypeReference<>() {});
+                    .body(new ParameterizedTypeReference<List<RankingResponse>>() {});
             return response != null ? response : List.of();
         } catch (Exception e) {
             log.warn("AI pipeline call failed: {}", e.getMessage());

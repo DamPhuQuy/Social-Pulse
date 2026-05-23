@@ -11,5 +11,5 @@ import lombok.Setter;
 public class AiPipelineProperties {
     private boolean enabled = false;
     private String baseUrl = "http://localhost:8000";
-    private String featureSchemaVersion = "v1";
+    private String featureSchemaVersion = "v2";
 }

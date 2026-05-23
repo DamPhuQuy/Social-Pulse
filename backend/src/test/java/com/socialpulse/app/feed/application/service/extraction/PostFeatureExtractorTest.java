@@ -1,21 +1,18 @@
 package com.socialpulse.app.feed.application.service.extraction;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
+import static org.junit.jupiter.api.Assertions.assertFalse;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.LocalDateTime;
-import java.time.ZoneOffset;
 
 import org.junit.jupiter.api.Test;
 
 import com.socialpulse.app.post.domain.model.Post;
 
 class PostFeatureExtractorTest {
-    private static final double HOT_SCORE_TIME_DIVISOR = 45000.0;
-    private static final long REDDIT_EPOCH = 1134028003L;
-
     @Test
-    void computesHotScoreUsingRedditStyleRecencyTerm() {
+    void extractsLeakageSafePostFeatures() {
         PostFeatureExtractor extractor = new PostFeatureExtractor();
         LocalDateTime now = LocalDateTime.of(2026, 5, 20, 10, 0);
         LocalDateTime createdAt = LocalDateTime.of(2026, 5, 20, 6, 0);
@@ -23,48 +20,40 @@ class PostFeatureExtractorTest {
         Post post = Post.builder()
                 .id(1L)
                 .content("hello world")
+                .imageUrl("https://cdn.example.com/post.jpg")
                 .upvoteCount(20L)
                 .downvoteCount(3L)
+                .cmtCount(9L)
+                .shareCount(2L)
+                .viewCount(100L)
+                .hotScore(42.0)
                 .createdAt(createdAt)
                 .build();
 
-        double actual = extractor.extract(post, now).getHotScore();
-        double expected = expectedHotScore(17L, createdAt);
+        var features = extractor.extract(post, now);
 
-        assertEquals(expected, actual, 1e-9);
+        assertEquals(1L, features.getPostId());
+        assertEquals(11, features.getContentLength());
+        assertTrue(features.getHasMultimedia());
+        assertFalse(features.getIsSharePost());
+        assertEquals(4.0, features.getPostAgeHours(), 1e-9);
     }
 
     @Test
-    void assignsHigherHotScoreToNewerPostWhenNetScoreMatches() {
+    void clampsMissingCreatedAtToZeroAge() {
         PostFeatureExtractor extractor = new PostFeatureExtractor();
         LocalDateTime now = LocalDateTime.of(2026, 5, 20, 10, 0);
 
-        Post newer = Post.builder()
+        Post post = Post.builder()
                 .id(1L)
-                .content("newer")
-                .upvoteCount(10L)
-                .downvoteCount(2L)
-                .createdAt(now.minusHours(2))
+                .content(null)
+                .imageUrl("")
                 .build();
 
-        Post older = Post.builder()
-                .id(2L)
-                .content("older")
-                .upvoteCount(10L)
-                .downvoteCount(2L)
-                .createdAt(now.minusHours(24))
-                .build();
+        var features = extractor.extract(post, now);
 
-        double newerScore = extractor.extract(newer, now).getHotScore();
-        double olderScore = extractor.extract(older, now).getHotScore();
-
-        assertTrue(newerScore > olderScore);
-    }
-
-    private static double expectedHotScore(long netScore, LocalDateTime createdAt) {
-        double order = Math.log10(Math.max(Math.abs(netScore), 1));
-        double sign = netScore > 0 ? 1.0 : netScore < 0 ? -1.0 : 0.0;
-        long createdEpochSeconds = createdAt.toEpochSecond(ZoneOffset.UTC);
-        return sign * order + (createdEpochSeconds - REDDIT_EPOCH) / HOT_SCORE_TIME_DIVISOR;
+        assertEquals(0, features.getContentLength());
+        assertFalse(features.getHasMultimedia());
+        assertEquals(0.0, features.getPostAgeHours(), 1e-9);
     }
 }

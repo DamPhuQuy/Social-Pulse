@@ -22,4 +22,10 @@ public class SystemMetricsResponse {
     private long newPosts;
     private long toxicPosts;
     private long deletedPosts;
+
+    // Feed analytics
+    private long totalFeedImpressions;
+    private long newFeedImpressions;
+    private long aiRankedImpressions;
+    private long fallbackRankedImpressions;
 }

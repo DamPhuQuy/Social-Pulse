@@ -30,7 +30,7 @@ class RankingServiceConfig:
 
     # Defaults
     _DEFAULT_MODEL_LOCATION = "ai_pipeline/model/model.json"
-    _DEFAULT_FEATURE_SCHEMA = "v1"
+    _DEFAULT_FEATURE_SCHEMA = "v2"
     _DEFAULT_INFERENCE_DEVICE = "cpu"
 
     def build(self) -> RankingService:

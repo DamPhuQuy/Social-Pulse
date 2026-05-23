@@ -1,4 +1,4 @@
-"""Dataset scanner: reads .zst archives, reservoir-samples posts, extracts interactions."""
+"""Dataset scanner: reads .zst archives, samples posts, and extracts interactions."""
 from __future__ import annotations
 
 import random
@@ -8,13 +8,9 @@ from collections import defaultdict
 from hashlib import sha1
 from pathlib import Path
 
-from ai_pipeline.shared.schema import RankingFeatureSchema
 from . import json_support as js
 from .arguments import TrainingArguments
 from .types import AuthorAggregate, InteractionScanResult, ScanResult, SubmissionRecord
-
-_HOT_SCORE_TIME_DIVISOR = 45000.0
-_REDDIT_EPOCH = 1134028003
 
 _MEDIA_EXTENSIONS = (".jpg", ".jpeg", ".png", ".gif", ".webp", ".mp4", ".mov")
 _SKIP_THUMBNAILS = {"", "self", "default", "nsfw", "image"}
@@ -33,14 +29,12 @@ _LIKELY_BOT_AUTHORS = {
 
 
 class PushshiftDatasetScanner:
-
     def scan_submissions(self, arguments: TrainingArguments) -> ScanResult:
         rng = random.Random(arguments.seed)
         reservoir: list[SubmissionRecord] = []
         author_aggregates: dict[str, AuthorAggregate] = {}
         seen_signatures: set[bytes] = set()
         filter_reasons: dict[str, int] = defaultdict(int)
-
         scanned = filtered = accepted = 0
 
         with js.JsonLineReader(arguments.submissions_path) as reader:
@@ -62,12 +56,9 @@ class PushshiftDatasetScanner:
 
                 accepted += 1
                 popularity = self.popularity(record.score, record.num_comments, record.num_crossposts)
-                agg = author_aggregates.setdefault(record.author, AuthorAggregate())
-                # Snapshot BEFORE incrementing so the attached aggregate reflects
-                # only posts the author had published prior to this one.
-                author_snapshot = agg.snapshot()
-                agg.increment(popularity)
-                # Re-attach the pre-increment snapshot to the immutable record.
+                aggregate = author_aggregates.setdefault(record.author, AuthorAggregate())
+                author_snapshot = aggregate.snapshot()
+                aggregate.increment(popularity)
                 record = SubmissionRecord(
                     post_id=record.post_id,
                     author=record.author,
@@ -81,8 +72,6 @@ class PushshiftDatasetScanner:
                     num_crossposts=record.num_crossposts,
                     has_multimedia=record.has_multimedia,
                     is_share_post=record.is_share_post,
-                    hot_score=record.hot_score,
-                    upvote_ratio=record.upvote_ratio,
                     author_snapshot=author_snapshot,
                 )
 
@@ -104,6 +93,7 @@ class PushshiftDatasetScanner:
                 )
                 if arguments.scan_limit_posts > 0 and accepted >= arguments.scan_limit_posts:
                     break
+
             progress.finish(
                 reader.progress_percent,
                 scanned_records=scanned,
@@ -111,15 +101,18 @@ class PushshiftDatasetScanner:
                 extra=f"filtered={filtered:,} sample={len(reservoir):,}",
             )
 
-        stats = {
-            "submissions_scanned": scanned,
-            "submissions_filtered": filtered,
-            "submissions_accepted": accepted,
-            "reservoir_size": len(reservoir),
-            "distinct_content_signatures": len(seen_signatures),
-            "filter_reasons": dict(sorted(filter_reasons.items())),
-        }
-        return ScanResult(list(reservoir), dict(author_aggregates), stats)
+        return ScanResult(
+            sampled_posts=list(reservoir),
+            author_aggregates=dict(author_aggregates),
+            scan_stats={
+                "submissions_scanned": scanned,
+                "submissions_filtered": filtered,
+                "submissions_accepted": accepted,
+                "reservoir_size": len(reservoir),
+                "distinct_content_signatures": len(seen_signatures),
+                "filter_reasons": dict(sorted(filter_reasons.items())),
+            },
+        )
 
     def scan_interactions(
         self,
@@ -129,6 +122,7 @@ class PushshiftDatasetScanner:
         arguments: TrainingArguments,
     ) -> InteractionScanResult:
         interactions: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
+        post_interactions: dict[str, dict[str, list[float]]] = defaultdict(lambda: defaultdict(list))
         scanned = matched = 0
         skipped_reasons: dict[str, int] = defaultdict(int)
 
@@ -139,25 +133,14 @@ class PushshiftDatasetScanner:
                 commenter = js.normalize_text(payload.get("author"))
                 if not commenter or commenter.lower() == "[deleted]":
                     skipped_reasons["invalid_author"] += 1
-                    progress.maybe_report(
-                        reader.progress_percent,
-                        scanned_records=scanned,
-                        accepted_records=matched,
-                        extra=f"unique_viewers={len(interactions):,}",
-                    )
+                    self._report_interaction_progress(progress, reader.progress_percent, scanned, matched, interactions)
                     continue
                 if arguments.filter_bots and self._is_likely_bot_author(commenter):
                     skipped_reasons["bot_author"] += 1
-                    progress.maybe_report(
-                        reader.progress_percent,
-                        scanned_records=scanned,
-                        accepted_records=matched,
-                        extra=f"unique_viewers={len(interactions):,}",
-                    )
+                    self._report_interaction_progress(progress, reader.progress_percent, scanned, matched, interactions)
                     continue
 
-                link_id = payload.get("link_id", "")
-                post_id = js.strip_thing_prefix(str(link_id))
+                post_id = js.strip_thing_prefix(str(payload.get("link_id", "")))
                 post_author = post_author_map.get(post_id)
                 if post_author is None:
                     skipped_reasons["unmapped_post"] += 1
@@ -169,25 +152,17 @@ class PushshiftDatasetScanner:
                 created_utc = js.double_value(payload, "created_utc")
                 if created_utc <= 0:
                     skipped_reasons["invalid_timestamp"] += 1
-                    progress.maybe_report(
-                        reader.progress_percent,
-                        scanned_records=scanned,
-                        accepted_records=matched,
-                        extra=f"unique_viewers={len(interactions):,}",
-                    )
+                    self._report_interaction_progress(progress, reader.progress_percent, scanned, matched, interactions)
                     continue
 
                 matched += 1
                 interactions[commenter][post_author].append(created_utc)
+                post_interactions[post_id][commenter].append(created_utc)
+                self._report_interaction_progress(progress, reader.progress_percent, scanned, matched, interactions)
 
-                progress.maybe_report(
-                    reader.progress_percent,
-                    scanned_records=scanned,
-                    accepted_records=matched,
-                    extra=f"unique_viewers={len(interactions):,}",
-                )
                 if scan_limit > 0 and scanned >= scan_limit:
                     break
+
             progress.finish(
                 reader.progress_percent,
                 scanned_records=scanned,
@@ -195,15 +170,31 @@ class PushshiftDatasetScanner:
                 extra=f"unique_viewers={len(interactions):,}",
             )
 
-        stats = {
-            "comments_scanned": scanned,
-            "interactions_extracted": matched,
-            "unique_viewers": len(interactions),
-            "skipped_reasons": dict(sorted(skipped_reasons.items())),
-        }
-        # Convert defaultdicts to regular dicts
         return InteractionScanResult(
-            {k: dict(v) for k, v in interactions.items()}, stats
+            interactions={viewer: dict(authors) for viewer, authors in interactions.items()},
+            post_interactions={post_id: dict(viewers) for post_id, viewers in post_interactions.items()},
+            stats={
+                "comments_scanned": scanned,
+                "interactions_extracted": matched,
+                "unique_viewers": len(interactions),
+                "posts_with_interactions": len(post_interactions),
+                "skipped_reasons": dict(sorted(skipped_reasons.items())),
+            },
+        )
+
+    @staticmethod
+    def _report_interaction_progress(
+        progress: "_ProgressReporter",
+        percent: float,
+        scanned: int,
+        matched: int,
+        interactions: dict[str, dict[str, list[float]]],
+    ) -> None:
+        progress.maybe_report(
+            percent,
+            scanned_records=scanned,
+            accepted_records=matched,
+            extra=f"unique_viewers={len(interactions):,}",
         )
 
     def _preprocess_submission(
@@ -235,6 +226,7 @@ class PushshiftDatasetScanner:
             return None, "too_short", None
         if len(combined_text) > arguments.max_content_length:
             return None, "too_long", None
+
         low_signal_reason = self._low_signal_reason(
             combined_text,
             min_distinct_token_count=arguments.min_distinct_token_count,
@@ -247,20 +239,6 @@ class PushshiftDatasetScanner:
         post_id = js.normalize_text(payload.get("id"))
         if not post_id:
             return None, "missing_post_id", None
-
-        raw_ratio = js.optional_double_value(payload, "upvote_ratio")
-        if raw_ratio is not None and 0.0 <= raw_ratio <= 1.0:
-            # Apply Laplace smoothing (α=2) to pull low-confidence ratios toward 0.5.
-            # At serving time a brand-new post defaults to 0.5 (no votes yet), so
-            # smoothing here reduces the training↔serving distribution gap.
-            # We use |score| as a proxy for total vote count since Pushshift
-            # does not expose separate upvote/downvote fields.
-            _SMOOTHING_ALPHA = 2.0
-            total_proxy = max(abs(score), 0)
-            upvote_ratio = (raw_ratio * total_proxy + _SMOOTHING_ALPHA * 0.5) / (total_proxy + _SMOOTHING_ALPHA)
-        else:
-            upvote_ratio = RankingFeatureSchema.DEFAULT_UPVOTE_RATIO
-        content_signature = self._content_signature(title, body)
 
         return (
             SubmissionRecord(
@@ -276,11 +254,9 @@ class PushshiftDatasetScanner:
                 num_crossposts=num_crossposts,
                 has_multimedia=self._detect_multimedia(payload),
                 is_share_post=self._detect_share_post(payload),
-                hot_score=self._reddit_hot_score(score, created_utc),
-                upvote_ratio=upvote_ratio,
             ),
             None,
-            content_signature,
+            self._content_signature(title, body),
         )
 
     @staticmethod
@@ -306,14 +282,6 @@ class PushshiftDatasetScanner:
         return js.int_value(payload, "num_crossposts") > 0 or payload.get("crosspost_parent") is not None
 
     @staticmethod
-    def _reddit_hot_score(score: int, created_utc: float) -> float:
-        import math
-        order = math.log10(max(abs(score), 1))
-        sign = 1.0 if score > 0 else (-1.0 if score < 0 else 0.0)
-        seconds = created_utc - _REDDIT_EPOCH
-        return js.round6(sign * order + seconds / _HOT_SCORE_TIME_DIVISOR)
-
-    @staticmethod
     def _compose_text(title: str, body: str) -> str:
         return f"{title}\n{body}".strip()
 
@@ -336,8 +304,7 @@ class PushshiftDatasetScanner:
         if alpha_count < min_alpha_char_count:
             return "low_alpha_content"
 
-        url_count = len(_URL_PATTERN.findall(normalized))
-        if url_count > max_url_count:
+        if len(_URL_PATTERN.findall(normalized)) > max_url_count:
             return "too_many_urls"
 
         tokens = {token.lower() for token in _TOKEN_PATTERN.findall(normalized)}
@@ -349,8 +316,7 @@ class PushshiftDatasetScanner:
             char_counts: dict[str, int] = defaultdict(int)
             for ch in compact.lower():
                 char_counts[ch] += 1
-            dominant_ratio = max(char_counts.values()) / len(compact)
-            if dominant_ratio > 0.45:
+            if max(char_counts.values()) / len(compact) > 0.45:
                 return "repetitive_content"
         return None
 

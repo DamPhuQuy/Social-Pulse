@@ -2,9 +2,10 @@ Model training output lives here.
 
 Expected files after training:
 - `model.json`: metadata artifact
-- `model.ubj`: XGBoost booster sidecar
+- `model.txt`: LightGBM booster sidecar
 - `metrics.json`: training summary and metrics
 - `plots/label_distribution.png`
+- `plots/split_label_distribution.png`
 - `plots/training_curves.png`
 - `plots/feature_importance.png`
 
@@ -24,6 +25,8 @@ cd e:\Projects\Social-Pulse\ai_pipeline
 
 What to check after training:
 - `evaluation_warnings`
+- `evaluation_diagnostics.split_integrity`
+- `evaluation_diagnostics.feature_importance`
 - `validation_ndcg_k` and `test_ndcg_k`
 - `validation_rmse` vs `test_rmse`
 - `evaluation_diagnostics.mean_label_baseline`

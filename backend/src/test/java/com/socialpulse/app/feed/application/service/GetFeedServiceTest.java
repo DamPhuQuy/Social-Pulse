@@ -20,6 +20,7 @@ import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.FeedItem;
+import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 import com.socialpulse.app.user.domain.enums.VerificationStatus;
@@ -38,10 +39,17 @@ class GetFeedServiceTest {
     private StringRedisTemplate redisTemplate;
     @Mock
     private SetOperations<String, String> setOperations;
+    @Mock
+    private FeedImpressionRepository feedImpressionRepository;
 
     @Test
     void returnsPaginatedFeedWithoutTrainingSideEffects() {
-        GetFeedService service = new GetFeedService(rankFeedUseCase, feedItemResponseAssembler, cacheFeedUseCase, redisTemplate);
+        GetFeedService service = new GetFeedService(
+                rankFeedUseCase,
+                feedItemResponseAssembler,
+                cacheFeedUseCase,
+                redisTemplate,
+                feedImpressionRepository);
         CustomUserDetails currentUser = new CustomUserDetails(User.builder()
                 .id(42L)
                 .email("user@example.com")
@@ -63,6 +71,7 @@ class GetFeedServiceTest {
 
         assertEquals(2, response.size());
         verify(rankFeedUseCase).getPaginatedFeed(42L, 2, 2);
+        verify(feedImpressionRepository).saveAll(42L, feedItems, 2, 2, "HOME");
         verify(feedItemResponseAssembler).assemble(feedItems, 42L);
     }
 }
