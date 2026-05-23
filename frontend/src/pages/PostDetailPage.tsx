@@ -206,6 +206,7 @@ export default function PostDetailPage() {
                 {/* Bookmark */}
                 <button
                   onClick={handleToggleBookmark}
+                  title={bookmarkedPostIds.has(post.id) ? "Bỏ lưu bài viết" : "Lưu bài viết"}
                   className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${
                     bookmarkedPostIds.has(post.id)
                       ? "text-slate-900 dark:text-white"
@@ -220,6 +221,7 @@ export default function PostDetailPage() {
                 {/* Share */}
                 <button
                   onClick={handleShare}
+                  title="Chia sẻ liên kết bài viết"
                   className="flex items-center gap-2 text-slate-600 hover:text-slate-900 dark:text-neutral-400 dark:hover:text-white transition-colors group"
                 >
                   <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
