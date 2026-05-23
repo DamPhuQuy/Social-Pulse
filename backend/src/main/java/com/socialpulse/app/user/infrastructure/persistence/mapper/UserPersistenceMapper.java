@@ -1,6 +1,6 @@
 package com.socialpulse.app.user.infrastructure.persistence.mapper;
 
-import com.socialpulse.app.user.infrastructure.persistence.mapper.RolePersistenceMapper;
+
 import org.mapstruct.AfterMapping;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;

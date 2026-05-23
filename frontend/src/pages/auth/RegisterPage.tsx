@@ -45,6 +45,17 @@ export default function RegisterPage() {
       return;
     }
 
+    if (username.length < 3 || username.length > 27) {
+      toast.error("Tên người dùng phải từ 3 đến 27 ký tự.");
+      return;
+    }
+
+    const usernameRegex = /^[a-zA-Z0-9_]*$/;
+    if (!usernameRegex.test(username)) {
+      toast.error("Tên người dùng chỉ được chứa chữ cái không dấu, số và dấu gạch dưới.");
+      return;
+    }
+
     if (form.rawPassword !== form.confirmPassword) {
       toast.error("Mật khẩu không khớp.");
       return;
@@ -108,13 +119,19 @@ export default function RegisterPage() {
 
           <form onSubmit={handleSubmit} className="space-y-5">
             <div className="space-y-2">
-              <Label htmlFor="username" className="text-sm font-bold text-gray-700 dark:text-slate-300 ml-1">Tên người dùng</Label>
+              <div className="flex justify-between items-center ml-1">
+                <Label htmlFor="username" className="text-sm font-bold text-gray-700 dark:text-slate-300">Tên người dùng</Label>
+                <span className="text-[10px] font-bold text-gray-400 dark:text-neutral-500">
+                  {form.username.length}/27
+                </span>
+              </div>
               <div className="relative group">
                 <User className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400 group-focus-within:text-blue-500 transition-colors" />
                 <Input
                   id="username"
                   placeholder="johndoe"
                   value={form.username}
+                  maxLength={27}
                   onChange={(e) => setForm(prev => ({ ...prev, username: e.target.value }))}
                   className="pl-12 pr-4 py-6 bg-white/50 dark:bg-slate-800/50 border-gray-100 dark:border-slate-700 rounded-2xl focus:ring-blue-500 focus:border-blue-500 transition-all dark:text-white"
                   required
