@@ -17,7 +17,6 @@ public class PostFeatureExtractor {
         double upvoteRatio = (up + down) > 0 ? (double) up / (up + down) : 0.5;
         double postAgeHours = post.getCreatedAt() != null
                 ? ChronoUnit.MINUTES.between(post.getCreatedAt(), now) / 60.0 : 0.0;
-        double popularity = up + safe(post.getCmtCount()) + safe(post.getShareCount());
 
         return PostFeatures.builder()
                 .postId(post.getId())
@@ -32,7 +31,6 @@ public class PostFeatureExtractor {
                 .commentCount(post.getCmtCount())
                 .viewCount(post.getViewCount())
                 .shareCount(post.getShareCount())
-                .popularity(popularity)
                 .build();
     }
 

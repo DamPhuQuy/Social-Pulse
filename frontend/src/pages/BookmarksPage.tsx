@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import { deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
 import type { UserPost } from "@/services/user/userService";
@@ -41,10 +42,10 @@ export default function BookmarksPage() {
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="bookmarks" />
 
-        <div className="min-w-0">
+        <div className="min-w-0 pb-24 lg:pb-10">
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
           <div className="mb-4 flex items-center gap-2">
             <Bookmark className="h-5 w-5 text-blue-500" />
@@ -84,6 +85,7 @@ export default function BookmarksPage() {
           </section>
         </div>
       </div>
+      <BottomNavBar active="bookmarks" />
     </div>
   );
 }

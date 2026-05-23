@@ -98,7 +98,6 @@ public class DiscoveryController {
     }
 
     @GetMapping("/hashtags/trending")
-    @RequiresPermission.DiscoveryRead
     public ResponseEntity<ApiResponse<List<TrendingHashtagResponse>>> getTrendingHashtags(
             @RequestParam(defaultValue = "7") @Max(365) int days,
             @RequestParam(defaultValue = "10") @Max(100) int limit) {

@@ -4,6 +4,7 @@ import { useNavigate } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { PATHS } from "@/constants/paths";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
@@ -100,10 +101,10 @@ export default function NotificationsPage() {
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="notifications" />
 
-        <div className="min-w-0">
+        <div className="min-w-0 pb-24 lg:pb-10">
           <div className="mb-5 flex items-center justify-end">
           <button
             onClick={handleMarkAll}
@@ -149,6 +150,7 @@ export default function NotificationsPage() {
           </section>
         </div>
       </div>
+      <BottomNavBar active="notifications" />
     </div>
   );
 }

@@ -120,7 +120,6 @@ public class PostController {
     }
 
     @GetMapping("/topics")
-    @RequiresPermission.PostRead
     @Operation(summary = "List post topics", description = "List selectable post topics used by create/edit post flows")
     public ResponseEntity<ApiResponse<List<PostTopicResponse>>> getPostTopics() {
         return ResponseEntity.ok(ApiResponse.<List<PostTopicResponse>>builder()

@@ -1,5 +1,6 @@
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
@@ -217,6 +218,7 @@ export default function ChatPage() {
   const [currentUserEmail, setCurrentUserEmail] = useState<string | null>(null);
   const [bootstrapping, setBootstrapping] = useState(true);
   const [socketStatus, setSocketStatus] = useState<SocketStatus>("connecting");
+  const [mobileView, setMobileView] = useState<"list" | "chat">("list");
   const [conversations, setConversations] = useState<
     ConversationListResponse[]
   >([]);
@@ -258,6 +260,7 @@ export default function ChatPage() {
       ) ?? null,
     [conversations, selectedConversationId],
   );
+  const hasSelectedConversation = !!selectedConversation;
 
   useEffect(() => {
     currentUserIdRef.current = currentUserId;
@@ -679,34 +682,39 @@ export default function ChatPage() {
 
     let cancelled = false;
     const bootstrap = async () => {
-      const [meRes, conversationsRes] = await Promise.all([
-        getCurrentUser(accessToken),
-        getConversations(0, 100),
-      ]);
+      try {
+        const [meRes, conversationsRes] = await Promise.all([
+          getCurrentUser(accessToken),
+          getConversations(0, 100),
+        ]);
 
-      if (cancelled) return;
+        if (cancelled) return;
 
-      if (meRes.ok && meRes.data) {
-        setCurrentUserId(meRes.data.id);
-        setCurrentUserEmail(meRes.data.email);
-      } else {
-        toast.error(meRes.message ?? "Không thể tải thông tin tài khoản.");
-      }
-
-      if (conversationsRes.ok && conversationsRes.data) {
-        const ordered = sortConversations(conversationsRes.data);
-        setConversations(ordered);
-        if (ordered.length > 0) {
-          setSelectedConversationId((current) => current ?? ordered[0].id);
+        if (meRes.ok && meRes.data) {
+          setCurrentUserId(meRes.data.id);
+          setCurrentUserEmail(meRes.data.email);
+        } else {
+          toast.error(meRes.message ?? "Không thể tải thông tin tài khoản.");
         }
-      } else {
-        toast.error(
-          conversationsRes.message ??
-            "Không thể tải danh sách cuộc trò chuyện.",
-        );
-      }
 
-      setBootstrapping(false);
+        if (conversationsRes.ok && conversationsRes.data) {
+          const ordered = sortConversations(conversationsRes.data);
+          setConversations(ordered);
+          if (ordered.length > 0) {
+            setSelectedConversationId((current) => current ?? ordered[0].id);
+          }
+        } else {
+          toast.error(
+            conversationsRes.message ??
+              "Không thể tải danh sách cuộc trò chuyện.",
+          );
+        }
+      } catch (err) {
+        console.error("Error during bootstrap:", err);
+      } finally {
+        setConversationsLoading(false);
+        setBootstrapping(false);
+      }
     };
 
     void bootstrap();
@@ -754,7 +762,7 @@ export default function ChatPage() {
       ),
     );
     sendReadAck(selectedConversation.id);
-  }, [selectedConversationId]);
+  }, [selectedConversationId, hasSelectedConversation]);
 
   useEffect(() => {
     if (!selectedConversationId || socketStatus !== "connected") {
@@ -825,12 +833,14 @@ export default function ChatPage() {
 
   const handleConversationPick = (conversation: ConversationListResponse) => {
     setSelectedConversationId(conversation.id);
+    setMobileView("chat");
   };
 
   const handleUserPick = async (user: SearchUserResponse) => {
     setUserSearchQuery("");
     setUserSearchResults([]);
     await openConversationWithParticipant(user.id);
+    setMobileView("chat");
   };
 
   const loadOlderMessages = async () => {
@@ -855,13 +865,14 @@ export default function ChatPage() {
     return (
       <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
         <AppHeader />
-        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
           <AppSidebar active="chat" />
           <div className="flex items-center justify-center py-24 text-slate-500 dark:text-neutral-400">
             <Loader2 className="w-6 h-6 animate-spin mr-2" />
             Đang khởi tạo hộp thư...
           </div>
         </div>
+        <BottomNavBar active="chat" />
       </div>
     );
   }
@@ -870,10 +881,10 @@ export default function ChatPage() {
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
 
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="chat" />
 
-        <div className="min-w-0 pb-10">
+        <div className="min-w-0 pb-24 lg:pb-10">
           <div className="mb-6 flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-blue-500/10 p-3 text-blue-500">
@@ -916,7 +927,10 @@ export default function ChatPage() {
           </div>
 
           <div className="grid gap-6 xl:grid-cols-[380px_1fr]">
-            <aside className="space-y-4">
+            {/* Conversation List — hidden on mobile when chat is open */}
+            <aside className={`space-y-4 ${
+              mobileView === "chat" ? "hidden xl:block" : "block"
+            }`}>
               <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
                 <div className="mb-3 flex items-center gap-2">
                   <Users className="h-4 w-4 text-blue-500" />
@@ -1087,7 +1101,10 @@ export default function ChatPage() {
               </section>
             </aside>
 
-            <section className="min-w-0 rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
+            {/* Chat Panel — hidden on mobile when list is shown */}
+            <section className={`min-w-0 rounded-2xl border border-slate-200/80 bg-white shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e] ${
+              mobileView === "list" ? "hidden xl:flex xl:flex-col" : "flex flex-col"
+            }`}>
               {!selectedConversation ? (
                 <div className="flex min-h-[70vh] flex-col items-center justify-center px-6 py-20 text-center">
                   <div className="rounded-full bg-blue-500/10 p-5 text-blue-500">
@@ -1117,7 +1134,15 @@ export default function ChatPage() {
                 <div className="flex min-h-[70vh] flex-col">
                   <header className="flex items-center justify-between gap-4 border-b border-slate-200/80 px-5 py-4 dark:border-neutral-800">
                     <div className="flex min-w-0 items-center gap-3">
-                      <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 dark:border-neutral-800">
+                      {/* Back button — mobile only */}
+                      <button
+                        onClick={() => setMobileView("list")}
+                        className="xl:hidden flex items-center justify-center w-9 h-9 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-slate-600 dark:text-neutral-300 transition-colors shrink-0"
+                        aria-label="Quay lại"
+                      >
+                        <ArrowLeft className="w-5 h-5" />
+                      </button>
+                      <div className="h-12 w-12 overflow-hidden rounded-full border border-slate-200 dark:border-neutral-800 shrink-0">
                         <SafeAvatar
                           src={selectedContact?.avatarUrl}
                           alt={selectedConversation.otherParticipantUsername}
@@ -1245,6 +1270,8 @@ export default function ChatPage() {
                   <footer className="border-t border-slate-200/80 px-5 py-4 dark:border-neutral-800">
                     <div className="rounded-3xl border border-slate-200/80 bg-slate-50 p-3 dark:border-neutral-800 dark:bg-neutral-950">
                       <textarea
+                        id="chat-message-input"
+                        name="message"
                         value={draft}
                         onChange={(event) => setDraft(event.target.value)}
                         onKeyDown={(event) => {
@@ -1283,6 +1310,7 @@ export default function ChatPage() {
           </div>
         </div>
       </div>
+      <BottomNavBar active="chat" />
     </div>
   );
 }

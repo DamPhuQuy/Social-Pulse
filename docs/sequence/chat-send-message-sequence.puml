@@ -1,0 +1,60 @@
+@startuml
+!theme plain
+
+title Chat Endpoint Sequence - WebSocket STOMP & Real-Time Delivery
+
+autonumber
+
+actor Sender
+actor Recipient
+participant ChatWebSocketController
+participant SendMessageUseCase
+participant SendMessageService
+database ConversationRepository
+database MessageRepository
+participant ApplicationEventPublisher
+participant NotifyMessageService
+participant WebSocketSessionManager
+participant SimpMessagingTemplate
+database RedisCache
+
+Sender -> ChatWebSocketController: Send Message frame via STOMP\nDestination: /app/chat.send\nPayload: [conversationId, content]
+ChatWebSocketController -> ChatWebSocketController: extractUserDetails(headerAccessor)
+ChatWebSocketController -> SendMessageUseCase: sendMessage(conversationId, request, senderDetails)
+
+group Transactional
+  SendMessageUseCase -> SendMessageService: sendMessage()
+  SendMessageService -> SendMessageService: validateContent(content)
+  SendMessageService -> ConversationRepository: findById(conversationId)
+  ConversationRepository --> SendMessageService: Conversation
+  SendMessageService -> SendMessageService: verify sender is participant
+  
+  SendMessageService -> MessageRepository: save(Message[SENT])
+  MessageRepository --> SendMessageService: Message[id, timestamp, SENT]
+  
+  SendMessageService -> ConversationRepository: updateLastMessageTimestamp(conversationId, timestamp)
+  
+  SendMessageService -> ApplicationEventPublisher: publishEvent(MessagePersistedEvent)
+end
+
+SendMessageService --> SendMessageUseCase: MessageResponse
+SendMessageUseCase --> ChatWebSocketController: MessageResponse
+note right: Controller method ends\nTransaction commits
+
+group AFTER_COMMIT Event Handling
+  ApplicationEventPublisher -> NotifyMessageService: onMessagePersisted(MessagePersistedEvent)
+  NotifyMessageService -> WebSocketSessionManager: isUserOnline(recipientId)
+  
+  alt Recipient is Online
+    WebSocketSessionManager --> NotifyMessageService: true
+    NotifyMessageService -> SimpMessagingTemplate: convertAndSend("/topic/chat." + conversationId, MessageResponse)
+    SimpMessagingTemplate -> Recipient: STOMP MESSAGE frame delivered
+    NotifyMessageService -> MessageRepository: updateStatus(messageId, DELIVERED)
+  else Recipient is Offline
+    WebSocketSessionManager --> NotifyMessageService: false
+    NotifyMessageService -> RedisCache: incr("chat:unread:" + conversationId + ":" + recipientId)
+    RedisCache --> NotifyMessageService: success
+  end
+end
+
+@enduml

@@ -1,18 +1,24 @@
-import { useEffect, useState } from "react";
-import { Compass, Hash, Loader2, Search, User } from "lucide-react";
+import { useEffect, useState, useRef } from "react";
+import { Compass, Hash, Loader2, Search, User, Clock, X } from "lucide-react";
 import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
   getPostsByHashtag,
   getPostsByMention,
   getTrendingHashtags,
+  getSearchHistory,
+  saveSearchHistory,
+  deleteSearchHistory,
+  clearSearchHistory,
   searchPosts,
   searchUsers,
   type SearchUserResponse,
   type TrendingHashtagResponse,
+  type SearchHistoryResponse,
 } from "@/services/social/discoveryService";
 import type { UserPost } from "@/services/user/userService";
 
@@ -28,6 +34,9 @@ export default function DiscoveryPage() {
   const [posts, setPosts] = useState<UserPost[]>([]);
   const [users, setUsers] = useState<SearchUserResponse[]>([]);
   const [trending, setTrending] = useState<TrendingHashtagResponse[]>([]);
+  const [searchHistory, setSearchHistory] = useState<SearchHistoryResponse[]>([]);
+  const [showHistory, setShowHistory] = useState(false);
+  const containerRef = useRef<HTMLDivElement>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -36,6 +45,21 @@ export default function DiscoveryPage() {
         setTrending(res.data);
       }
     });
+    getSearchHistory().then((res) => {
+      if (res.ok && res.data) {
+        setSearchHistory(res.data);
+      }
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(event.target as Node)) {
+        setShowHistory(false);
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
 
   useEffect(() => {
@@ -100,28 +124,56 @@ export default function DiscoveryPage() {
     };
   }, [params]);
 
-  const submitSearch = (nextMode = mode) => {
+  const submitSearch = async (nextMode = mode) => {
     const trimmed = query.trim();
+    setShowHistory(false);
     if (!trimmed) {
       setParams({ mode: nextMode });
       return;
     }
+    
+    await saveSearchHistory(trimmed);
+    const historyRes = await getSearchHistory();
+    if (historyRes.ok && historyRes.data) {
+      setSearchHistory(historyRes.data);
+    }
+
     const type = trimmed.startsWith("#") ? "hashtag" : trimmed.startsWith("@") ? "mention" : "search";
     const normalized = type === "search" ? trimmed : trimmed.slice(1);
     setParams({ q: normalized, mode: nextMode, type });
   };
 
+  const handleDeleteHistory = async (e: React.MouseEvent, id: number) => {
+    e.stopPropagation();
+    const res = await deleteSearchHistory(id);
+    if (res.ok) {
+      setSearchHistory((prev) => prev.filter((h) => h.id !== id));
+    } else if (res.message) {
+      toast.error(res.message);
+    }
+  };
+
+  const handleClearHistory = async (e: React.MouseEvent) => {
+    e.stopPropagation();
+    const res = await clearSearchHistory();
+    if (res.ok) {
+      setSearchHistory([]);
+    } else if (res.message) {
+      toast.error(res.message);
+    }
+  };
+
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="discovery" />
 
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 pb-24 lg:pb-10">
 
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
-            <div className="relative flex-1">
+            <div ref={containerRef} className="relative flex-1">
               <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
               <input
                 value={query}
@@ -129,7 +181,9 @@ export default function DiscoveryPage() {
                   const val = event.target.value;
                   setQuery(val);
                   sessionStorage.setItem("discovery_input", val);
+                  setShowHistory(true);
                 }}
+                onFocus={() => setShowHistory(true)}
                 onKeyDown={(event) => {
                   if (event.key === "Enter") {
                     submitSearch();
@@ -138,6 +192,56 @@ export default function DiscoveryPage() {
                 placeholder="Tìm bài viết, người dùng, hashtag hoặc @username"
                 className="w-full rounded-full border border-slate-200 bg-slate-50 py-3 pl-11 pr-4 text-sm outline-none focus:border-slate-400 dark:border-neutral-800 dark:bg-neutral-950 dark:text-white"
               />
+              
+              {showHistory && searchHistory.length > 0 && (
+                <div className="absolute top-full left-0 z-50 mt-2 w-full rounded-2xl border border-slate-200 bg-white p-2 shadow-lg dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
+                  <div className="mb-2 flex items-center justify-between px-3 pt-2 text-xs font-semibold text-slate-500 dark:text-neutral-400">
+                    <span>Lịch sử tìm kiếm</span>
+                    <button
+                      onClick={handleClearHistory}
+                      className="hover:text-blue-500 dark:hover:text-blue-400"
+                    >
+                      Xóa tất cả
+                    </button>
+                  </div>
+                  <div className="max-h-64 overflow-y-auto">
+                    {searchHistory.map((item) => (
+                      <div
+                        key={item.id}
+                        onClick={async () => {
+                          setQuery(item.keyword);
+                          sessionStorage.setItem("discovery_input", item.keyword);
+                          const type = item.keyword.startsWith("#") ? "hashtag" : item.keyword.startsWith("@") ? "mention" : "search";
+                          const normalized = type === "search" ? item.keyword : item.keyword.slice(1);
+                          setParams({ q: normalized, mode, type });
+                          setShowHistory(false);
+                          
+                          // Save again to bring to top
+                          await saveSearchHistory(item.keyword);
+                          const historyRes = await getSearchHistory();
+                          if (historyRes.ok && historyRes.data) {
+                            setSearchHistory(historyRes.data);
+                          }
+                        }}
+                        className="flex cursor-pointer items-center justify-between rounded-xl px-3 py-2.5 hover:bg-slate-50 dark:hover:bg-neutral-900"
+                      >
+                        <div className="flex items-center gap-3 min-w-0">
+                          <Clock className="h-4 w-4 shrink-0 text-slate-400" />
+                          <span className="truncate text-sm text-slate-700 dark:text-neutral-300">
+                            {item.keyword}
+                          </span>
+                        </div>
+                        <button
+                          onClick={(e) => handleDeleteHistory(e, item.id)}
+                          className="ml-2 rounded-full p-1 text-slate-400 hover:bg-slate-200 hover:text-slate-700 dark:hover:bg-neutral-800 dark:hover:text-neutral-300"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              )}
             </div>
             <div className="flex gap-2">
               <button
@@ -162,7 +266,7 @@ export default function DiscoveryPage() {
           </div>
         </section>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_280px]">
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
             {loading ? (
               <div className="flex justify-center py-16">
@@ -262,6 +366,7 @@ export default function DiscoveryPage() {
           </div>
         </div>
       </div>
+      <BottomNavBar active="discovery" />
     </div>
   );
 }

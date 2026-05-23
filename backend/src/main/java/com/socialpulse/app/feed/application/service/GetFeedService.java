@@ -36,28 +36,32 @@ public class GetFeedService implements GetFeedUseCase {
 
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
-        Long userId = currentUser.getId();
+        Long userId = currentUser != null ? currentUser.getId() : null;
 
-        if (page == 0) {
+        if (page == 0 && userId != null) {
             cacheFeedUseCase.invalidateFeed(userId);
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
-        markSeen(userId, feedItems);
+        if (userId != null) {
+            markSeen(userId, feedItems);
+        }
 
         return feedItemResponseAssembler.assemble(feedItems, userId);
     }
 
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, String topicSlug, CustomUserDetails currentUser) {
-        Long userId = currentUser.getId();
+        Long userId = currentUser != null ? currentUser.getId() : null;
 
-        if (page == 0) {
+        if (page == 0 && userId != null) {
             cacheFeedUseCase.invalidateFeed(userId);
         }
 
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
-        markSeen(userId, feedItems);
+        if (userId != null) {
+            markSeen(userId, feedItems);
+        }
 
         return feedItemResponseAssembler.assemble(feedItems, userId);
     }

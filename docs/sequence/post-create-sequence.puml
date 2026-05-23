@@ -1,0 +1,57 @@
+@startuml
+!theme plain
+
+title Post Endpoint Sequence - POST /api/v1/posts
+
+autonumber
+
+actor Member
+participant PostController
+participant CreatePostUseCase
+participant CreatePostService
+database UserRepository
+database PostRepository
+participant PostTopicCatalog
+database RedisCache
+
+Member -> PostController: POST /api/v1/posts\nPostCreationRequest
+PostController -> CreatePostUseCase: createPost(request, currentUser)
+CreatePostUseCase -> CreatePostService: createPost()
+
+CreatePostService -> UserRepository: findById(userId)
+UserRepository --> CreatePostService: User
+
+alt parentPostId != null (Shared Post)
+  CreatePostService -> PostRepository: findById(parentPostId)
+  PostRepository --> CreatePostService: Parent Post
+  
+  alt parentPost is shared post
+    CreatePostService --> PostController: throw POST_ALREADY_SHARED
+    PostController --> Member: 400 Bad Request
+  else parentPost is private & not owned by user
+    CreatePostService --> PostController: throw POST_NOT_ACCESSIBLE
+    PostController --> Member: 403 Forbidden
+  else accessible & not already shared
+    CreatePostService -> PostRepository: existsByUserIdAndParentPostIdAndType(userId, parentPostId, SHARE)
+    PostRepository --> CreatePostService: false
+    
+    CreatePostService -> CreatePostService: Register transaction synchronization afterCommit
+    note over CreatePostService: After transaction commits:\nIncrement shareCount delta key in Redis\nAdd key to "share:delta:keys" set
+  end
+end
+
+CreatePostService -> PostTopicCatalog: normalizeAndValidate(topicSlugs)
+PostTopicCatalog --> CreatePostService: validatedTopicSlugs
+
+CreatePostService -> PostRepository: save(Post)
+PostRepository --> CreatePostService: savedPost
+
+CreatePostService -> RedisCache: delete("user:feed:" + userId)
+note right: Invalidates the cache so\nnew post appears immediately
+RedisCache --> CreatePostService: success
+
+CreatePostService --> CreatePostUseCase: savedPost
+CreatePostUseCase --> PostController: PostCreationResponse
+PostController --> Member: 201 Created\nApiResponse<PostCreationResponse>
+
+@enduml

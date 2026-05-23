@@ -73,6 +73,19 @@ export async function getUserProfile(username: string): Promise<{ ok: boolean; d
   }
 }
 
+export async function getUserProfileById(userId: number): Promise<{ ok: boolean; data?: UserProfile; message?: string }> {
+  try {
+    const res = await apiClient.get<{ code: number; message: string; data: UserProfile }>(`/users/profile/id/${userId}`);
+    return { ok: true, data: res.data.data };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return {
+      ok: false,
+      message: axiosErr?.response?.data?.message ?? "Failed to fetch profile.",
+    };
+  }
+}
+
 export async function getUserPosts(userId: number, page = 0, size = 20): Promise<{ ok: boolean; data?: PageResponse<UserPost>; message?: string }> {
   try {
     const res = await apiClient.get<{ code: number; message: string; data: PageResponse<UserPost> }>(

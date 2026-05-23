@@ -55,6 +55,19 @@ export async function getReports(status?: ReportStatus, page = 0, size = 20): Pr
   }
 }
 
+export async function getReportDetail(reportId: number): Promise<{ ok: boolean; data?: ReportResponse; message?: string }> {
+  try {
+    const res = await apiClient.request<{ code: number; message: string; data: ReportResponse }>({
+      method: "get",
+      url: `${REPORT_BASE_URL}/reports/${reportId}`,
+    });
+    return { ok: true, data: res.data.data };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to fetch report detail." };
+  }
+}
+
 export async function updateReportStatus(reportId: number, status: ReportStatus): Promise<{ ok: boolean; message?: string }> {
   try {
     await apiClient.request<{ code: number; message: string }>({

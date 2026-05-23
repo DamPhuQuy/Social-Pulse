@@ -1,0 +1,98 @@
+@startuml
+!theme plain
+
+title Feed Endpoint Sequence - GET /api/v1/feed
+
+autonumber
+
+actor Member
+participant FeedController
+participant GetFeedUseCase
+participant FeedRankingService
+participant SelectCandidatesUseCase
+database PostRepository
+participant ExtractFeaturesUseCase
+database UserRepository
+participant PredictRankingUseCase
+participant RestClient
+participant AiPipelineServer
+participant ScoreBoostService
+participant CacheFeedUseCase
+database RedisCache
+participant FeedItemResponseAssembler
+
+Member -> FeedController: GET /api/v1/feed\n[page, size, topicSlug, Authorization]
+FeedController -> GetFeedUseCase: getFeed(page, size, topicSlug, currentUser)
+
+alt page == 0 (First Page / Refresh)
+  GetFeedUseCase -> CacheFeedUseCase: invalidateFeed(userId)
+  CacheFeedUseCase -> RedisCache: del("user:feed:" + userId)
+  RedisCache --> CacheFeedUseCase: success
+  CacheFeedUseCase --> GetFeedUseCase: void
+end
+
+GetFeedUseCase -> FeedRankingService: getPaginatedFeed(userId, page, size, topicSlug)
+
+alt topicSlug != null (Topic Specific Feed)
+  FeedRankingService -> SelectCandidatesUseCase: selectCandidatesByTopic(topicSlug)
+  SelectCandidatesUseCase -> PostRepository: findActivePostsByTopic(topicSlug)
+  PostRepository --> SelectCandidatesUseCase: List<PostEntity>
+  SelectCandidatesUseCase --> FeedRankingService: List<CandidatePost>
+else topicSlug == null (Personalized Home Feed)
+  FeedRankingService -> FeedRankingService: getRankedFeed(userId)
+  FeedRankingService -> CacheFeedUseCase: getCachedFeed(userId)
+  CacheFeedUseCase -> RedisCache: zrange("user:feed:" + userId) / get()
+  
+  alt Cache Hit
+    RedisCache --> CacheFeedUseCase: cached ranked items
+    CacheFeedUseCase --> FeedRankingService: List<FeedItem>
+  else Cache Miss
+    CacheFeedUseCase --> FeedRankingService: null/empty
+    FeedRankingService -> SelectCandidatesUseCase: selectCandidates(userId)
+    SelectCandidatesUseCase -> PostRepository: findFeedCandidatesExcludeBlocked(userId)
+    PostRepository --> SelectCandidatesUseCase: List<PostEntity>
+    SelectCandidatesUseCase --> FeedRankingService: List<CandidatePost>
+    
+    FeedRankingService -> FeedRankingService: resolveScores(userId, candidates)
+    FeedRankingService -> ExtractFeaturesUseCase: extractFeatures(userId, candidates)
+    ExtractFeaturesUseCase -> UserRepository: getUserReputationAndHistory(userId)
+    UserRepository --> ExtractFeaturesUseCase: UserStats
+    ExtractFeaturesUseCase --> FeedRankingService: List<RankingFeatures>
+    
+    FeedRankingService -> PredictRankingUseCase: predictScores(rankingRequest)
+    PredictRankingUseCase -> RestClient: POST /api/ranking/predict
+    RestClient -> AiPipelineServer: API Request
+    note right: Handled by LightGBM model\nin Fast API server
+    AiPipelineServer --> RestClient: API Response (List<RankingResponse>)
+    RestClient --> PredictRankingUseCase: List<RankingResponse>
+    PredictRankingUseCase --> FeedRankingService: List<RankingResponse>
+    
+    alt AI Prediction Failed / Unreachable
+      FeedRankingService -> FeedRankingService: fallback.rank(candidates)
+      note over FeedRankingService: Sort by created date & basic engagement
+    end
+    
+    loop for each candidate
+      FeedRankingService -> ScoreBoostService: boost(score, userId, candidate)
+      note over ScoreBoostService: Boost score based on user preferences,\ntopic affinity, and recency
+      ScoreBoostService --> FeedRankingService: boostedScore
+    end
+    
+    FeedRankingService -> FeedRankingService: sort by boostedScore descending
+    FeedRankingService -> CacheFeedUseCase: cacheFeed(userId, rankedFeed)
+    CacheFeedUseCase -> RedisCache: set/zadd("user:feed:" + userId, rankedFeed)
+    RedisCache --> CacheFeedUseCase: success
+  end
+end
+
+FeedRankingService --> GetFeedUseCase: List<FeedItem> (page subset)
+GetFeedUseCase -> GetFeedUseCase: markSeen(userId, feedItems)
+GetFeedUseCase -> RedisCache: sadd("user:seen:" + userId, postIds)
+RedisCache --> GetFeedUseCase: success
+
+GetFeedUseCase -> FeedItemResponseAssembler: assemble(feedItems, userId)
+FeedItemResponseAssembler --> GetFeedUseCase: List<FeedItemResponse>
+GetFeedUseCase --> FeedController: List<FeedItemResponse>
+FeedController --> Member: 200 OK\nApiResponse<List<FeedItemResponse>>
+
+@enduml

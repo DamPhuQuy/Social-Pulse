@@ -72,3 +72,60 @@ export async function getPostsByMention(username: string, page = 0, size = 20): 
     return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to fetch mention posts." };
   }
 }
+
+export interface SearchHistoryResponse {
+  id: number;
+  keyword: string;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export async function getSearchHistory(): Promise<{ ok: boolean; data?: SearchHistoryResponse[]; message?: string }> {
+  try {
+    const res = await apiClient.get<{ code: number; message: string; data: SearchHistoryResponse[] }>(
+      `/discovery/history`
+    );
+    return { ok: true, data: res.data.data ?? [] };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to fetch search history." };
+  }
+}
+
+export async function saveSearchHistory(keyword: string): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await apiClient.post<{ code: number; message: string }>(
+      `/discovery/history`,
+      { keyword }
+    );
+    return { ok: true, message: res.data.message };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to save search history." };
+  }
+}
+
+export async function deleteSearchHistory(id: number): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await apiClient.delete<{ code: number; message: string }>(
+      `/discovery/history/${id}`
+    );
+    return { ok: true, message: res.data.message };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to delete search history item." };
+  }
+}
+
+export async function clearSearchHistory(): Promise<{ ok: boolean; message?: string }> {
+  try {
+    const res = await apiClient.delete<{ code: number; message: string }>(
+      `/discovery/history`
+    );
+    return { ok: true, message: res.data.message };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to clear search history." };
+  }
+}
+

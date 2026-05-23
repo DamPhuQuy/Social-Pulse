@@ -4,10 +4,8 @@ import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
 import {
   getReports,
-  reviewReport,
   type ReportResponse,
   type ReportStatus,
-  type ReviewAction,
 } from "@/services/social/reportService";
 import {
   ShieldCheck,
@@ -15,9 +13,9 @@ import {
   CheckCircle,
   XCircle,
   Clock,
-  UserX,
-  MessageSquareWarning,
+  Eye,
 } from "lucide-react";
+import ReportDetailModal from "@/components/social/ReportDetailModal";
 
 export default function AdminDashboard() {
   const [reports, setReports] = useState<ReportResponse[]>([]);
@@ -25,7 +23,7 @@ export default function AdminDashboard() {
   const [loading, setLoading] = useState(false);
   const [page, setPage] = useState(0);
   const [totalPages, setTotalPages] = useState(0);
-  const [reviewingId, setReviewingId] = useState<number | null>(null);
+  const [selectedReportId, setSelectedReportId] = useState<number | null>(null);
   const [stats, setStats] = useState({ pending: 0, resolved: 0, rejected: 0 });
 
   const loadReports = async () => {
@@ -60,16 +58,7 @@ export default function AdminDashboard() {
     void loadStats();
   }, [statusFilter, page]);
 
-  const handleReview = async (reportId: number, action: ReviewAction) => {
-    setReviewingId(reportId);
-    const res = await reviewReport(reportId, action);
-    setReviewingId(null);
-    if (!res.ok) {
-      toast.error(res.message ?? "Xử lý báo cáo thất bại.");
-      return;
-    }
-
-    toast.success(getReviewSuccessMessage(action));
+  const handleModalActionComplete = () => {
     void loadReports();
     void loadStats();
   };
@@ -223,42 +212,12 @@ export default function AdminDashboard() {
                           {new Date(report.createdAt).toLocaleString("vi-VN")}
                         </td>
                         <td className="px-6 py-4">
-                          {report.status === "PENDING" ? (
-                            <div className="flex flex-wrap justify-end gap-2">
-                              <ActionButton
-                                icon={MessageSquareWarning}
-                                label="Ẩn nội dung"
-                                intent="success"
-                                disabled={reviewingId === report.id}
-                                onClick={() => handleReview(report.id, "DELETE_CONTENT")}
-                              />
-                              <ActionButton
-                                icon={UserX}
-                                label="Khóa user"
-                                intent="warning"
-                                disabled={reviewingId === report.id}
-                                onClick={() => handleReview(report.id, "BAN_USER")}
-                              />
-                              <ActionButton
-                                icon={ShieldCheck}
-                                label="Ẩn + khóa"
-                                intent="danger"
-                                disabled={reviewingId === report.id}
-                                onClick={() => handleReview(report.id, "DELETE_CONTENT_AND_BAN_USER")}
-                              />
-                              <ActionButton
-                                icon={XCircle}
-                                label="Bác bỏ"
-                                intent="neutral"
-                                disabled={reviewingId === report.id}
-                                onClick={() => handleReview(report.id, "REJECT")}
-                              />
-                            </div>
-                          ) : (
-                            <div className="text-right text-xs text-slate-400 dark:text-slate-500">
-                              Đã chốt moderation
-                            </div>
-                          )}
+                          <ActionButton
+                            icon={Eye}
+                            label="Xem chi tiết"
+                            intent="neutral"
+                            onClick={() => setSelectedReportId(report.id)}
+                          />
                         </td>
                       </tr>
                     ))}
@@ -291,6 +250,13 @@ export default function AdminDashboard() {
           </div>
         </div>
       </div>
+      
+      <ReportDetailModal
+        isOpen={selectedReportId !== null}
+        onClose={() => setSelectedReportId(null)}
+        reportId={selectedReportId}
+        onActionComplete={handleModalActionComplete}
+      />
     </div>
   );
 }
@@ -327,18 +293,4 @@ function ActionButton({
       {label}
     </button>
   );
-}
-
-function getReviewSuccessMessage(action: ReviewAction) {
-  switch (action) {
-    case "DELETE_CONTENT":
-      return "Đã ẩn nội dung bị báo cáo.";
-    case "BAN_USER":
-      return "Đã khóa tài khoản liên quan.";
-    case "DELETE_CONTENT_AND_BAN_USER":
-      return "Đã ẩn nội dung và khóa tài khoản liên quan.";
-    case "REJECT":
-    default:
-      return "Đã bác bỏ báo cáo.";
-  }
 }

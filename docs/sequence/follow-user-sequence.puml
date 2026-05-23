@@ -1,0 +1,48 @@
+@startuml
+!theme plain
+
+title User Follow Endpoint Sequence - POST /api/v1/users/{userId}/follow
+
+autonumber
+
+actor Member
+participant FollowController
+participant FollowUserUseCase
+participant FollowUserService
+database UserRepository
+database FollowRepository
+participant NotificationCommandService
+participant FollowMapper
+
+Member -> FollowController: POST /api/v1/users/{userId}/follow\n[Authorization]
+FollowController -> FollowUserUseCase: followUser(followingId, currentUser)
+FollowUserUseCase -> FollowUserService: followUser(followingId, currentUser)
+
+alt followerId == followingId
+  FollowUserService --> FollowController: throw CANNOT_FOLLOW_YOURSELF
+  FollowController --> Member: 400 Bad Request
+end
+
+FollowUserService -> UserRepository: findById(followingId)
+UserRepository --> FollowUserService: TargetUser
+
+FollowUserService -> FollowRepository: existsByFollowerIdAndFollowingId(followerId, followingId)
+FollowRepository --> FollowUserService: exists (boolean)
+
+alt already following
+  FollowUserService --> FollowController: throw ALREADY_FOLLOWING
+  FollowController --> Member: 400 Bad Request
+end
+
+FollowUserService -> FollowRepository: save(Follow)
+FollowRepository --> FollowUserService: savedFollow
+
+FollowUserService -> NotificationCommandService: notifyFollow(followerId, followingId)
+FollowUserService -> FollowMapper: toFollowResponse(savedFollow)
+FollowMapper --> FollowUserService: FollowResponse
+
+FollowUserService --> FollowUserUseCase: FollowResponse
+FollowUserUseCase --> FollowController: FollowResponse
+FollowController --> Member: 200 OK\nApiResponse<FollowResponse>
+
+@enduml

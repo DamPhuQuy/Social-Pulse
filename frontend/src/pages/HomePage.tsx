@@ -3,7 +3,7 @@ import {
   Search, MoreHorizontal,
   MessageCircle, Share2, Bookmark,
   Activity, Moon, Sun, Loader2, Plus, Edit3, Trash2,
-  ChevronDown, X
+  ChevronDown, X, UserX
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -13,10 +13,12 @@ import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type Priv
 import { getMyProfile, type UserPost, type UserProfile } from "@/services/user/userService";
 import { getTrendingHashtags, type TrendingHashtagResponse } from "@/services/social/discoveryService";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
+import { blockUser } from "@/services/social/blockService";
 
 import ReportModal from "@/components/social/ReportModal";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import CommentSection from "@/components/comment/CommentSection";
 
@@ -74,6 +76,7 @@ export default function HomePage() {
     return false;
   });
   const [showModal, setShowModal] = useState(false);
+  const [sharingPost, setSharingPost] = useState<FeedItem | null>(null);
 
   useEffect(() => {
     if (isDark) {
@@ -186,16 +189,18 @@ export default function HomePage() {
   };
 
   useEffect(() => {
-    if (authLoading || !accessToken) {
+    if (authLoading) {
       return;
     }
 
-    loadMyProfile();
+    if (accessToken) {
+      loadMyProfile();
+      loadBookmarks();
+    }
+    
     loadFeed(selectedTopic || undefined);
-    loadBookmarks();
     loadTrending();
     loadTopics();
-    
   }, [authLoading, accessToken, selectedTopic]);
 
   useEffect(() => {
@@ -226,6 +231,11 @@ export default function HomePage() {
   }, []);
 
   const handleReact = async (postId: number, type: PulseReaction) => {
+    if (!accessToken) {
+      toast.error("Vui lòng đăng nhập để bày tỏ cảm xúc.");
+      navigate(PATHS.LOGIN);
+      return;
+    }
     if (reactingPostIds.has(postId)) return;
 
     const previousPost = feed.find((post) => post.postId === postId);
@@ -300,6 +310,11 @@ export default function HomePage() {
   };
 
   const handleToggleBookmark = async (postId: number) => {
+    if (!accessToken) {
+      toast.error("Vui lòng đăng nhập để bookmark bài viết.");
+      navigate(PATHS.LOGIN);
+      return;
+    }
     if (bookmarkingPostIds.has(postId)) return;
 
     const wasBookmarked = bookmarkedPostIds.has(postId);
@@ -329,11 +344,34 @@ export default function HomePage() {
     });
   };
 
-  const handleReportSuccess = (options: { hidePost: boolean; hideUser: boolean }) => {
+  const handleBlockUser = async (userId: number, username: string) => {
+    if (!accessToken) {
+      toast.error("Vui lòng đăng nhập để chặn người dùng.");
+      navigate(PATHS.LOGIN);
+      return;
+    }
+    if (!window.confirm(`Bạn có chắc chắn muốn chặn người dùng @${username}? Họ sẽ không thể xem bài viết của bạn và bạn sẽ không thấy nội dung của họ.`)) {
+      return;
+    }
+    const res = await blockUser(userId);
+    if (res.ok) {
+      toast.success(`Đã chặn @${username} thành công.`);
+      setFeed((prev) => prev.filter((post) => post.userId !== userId));
+    } else {
+      toast.error(res.message ?? "Chặn người dùng thất bại.");
+    }
+  };
+
+  const handleReportSuccess = async (options: { hidePost: boolean; hideUser: boolean }) => {
     if (reportPostId === null) return;
     
     const reportedPost = feed.find((p) => p.postId === reportPostId);
     if (!reportedPost) return;
+
+    if (options.hideUser) {
+      await blockUser(reportedPost.userId);
+      toast.success(`Đã chặn @${reportedPost.username} thành công.`);
+    }
 
     setFeed((prevFeed) => {
       let nextFeed = prevFeed;
@@ -362,32 +400,48 @@ export default function HomePage() {
           <button onClick={() => setIsDark(d => !d)} className="p-2 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-850 text-slate-500 dark:text-slate-400 transition-all">
             {isDark ? <Sun className="w-5 h-5" /> : <Moon className="w-5 h-5" />}
           </button>
-          <button onClick={() => setShowModal(true)}
+          <button onClick={() => {
+            if (!accessToken) {
+              toast.error("Vui lòng đăng nhập để đăng bài.");
+              navigate(PATHS.LOGIN);
+              return;
+            }
+            setShowModal(true);
+          }}
             className="hidden sm:flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity">
             <Plus className="w-4 h-4" /> Đăng bài
           </button>
-          <div onClick={() => navigate(PATHS.PROFILE)} className="w-9 h-9 rounded-full overflow-hidden cursor-pointer border border-slate-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
-            <SafeAvatar src={currentUser?.avatarUrl} alt="me" />
-          </div>
+          {accessToken ? (
+            <div onClick={() => navigate(PATHS.PROFILE)} className="w-9 h-9 rounded-full overflow-hidden cursor-pointer border border-slate-200 dark:border-neutral-700 hover:opacity-80 transition-opacity">
+              <SafeAvatar src={currentUser?.avatarUrl} alt="me" />
+            </div>
+          ) : (
+            <button
+              onClick={() => navigate(PATHS.LOGIN)}
+              className="flex items-center gap-2 px-4 py-2 rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 text-sm font-bold hover:opacity-90 transition-opacity"
+            >
+              Đăng nhập
+            </button>
+          )}
         </div>
       </header>
 
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
 
         {/* LEFT SIDEBAR */}
         <AppSidebar active="home" />
 
         {/* FEED */}
-        <main className="flex flex-col gap-6 pb-10 min-w-0">
+        <main className="flex flex-col gap-6 pb-24 lg:pb-10 min-w-0">
 
           {/* Topic Selector & Search Dropdown */}
-          <div className="flex gap-3 items-center relative z-30 pb-2">
+          <div className="flex gap-2 items-center relative z-30 pb-2 overflow-x-auto scrollbar-none flex-nowrap">
             <button
               onClick={() => {
                 setSelectedTopic(null);
                 setIsDropdownOpen(false);
               }}
-              className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap transition-all shadow-sm ${
+              className={`px-5 py-2.5 rounded-full text-sm font-bold whitespace-nowrap flex-shrink-0 transition-all shadow-sm ${
                 selectedTopic === null
                   ? "bg-slate-900 text-white dark:bg-white dark:text-slate-900"
                   : "bg-white text-slate-600 hover:bg-slate-50 dark:bg-[#1e1e1e] dark:text-neutral-400 dark:hover:bg-neutral-850 border border-slate-200/60 dark:border-[#2a2a2a]"
@@ -426,7 +480,9 @@ export default function HomePage() {
 
               {/* Popover Dropdown Panel */}
               {isDropdownOpen && (
-                <div className="absolute top-full left-0 mt-2 w-80 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200">
+                <div className="absolute top-full mt-2 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
+                  style={{ width: 'min(320px, calc(100vw - 2rem))', left: 0, maxWidth: 'calc(100vw - 2rem)' }}
+                >
                   {/* Search Header */}
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -506,7 +562,16 @@ export default function HomePage() {
                   onDelete={handleDeletePost}
                   isBookmarked={bookmarkedPostIds.has(post.postId)}
                   onToggleBookmark={handleToggleBookmark}
-                  onReport={setReportPostId}
+                  onReport={(id) => {
+                    if (!accessToken) {
+                      toast.error("Vui lòng đăng nhập để báo cáo bài viết.");
+                      navigate(PATHS.LOGIN);
+                      return;
+                    }
+                    setReportPostId(id);
+                  }}
+                  onBlockUser={handleBlockUser}
+                  onShare={setSharingPost}
                 />
               ))}
               {hasMore && (
@@ -531,19 +596,37 @@ export default function HomePage() {
               </div>
             ) : (
               trendingTags.map((tag) => (
-                <div key={tag.hashtag} className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-neutral-800/40 cursor-pointer transition-colors">
+                <div
+                  key={tag.hashtag}
+                  onClick={() => {
+                    if (!accessToken) {
+                      toast.error("Vui lòng đăng nhập để khám phá xu hướng.");
+                      navigate(PATHS.LOGIN);
+                      return;
+                    }
+                    navigate(`${PATHS.DISCOVERY}?q=${encodeURIComponent(tag.hashtag)}&mode=posts&type=hashtag`);
+                  }}
+                  className="px-5 py-3 hover:bg-slate-50 dark:hover:bg-neutral-800/40 cursor-pointer transition-colors"
+                >
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mb-0.5">Xu hướng thịnh hành</p>
-                  <button
-                    onClick={() => navigate(`${PATHS.DISCOVERY}?q=${encodeURIComponent(tag.hashtag)}&mode=posts&type=hashtag`)}
-                    className="font-bold text-slate-800 dark:text-[#e4e6eb] hover:underline"
-                  >
+                  <span className="font-bold text-slate-800 dark:text-[#e4e6eb] hover:underline">
                     #{tag.hashtag}
-                  </button>
+                  </span>
                   <p className="text-xs text-slate-500 dark:text-neutral-400 mt-0.5">{tag.count} bài đăng</p>
                 </div>
               ))
             )}
-            <button onClick={() => navigate(PATHS.DISCOVERY)} className="w-full px-5 py-3 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-neutral-800/40 transition-colors font-medium">
+            <button
+              onClick={() => {
+                if (!accessToken) {
+                  toast.error("Vui lòng đăng nhập để xem thêm xu hướng.");
+                  navigate(PATHS.LOGIN);
+                  return;
+                }
+                navigate(PATHS.DISCOVERY);
+              }}
+              className="w-full px-5 py-3 text-left text-sm text-blue-600 dark:text-blue-400 hover:bg-slate-50 dark:hover:bg-neutral-800/40 transition-colors font-medium"
+            >
               Xem thêm
             </button>
           </section>
@@ -566,6 +649,20 @@ export default function HomePage() {
         currentUsername={currentUser?.displayName || currentUser?.username}
         onPostUpdated={handlePostUpdated}
       />
+      <CreatePostModal
+        isOpen={!!sharingPost}
+        mode="create"
+        parentPostId={sharingPost?.postId}
+        parentPostAuthor={sharingPost?.username}
+        parentPostContent={sharingPost?.content}
+        onClose={() => setSharingPost(null)}
+        currentUserAvatar={currentUser?.avatarUrl || undefined}
+        currentUsername={currentUser?.displayName || currentUser?.username}
+        onPostCreated={() => {
+          setSharingPost(null);
+          loadFeed();
+        }}
+      />
       <ReportModal
         isOpen={reportPostId !== null}
         targetType="POST"
@@ -574,6 +671,7 @@ export default function HomePage() {
         onClose={() => setReportPostId(null)}
         onReportSuccess={handleReportSuccess}
       />
+      <BottomNavBar active="home" />
     </div>
   );
 }
@@ -590,6 +688,8 @@ function FeedPost({
   isBookmarked,
   onToggleBookmark,
   onReport,
+  onBlockUser,
+  onShare,
 }: {
   post: FeedItem;
   onReact: (id: number, type: PulseReaction) => void;
@@ -600,6 +700,8 @@ function FeedPost({
   isBookmarked: boolean;
   onToggleBookmark: (postId: number) => void;
   onReport: (postId: number) => void;
+  onBlockUser?: (userId: number, username: string) => void;
+  onShare?: (post: FeedItem) => void;
 }) {
   const navigate = useNavigate();
   const isUpvoted = post.myVote === 1;
@@ -614,6 +716,11 @@ function FeedPost({
 
   const navigateToProfile = (e: React.MouseEvent) => {
     e.stopPropagation();
+    if (!currentUserId) {
+      toast.error("Vui lòng đăng nhập để xem thông tin người dùng.");
+      navigate(PATHS.LOGIN);
+      return;
+    }
     navigate(`/profile/${post.username}`);
   };
 
@@ -645,9 +752,14 @@ function FeedPost({
                       </button>
                     </>
                   ) : (
-                    <button onClick={() => { setShowMenu(false); onReport(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
-                      <Trash2 className="w-4 h-4" /> Báo cáo
-                    </button>
+                    <>
+                      <button onClick={() => { setShowMenu(false); onReport(post.postId); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10 border-b border-slate-100 dark:border-neutral-800">
+                        <Trash2 className="w-4 h-4" /> Báo cáo
+                      </button>
+                      <button onClick={() => { setShowMenu(false); onBlockUser?.(post.userId, post.username); }} className="flex w-full items-center gap-2 px-4 py-2.5 text-left text-sm font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-500/10">
+                        <UserX className="w-4 h-4" /> Chặn người dùng
+                      </button>
+                    </>
                   )}
                 </div>
               )}
@@ -683,7 +795,14 @@ function FeedPost({
 
             {/* Comment */}
             <button
-              onClick={() => setShowComments(!showComments)}
+              onClick={() => {
+                if (!currentUserId) {
+                  toast.error("Vui lòng đăng nhập để xem và bình luận.");
+                  navigate(PATHS.LOGIN);
+                  return;
+                }
+                setShowComments(!showComments);
+              }}
               className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${showComments ? "text-slate-905 dark:text-white font-bold" : ""}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
@@ -700,8 +819,12 @@ function FeedPost({
 
             <button
               onClick={() => {
-                navigator.clipboard.writeText(`${window.location.origin}/posts/${post.postId}`);
-                toast.success("Đã sao chép liên kết bài viết.");
+                if (!currentUserId) {
+                  toast.error("Vui lòng đăng nhập để chia sẻ bài viết.");
+                  navigate(PATHS.LOGIN);
+                  return;
+                }
+                onShare?.(post);
               }}
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >

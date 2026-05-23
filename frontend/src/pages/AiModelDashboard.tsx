@@ -2,14 +2,15 @@ import { useEffect, useState } from "react";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
-import { Brain, Cpu, Layers, Link2, Loader2, ShieldCheck } from "lucide-react";
-import { getAiStatus, getAdminMetrics, type AiStatusResponse, type MetricsPeriod, type SystemMetricsResponse } from "@/services/admin/adminService";
+import { Brain, Cpu, Layers, Link2, Loader2, ShieldCheck, Download, AlertTriangle, XCircle, UserX } from "lucide-react";
+import { getAiStatus, getAdminMetrics, exportAdminMetrics, type AiStatusResponse, type MetricsPeriod, type SystemMetricsResponse } from "@/services/admin/adminService";
 
 export default function AiModelDashboard() {
   const [status, setStatus] = useState<AiStatusResponse | null>(null);
   const [metrics, setMetrics] = useState<SystemMetricsResponse | null>(null);
   const [period, setPeriod] = useState<MetricsPeriod>("LAST_30_DAYS");
   const [loading, setLoading] = useState(true);
+  const [exporting, setExporting] = useState(false);
 
   useEffect(() => {
     void loadData(period);
@@ -36,6 +37,26 @@ export default function AiModelDashboard() {
     }
   };
 
+  const handleExport = async () => {
+    setExporting(true);
+    const res = await exportAdminMetrics(period);
+    setExporting(false);
+    
+    if (res.ok && res.data) {
+      const url = window.URL.createObjectURL(res.data);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = `metrics-${period.toLowerCase()}.csv`;
+      document.body.appendChild(a);
+      a.click();
+      window.URL.revokeObjectURL(url);
+      a.remove();
+      toast.success("Đã xuất báo cáo CSV thành công.");
+    } else {
+      toast.error(res.message ?? "Lỗi khi xuất báo cáo.");
+    }
+  };
+
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
@@ -57,16 +78,27 @@ export default function AiModelDashboard() {
               </div>
             </div>
 
-            <select
-              value={period}
-              onChange={(e) => setPeriod(e.target.value as MetricsPeriod)}
-              className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
-            >
-              <option value="LAST_7_DAYS">7 ngày</option>
-              <option value="LAST_30_DAYS">30 ngày</option>
-              <option value="LAST_90_DAYS">90 ngày</option>
-              <option value="ALL_TIME">Toàn thời gian</option>
-            </select>
+            <div className="flex items-center gap-3">
+              <select
+                value={period}
+                onChange={(e) => setPeriod(e.target.value as MetricsPeriod)}
+                className="bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-200 rounded-xl px-3 py-2 text-sm font-semibold focus:outline-none focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="LAST_7_DAYS">7 ngày</option>
+                <option value="LAST_30_DAYS">30 ngày</option>
+                <option value="LAST_90_DAYS">90 ngày</option>
+                <option value="ALL_TIME">Toàn thời gian</option>
+              </select>
+              
+              <button
+                onClick={handleExport}
+                disabled={exporting || loading}
+                className="flex items-center gap-2 bg-blue-600 hover:bg-blue-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-all shadow-lg shadow-blue-600/20 disabled:opacity-60 disabled:cursor-not-allowed"
+              >
+                {exporting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Download className="w-4 h-4" />}
+                Xuất CSV
+              </button>
+            </div>
           </div>
 
           {loading ? (
@@ -99,23 +131,41 @@ export default function AiModelDashboard() {
                 </div>
               </div>
 
-              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+              <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
                 <StatCard icon={Cpu} label="Tổng user" value={metrics?.totalUsers ?? 0} />
                 <StatCard icon={Layers} label="User mới" value={metrics?.newUsers ?? 0} />
                 <StatCard icon={Brain} label="Tổng post" value={metrics?.totalPosts ?? 0} />
                 <StatCard icon={ShieldCheck} label="Post mới" value={metrics?.newPosts ?? 0} />
+                <StatCard icon={AlertTriangle} label="Post độc hại" value={metrics?.toxicPosts ?? 0} />
+                <StatCard icon={XCircle} label="Post bị xóa" value={metrics?.deletedPosts ?? 0} />
               </div>
 
-              <div className="bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm space-y-4">
-                <div className="flex items-center gap-2 text-slate-800 dark:text-white pb-3 border-b border-slate-200/80 dark:border-[#2a2a2a]">
-                  <Cpu className="w-5 h-5 text-blue-500" />
-                  <h3 className="font-bold text-base">Trạng thái vận hành</h3>
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div className="bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 text-slate-800 dark:text-white pb-3 border-b border-slate-200/80 dark:border-[#2a2a2a]">
+                    <UserX className="w-5 h-5 text-orange-500" />
+                    <h3 className="font-bold text-base">User Analytics (Trạng thái)</h3>
+                  </div>
+                  {metrics?.usersByStatus ? (
+                    Object.entries(metrics.usersByStatus).map(([statusName, count]) => (
+                      <MetricRow key={statusName} label={`Tài khoản ${statusName}`} value={count.toString()} />
+                    ))
+                  ) : (
+                    <div className="text-sm text-slate-500">Chưa có dữ liệu</div>
+                  )}
                 </div>
-                <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-disc pl-5">
-                  <li>Feed ranking đang gọi AI pipeline qua HTTP từ backend bằng `ai.pipeline.base-url`.</li>
-                  <li>Schema version hiện hành phải khớp giữa backend và artifact/model server trước khi train hoặc deploy model mới.</li>
-                  <li>Training được thực thi qua pipeline offline, còn UI này chỉ hiển thị trạng thái runtime và chỉ số hệ thống.</li>
-                </ul>
+
+                <div className="bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm space-y-4">
+                  <div className="flex items-center gap-2 text-slate-800 dark:text-white pb-3 border-b border-slate-200/80 dark:border-[#2a2a2a]">
+                    <Cpu className="w-5 h-5 text-blue-500" />
+                    <h3 className="font-bold text-base">Trạng thái vận hành</h3>
+                  </div>
+                  <ul className="text-sm text-slate-600 dark:text-slate-300 space-y-2 list-disc pl-5">
+                    <li>Feed ranking đang gọi AI pipeline qua HTTP từ backend.</li>
+                    <li>Nội dung độc hại (Toxic Posts) được đếm từ hệ thống kiểm duyệt.</li>
+                    <li>Sử dụng chức năng Xuất CSV để phân tích dữ liệu chuyên sâu hơn.</li>
+                  </ul>
+                </div>
               </div>
             </>
           )}

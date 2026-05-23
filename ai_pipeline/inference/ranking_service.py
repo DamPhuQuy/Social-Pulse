@@ -39,7 +39,7 @@ class RankingService:
         self._properties = properties
         self._vectorizer = vectorizer
         self._scorer: TreeModelScorer | None = None
-        self._xgb_booster = None
+        self._lgb_booster = None
         self._lock = threading.Lock()
 
     def predict_scores(
@@ -58,17 +58,17 @@ class RankingService:
             return []
 
         scorer = self._get_or_load_scorer()
-        if scorer is None and self._xgb_booster is None:
+        if scorer is None and self._lgb_booster is None:
             return []
 
-        if self._xgb_booster is not None:
+        if self._lgb_booster is not None:
             import numpy as np
 
             matrix = np.array(
                 [self._vectorizer.to_ordered_vector(feature) for feature in features],
                 dtype=np.float32,
             )
-            scores = self._xgb_booster.inplace_predict(matrix)
+            scores = self._lgb_booster.predict(matrix)
             return [
                 RankingResponse(
                     post_id=feature.post_id,
@@ -88,10 +88,10 @@ class RankingService:
         ]
 
     def _get_or_load_scorer(self) -> TreeModelScorer | None:
-        if self._scorer is not None or self._xgb_booster is not None:
+        if self._scorer is not None or self._lgb_booster is not None:
             return self._scorer
         with self._lock:
-            if self._scorer is not None or self._xgb_booster is not None:
+            if self._scorer is not None or self._lgb_booster is not None:
                 return self._scorer
             self._scorer = self._load_scorer()
             return self._scorer
@@ -124,27 +124,25 @@ class RankingService:
             )
             return None
 
-        if model_backend == "xgboost":
+        if model_backend == "lightgbm":
             if not model_file:
-                logger.warning("Artifact declares xgboost backend but is missing model_file")
+                logger.warning("Artifact declares lightgbm backend but is missing model_file")
                 return None
             model_path = path.parent / model_file
             if not model_path.exists():
-                logger.warning("XGBoost model sidecar not found at %s", model_path)
+                logger.warning("LightGBM model sidecar not found at %s", model_path)
                 return None
             try:
-                import xgboost as xgb
+                import lightgbm as lgb
 
-                booster = xgb.Booster()
-                booster.load_model(model_path)
-                booster.set_param({"device": self._properties.inference_device})
+                booster = lgb.Booster(model_file=str(model_path))
             except Exception as exc:
-                logger.warning("Failed to load XGBoost booster: %s", exc)
+                logger.warning("Failed to load LightGBM booster: %s", exc)
                 return None
-            self._xgb_booster = booster
+            self._lgb_booster = booster
             self._scorer = None
             logger.info(
-                "Loaded xgboost model from %s: schema=%s, dataset=%s, trainedAt=%s",
+                "Loaded lightgbm model from %s: schema=%s, dataset=%s, trainedAt=%s",
                 model_path,
                 schema_ver,
                 dataset,
@@ -185,7 +183,7 @@ class RankingService:
                 artifact.model_file,
             )
 
-        if data.get("model_backend") == "xgboost":
+        if data.get("model_backend") == "lightgbm":
             artifact = parse_artifact(data)
             return (
                 TreeModel(),

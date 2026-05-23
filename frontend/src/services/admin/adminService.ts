@@ -54,6 +54,15 @@ export async function getAdminMetrics(period: MetricsPeriod): Promise<{ ok: bool
   }
 }
 
+export async function exportAdminMetrics(period: MetricsPeriod): Promise<{ ok: boolean; data?: Blob; message?: string }> {
+  try {
+    const res = await apiClient.get(`/admin/metrics/export?period=${period}`, { responseType: 'blob' });
+    return { ok: true, data: res.data };
+  } catch (err: unknown) {
+    return { ok: false, message: "Failed to export metrics." };
+  }
+}
+
 export async function getAdminUsers(query = "", page = 0, size = 20): Promise<{ ok: boolean; data?: PageResponse<AdminUserResponse>; message?: string }> {
   try {
     const params = new URLSearchParams({ page: String(page), size: String(size) });

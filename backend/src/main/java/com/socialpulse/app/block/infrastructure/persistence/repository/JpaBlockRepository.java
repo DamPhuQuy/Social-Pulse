@@ -1,10 +1,12 @@
-package com.socialpulse.app.block;
+package com.socialpulse.app.block.infrastructure.persistence.repository;
 
 import java.util.List;
 import java.util.Optional;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
+
+import com.socialpulse.app.block.infrastructure.persistence.entity.BlockEntity;
 
 @Repository
 public interface JpaBlockRepository extends JpaRepository<BlockEntity, Long> {

@@ -1,0 +1,49 @@
+@startuml
+!theme plain
+
+title Guest Trending Posts Sequence - GET /api/v1/discovery/hashtags/trending & /api/v1/discovery/hashtags/{hashtag}/posts
+
+autonumber
+
+actor Guest
+participant DiscoveryController
+participant GetTrendingHashtagsUseCase
+participant GetTrendingHashtagsService
+database PostRepository
+participant ContentAnalysisService
+participant GetPostsByHashtagUseCase
+participant GetPostsByHashtagService
+
+group Fetch Trending Hashtags
+  Guest -> DiscoveryController: GET /api/v1/discovery/hashtags/trending?days=7&limit=10
+  DiscoveryController -> GetTrendingHashtagsUseCase: getTrendingHashtags(days, limit)
+  GetTrendingHashtagsUseCase -> GetTrendingHashtagsService: getTrendingHashtags(days, limit)
+  
+  GetTrendingHashtagsService -> PostRepository: findRecentPublicActiveSince(sinceTime)
+  PostRepository --> GetTrendingHashtagsService: List<Post>
+  
+  loop for each public active post
+    GetTrendingHashtagsService -> ContentAnalysisService: extractHashtags(content)
+    ContentAnalysisService --> GetTrendingHashtagsService: List<String> hashtags
+  end
+  
+  GetTrendingHashtagsService -> GetTrendingHashtagsService: Group & count occurrences\nSort by frequency descending
+  GetTrendingHashtagsService --> GetTrendingHashtagsUseCase: List<TrendingHashtagResponse>
+  GetTrendingHashtagsUseCase --> DiscoveryController: List<TrendingHashtagResponse>
+  DiscoveryController --> Guest: 200 OK\nApiResponse<List<TrendingHashtagResponse>>
+end
+
+group Fetch Posts under Trending Hashtag
+  Guest -> DiscoveryController: GET /api/v1/discovery/hashtags/{hashtag}/posts?page=0&size=20
+  DiscoveryController -> GetPostsByHashtagUseCase: getPostsByHashtag(hashtag, page, size)
+  GetPostsByHashtagUseCase -> GetPostsByHashtagService: getPostsByHashtag(hashtag, page, size)
+  
+  GetPostsByHashtagService -> PostRepository: findByHashtagAndActive(hashtag, pageable)
+  PostRepository --> GetPostsByHashtagService: Page<PostEntity>
+  
+  GetPostsByHashtagService --> GetPostsByHashtagUseCase: PageResponse<UserPostResponse>
+  GetPostsByHashtagUseCase --> DiscoveryController: PageResponse<UserPostResponse>
+  DiscoveryController --> Guest: 200 OK\nApiResponse<PageResponse<UserPostResponse>>
+end
+
+@enduml
