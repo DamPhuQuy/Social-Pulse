@@ -4,6 +4,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 
 import com.socialpulse.app.common.utils.ReactionType;
+import com.socialpulse.app.feed.application.dto.response.OriginalPostData;
 import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.enums.Privacy;
 
@@ -36,4 +37,5 @@ public class UserPostResponse {
     private Integer myVote;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private OriginalPostData originalPost;
 }

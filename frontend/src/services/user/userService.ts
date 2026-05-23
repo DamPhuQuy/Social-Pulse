@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/axiosClient";
+import type { OriginalPostData } from "@/services/post/postService";
 
 export interface UserProfile {
   userId: number;
@@ -36,6 +37,7 @@ export interface UserPost {
   privacy: "PUBLIC" | "FRIENDS_ONLY" | "PRIVATE";
   createdAt: string;
   updatedAt: string | null;
+  originalPost: OriginalPostData | null;
 }
 
 export interface PageResponse<T> {
