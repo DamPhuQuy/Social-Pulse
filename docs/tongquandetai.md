@@ -163,17 +163,13 @@ Hệ thống thu thập bài viết từ 4 nguồn:
 - **Random posts**: Bài viết ngẫu nhiên để tăng diversity (max 100)
 
 **Bước 2: Feature Extraction (Trích xuất đặc trưng)**
-Hệ thống tính toán **19 features** cho mỗi bài viết:
+Hệ thống tính toán **11 features** cho mỗi bài viết:
 
-*Post Features (12 features):*
+*Post Features (4 features):*
 - `content_length`: Độ dài nội dung
 - `has_multimedia`: Có ảnh/video hay không
 - `is_share_post`: Là bài chia sẻ hay không
 - `post_age_hours`: Tuổi của bài viết (giờ)
-- `hot_score`: Điểm "hot" dựa trên engagement và thời gian
-- `upvote_ratio`: Tỷ lệ upvote/(upvote+downvote)
-- `upvote_count`, `downvote_count`: Số lượng reactions
-- `comment_count`, `share_count`, `view_count`: Số lượng tương tác
 - `popularity`: Điểm phổ biến tổng hợp
 
 *Author Features (3 features):*
@@ -189,7 +185,7 @@ Hệ thống tính toán **19 features** cho mỗi bài viết:
 
 **Bước 3: ML Ranking (Xếp hạng bằng Machine Learning)**
 - Model: **Gradient Boosted Decision Trees** (scikit-learn)
-- Input: 19 features đã được normalize và transform
+- Input: 11 features đã được normalize và transform
 - Output: Relevance score cho mỗi bài viết
 - **Fallback mechanism**: Nếu AI service không khả dụng, sử dụng deterministic ranking
 
@@ -314,7 +310,7 @@ Redis được sử dụng cho nhiều mục đích:
 - Preprocessing và cleaning data
 
 #### Bước 2: Feature Engineering
-- Tính toán 19 features từ raw data
+- Tính toán 11 features từ raw data
 - Feature categories: post, author, interaction
 
 #### Bước 3: Preprocessing
@@ -346,7 +342,7 @@ Backend → FastAPI Service → Feature Vectorizer → Tree Model Scorer → Sco
 #### Flow:
 1. Backend gửi POST request đến `/api/ranking/predict` với candidate features
 2. **FeatureVectorizer** áp dụng transformations giống training
-3. **TreeModelScorer** traverse decision trees để tính scores
+3. **LightGBM Booster** suy luận để tính scores
 4. Trả về relevance scores cho backend
 5. Backend sắp xếp và cache kết quả
 
@@ -359,8 +355,7 @@ Backend → FastAPI Service → Feature Vectorizer → Tree Model Scorer → Sco
 
 - **AI Toggle**: Có thể bật/tắt AI ranking qua config
 - **Fallback Ranking**: Khi AI disabled, sử dụng deterministic ranking:
-  - Sắp xếp theo hot_score
-  - Kết hợp upvote_ratio và recency
+  - Sắp xếp theo deterministic score từ live counters và recency
 - **Graceful Degradation**: Hệ thống vẫn hoạt động khi AI service down
 
 ---
@@ -467,7 +462,7 @@ Hệ thống sử dụng Docker Compose với 3 configurations:
 - **AI**: Python, FastAPI, scikit-learn, Gradient Boosting
 
 ### Tính năng đặc trưng:
-- **Personalized Feed**: AI ranking với 19 features
+- **Personalized Feed**: AI ranking với 11 features
 - **Real-time Chat**: WebSocket-based messaging
 - **Content Moderation**: Report system và toxic detection
 - **RBAC**: Flexible permission-based authorization

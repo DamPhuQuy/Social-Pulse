@@ -26,13 +26,13 @@ def create_app() -> FastAPI:
     ranking_controller = RankingController(ranking_service)
 
     app.include_router(ranking_controller.router)
-    _register_infrastructure_routes(app)
+    _register_infrastructure_routes(app, ranking_service)
 
     logger.info("ApplicationFactory: application wired and ready.")
     return app
 
 
-def _register_infrastructure_routes(app: FastAPI) -> None:
+def _register_infrastructure_routes(app: FastAPI, ranking_service) -> None:
     @app.get("/health", tags=["ops"], summary="Liveness probe")
-    def health() -> dict[str, str]:
-        return {"status": "ok"}
+    def health() -> dict[str, str | bool]:
+        return ranking_service.status()

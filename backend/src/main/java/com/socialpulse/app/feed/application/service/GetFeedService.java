@@ -12,6 +12,7 @@ import com.socialpulse.app.feed.application.usecase.GetFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.feed.domain.model.FeedItem;
+import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 @Service
@@ -22,16 +23,19 @@ public class GetFeedService implements GetFeedUseCase {
     private final FeedItemResponseAssembler feedItemResponseAssembler;
     private final CacheFeedUseCase cacheFeedUseCase;
     private final StringRedisTemplate redisTemplate;
+    private final FeedImpressionRepository feedImpressionRepository;
 
     public GetFeedService(
             RankFeedUseCase rankFeedUseCase,
             FeedItemResponseAssembler feedItemResponseAssembler,
             CacheFeedUseCase cacheFeedUseCase,
-            StringRedisTemplate redisTemplate) {
+            StringRedisTemplate redisTemplate,
+            FeedImpressionRepository feedImpressionRepository) {
         this.rankFeedUseCase = rankFeedUseCase;
         this.feedItemResponseAssembler = feedItemResponseAssembler;
         this.cacheFeedUseCase = cacheFeedUseCase;
         this.redisTemplate = redisTemplate;
+        this.feedImpressionRepository = feedImpressionRepository;
     }
 
     @Override
@@ -45,6 +49,7 @@ public class GetFeedService implements GetFeedUseCase {
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
         if (userId != null) {
             markSeen(userId, feedItems);
+            feedImpressionRepository.saveAll(userId, feedItems, page, size, "HOME");
         }
 
         return feedItemResponseAssembler.assemble(feedItems, userId);
@@ -61,6 +66,7 @@ public class GetFeedService implements GetFeedUseCase {
         List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
         if (userId != null) {
             markSeen(userId, feedItems);
+            feedImpressionRepository.saveAll(userId, feedItems, page, size, "TOPIC:" + topicSlug);
         }
 
         return feedItemResponseAssembler.assemble(feedItems, userId);

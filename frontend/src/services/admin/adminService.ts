@@ -13,6 +13,10 @@ export interface SystemMetricsResponse {
   newPosts: number;
   toxicPosts: number;
   deletedPosts: number;
+  totalFeedImpressions: number;
+  newFeedImpressions: number;
+  aiRankedImpressions: number;
+  fallbackRankedImpressions: number;
 }
 
 export interface AdminUserResponse {
@@ -41,6 +45,8 @@ export interface AiStatusResponse {
   baseUrl: string;
   featureSchemaVersion: string;
   healthReachable: boolean;
+  modelAvailable: boolean;
+  modelLoaded: boolean;
   trainingControlsAvailable: boolean;
 }
 

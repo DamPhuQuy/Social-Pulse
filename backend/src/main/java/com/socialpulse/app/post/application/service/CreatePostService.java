@@ -1,6 +1,6 @@
 package com.socialpulse.app.post.application.service;
 
-import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.transaction.support.TransactionSynchronization;
@@ -19,24 +19,26 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+import java.util.Map;
+
 public class CreatePostService implements CreatePostUseCase {
 
     private final PostRepository postRepository;
     private final UserRepository userRepository;
     private final PostMapper postMapper;
-    private final PostPersistenceMapper postPersistenceMapper;
     private final StringRedisTemplate redisTemplate;
+    private final SseEmitterRegistry sseEmitterRegistry;
 
     public CreatePostService(PostRepository postRepository,
                              UserRepository userRepository,
                              PostMapper postMapper,
-                             PostPersistenceMapper postPersistenceMapper,
-                             StringRedisTemplate redisTemplate) {
+                             StringRedisTemplate redisTemplate,
+                             SseEmitterRegistry sseEmitterRegistry) {
         this.postRepository = postRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
-        this.postPersistenceMapper = postPersistenceMapper;
         this.redisTemplate = redisTemplate;
+        this.sseEmitterRegistry = sseEmitterRegistry;
     }
 
     @Override
@@ -97,6 +99,19 @@ public class CreatePostService implements CreatePostUseCase {
         // CRITICAL FIX: Invalidate the user's feed cache so their newly created post
         // will be fetched immediately on the next feed request!
         redisTemplate.delete("user:feed:" + currentUser.getId());
+
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sseEmitterRegistry.broadcast("feed_refresh", Map.of(
+                            "postId", savedPost.getId(),
+                            "authorId", savedPost.getUserId(),
+                            "reason", "POST_CREATED"
+                    ));
+                }
+            });
+        }
 
         return postMapper.toPostCreationResponse(savedPost);
     }

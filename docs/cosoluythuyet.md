@@ -117,7 +117,7 @@ Machine Learning (ML) đã chứng minh hiệu quả trong việc cá nhân hóa
 - **Hạn chế**: Model được train offline trên Reddit data, chưa có online learning
 
 **2. Feature-Rich Ranking:**
-- Sử dụng 13 đặc trưng cốt lõi từ nhiều nguồn (sau khi loại bỏ 5 count features và 1 popularity feature nhằm tránh rò rỉ dữ liệu - data leakage)
+- Sử dụng 11 đặc trưng cốt lõi từ nhiều nguồn (sau khi loại bỏ các đặc trưng engagement snapshot nhằm tránh rò rỉ dữ liệu - data leakage)
 - Kết hợp post, author, và interaction features
 - **Hạn chế**: Một số features như affinity_score còn đơn giản, chưa tối ưu
 
@@ -290,7 +290,7 @@ Hệ thống phân chia chi tiết các quyền lợi và chức năng cho 3 nh�
   - Sử dụng cơ chế xác thực không trạng thái (stateless JWT) nhưng kết hợp lưu trữ whitelist/blacklist phiên đăng nhập trong Redis để hỗ trợ thu hồi token tức thì khi đổi mật khẩu hoặc đăng xuất.
   - Phân quyền nghiêm ngặt tới cấp độ phương thức (Method-level security) và kiểm tra tính sở hữu tài nguyên (Ownership check) tại tầng nghiệp vụ.
 - **Độ tin cậy & Sẵn sàng (Reliability & Availability):**
-  - Hệ thống phải duy trì cơ chế "AI Toggle" và "Graceful Degradation". Nếu AI pipeline ngoại tuyến (FastAPI server mất kết nối), hệ thống tự động hạ cấp xuống cơ chế xếp hạng deterministic dựa trên điểm số `hot_score` và thời gian thực để người dùng không bị gián đoạn trải nghiệm.
+  - Hệ thống phải duy trì cơ chế "AI Toggle" và "Graceful Degradation". Nếu AI pipeline ngoại tuyến (FastAPI server mất kết nối), hệ thống tự động hạ cấp xuống cơ chế xếp hạng deterministic dựa trên live counters và thời gian thực để người dùng không bị gián đoạn trải nghiệm.
 - **Khả năng mở rộng (Scalability):**
   - Kiến trúc backend tổ chức theo hướng Modular Monolith, chia ranh giới rõ ràng giữa 17 module để có thể tách thành các microservices độc lập dễ dàng khi quy mô người dùng tăng lên.
   - Tích hợp Redis làm bộ đệm trung gian cho các chỉ số đếm delta (ví dụ share_count delta) để giảm thiểu số lượng truy vấn ghi dồn dập vào cơ sở dữ liệu PostgreSQL.
@@ -781,7 +781,7 @@ Feature Engineering là quá trình chuyển đổi dữ liệu thô (raw data) 
 - **Sai lệch độ uy tín tác giả (author_engagement_rate):** Việc quét toàn bộ file dữ liệu để tính tỷ lệ tương tác trung bình (`average_popularity`) trước khi train khiến bài viết từ quá khứ (ví dụ: tháng 1) lại được thừa hưởng độ nổi tiếng của tác giả ở tương lai (ví dụ: tháng 12). 
 - **Giải pháp:** Sử dụng cơ chế cập nhật trạng thái rolling (**Sequential Rolling Snapshot**). Khi duyệt qua tập dữ liệu theo thứ tự thời gian tuyến tính, số liệu của tác giả chỉ được cập nhật dựa trên những bài viết trước thời điểm bài viết hiện tại được đăng, bảo đảm không có thông tin tương lai nào bị rò rỉ vào đặc trưng huấn luyện.
 
-**Danh sách 13 đặc trưng cốt lõi (Core Feature Schema):**
+**Danh sách 11 đặc trưng cốt lõi (Core Feature Schema):**
 
 | STT | Tên Đặc Trưng | Thể Loại | Mô Tả |
 |---|---|---|---|
@@ -789,15 +789,13 @@ Feature Engineering là quá trình chuyển đổi dữ liệu thô (raw data) 
 | 2 | `has_multimedia` | Post (Cấu trúc) | Nhị phân (0 hoặc 1), chỉ ra bài viết có chứa hình ảnh hoặc video. |
 | 3 | `is_share_post` | Post (Cấu trúc) | Nhị phân (0 hoặc 1), bài viết là bài chia sẻ (share post) lại từ bài khác. |
 | 4 | `post_age_hours` | Post (Thời gian) | Số giờ trôi qua kể từ khi đăng đến lúc truy vấn. |
-| 5 | `hot_score` | Post (Chất lượng) | Điểm "hot" suy giảm theo thời gian dựa trên tương tác thời gian thực. |
-| 6 | `upvote_ratio` | Post (Chất lượng) | Tỷ lệ upvote trên tổng số reaction (được làm mượt Laplace). |
-| 7 | `author_seniority` | Author (Tác giả) | Thâm niên của tác giả (tính bằng năm) kể từ ngày tạo tài khoản. |
-| 8 | `author_post_count` | Author (Tác giả) | Tổng số bài viết của tác giả tính đến trước thời điểm hiện tại. |
-| 9 | `author_engagement_rate` | Author (Tác giả) | Điểm tương tác trung bình của các bài viết trước đó của tác giả (Snapshot rolling). |
-| 10 | `interaction_count_7d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 7 ngày qua. |
-| 11 | `interaction_count_30d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 30 ngày qua. |
-| 12 | `hours_since_last_interaction` | Interaction (Tương tác) | Số giờ kể từ lần tương tác cuối của người xem với tác giả. |
-| 13 | `affinity_score` | Interaction (Tương tác) | Điểm thân thiết tính bằng tỷ lệ tương tác với tác giả trên tổng tương tác của người xem. |
+| 5 | `author_seniority` | Author (Tác giả) | Thâm niên của tác giả (tính bằng năm) kể từ ngày tạo tài khoản. |
+| 6 | `author_post_count` | Author (Tác giả) | Tổng số bài viết của tác giả tính đến trước thời điểm hiện tại. |
+| 7 | `author_engagement_rate` | Author (Tác giả) | Điểm tương tác trung bình của các bài viết trước đó của tác giả (Snapshot rolling). |
+| 8 | `interaction_count_7d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 7 ngày qua. |
+| 9 | `interaction_count_30d` | Interaction (Tương tác) | Số lượt tương tác của người xem với tác giả này trong 30 ngày qua. |
+| 10 | `hours_since_last_interaction` | Interaction (Tương tác) | Số giờ kể từ lần tương tác cuối của người xem với tác giả. |
+| 11 | `affinity_score` | Interaction (Tương tác) | Điểm thân thiết tính bằng tỷ lệ tương tác với tác giả trên tổng tương tác của người xem. |
 
 **Techniques tiền xử lý toán học (Preprocessing):**
 
@@ -808,19 +806,13 @@ x_transformed = log(x + 1)
 ```
 
 **2. Outlier Capping (Giới hạn ngoại lai):**
-Các đặc trưng có khoảng giá trị quá rộng (`content_length`, `post_age_hours`, `hot_score`, `author_seniority`, `author_post_count`, `author_engagement_rate`, `hours_since_last_interaction`) được giới hạn ở phân vị thứ 99 (99th percentile) để hạn chế ảnh hưởng tiêu cực của nhiễu dữ liệu:
+Các đặc trưng có khoảng giá trị quá rộng (`content_length`, `post_age_hours`, `author_seniority`, `author_post_count`, `author_engagement_rate`, `hours_since_last_interaction`) được giới hạn ở phân vị thứ 99 (99th percentile) để hạn chế ảnh hưởng tiêu cực của nhiễu dữ liệu:
 ```python
 capped_value = min(value, percentile_99)
 ```
 
-**3. Laplace Smoothing:**
-Làm mượt tỷ lệ upvote tránh trường hợp bài viết mới có quá ít tương tác:
-```python
-upvote_ratio = upvotes / (upvotes + downvotes + 1)
-```
-
 **Tầm quan trọng:**
-Sự kết hợp giữa ngăn ngừa rò rỉ dữ liệu thông qua cấu trúc 13 đặc trưng và áp dụng các biến đổi phân phối giúp LightGBM đạt NDCG@10 ổn định hơn, mô hình tổng quát hóa tốt hơn khi gặp các dữ liệu mới trong môi trường thực tế.
+Sự kết hợp giữa ngăn ngừa rò rỉ dữ liệu thông qua cấu trúc 11 đặc trưng và áp dụng các biến đổi phân phối giúp LightGBM đạt NDCG@10 ổn định hơn, mô hình tổng quát hóa tốt hơn khi gặp các dữ liệu mới trong môi trường thực tế.
 
 
 ### 2.6. Real-time Communication

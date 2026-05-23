@@ -1,9 +1,9 @@
-import { useState, useEffect, useRef } from 'react';
+import { useState, useEffect, useRef, useCallback } from 'react';
 import {
   Search, MoreHorizontal,
   MessageCircle, Share2, Bookmark,
   Activity, Moon, Sun, Loader2, Plus, Edit3, Trash2,
-  ChevronDown, X, UserX, Link
+  ChevronDown, X, UserX, Link, Brain, ShieldCheck
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
@@ -50,6 +50,9 @@ export default function HomePage() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [dropdownSearch, setDropdownSearch] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const aiRankedCount = feed.filter((post) => post.rankingProvider === "AI").length;
+  const fallbackRankedCount = feed.filter((post) => post.rankingProvider === "FALLBACK").length;
+  const feedSchemaVersion = feed.find((post) => post.featureSchemaVersion)?.featureSchemaVersion ?? "v2";
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent) {
@@ -99,7 +102,7 @@ export default function HomePage() {
     }
   };
 
-  const loadFeed = async (topicSlug?: string) => {
+  const loadFeed = useCallback(async (topicSlug?: string) => {
     try {
       setFeedLoading(true);
       setPage(0);
@@ -116,7 +119,7 @@ export default function HomePage() {
     } finally {
       setFeedLoading(false);
     }
-  };
+  }, []);
 
   const loadMoreFeed = async () => {
     if (loadingMore || !hasMore) return;
@@ -202,6 +205,17 @@ export default function HomePage() {
     loadTrending();
     loadTopics();
   }, [authLoading, accessToken, selectedTopic]);
+
+  useEffect(() => {
+    const handleFeedRefresh = () => {
+      void loadFeed(selectedTopic || undefined);
+    };
+
+    window.addEventListener("realtime:feed_refresh", handleFeedRefresh);
+    return () => {
+      window.removeEventListener("realtime:feed_refresh", handleFeedRefresh);
+    };
+  }, [loadFeed, selectedTopic]);
 
   useEffect(() => {
     const handleRealtimePostStats = (e: Event) => {
@@ -538,6 +552,38 @@ export default function HomePage() {
             </div>
           </div>
 
+          {feed.length > 0 && (
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-3">
+              <div className="rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] bg-white dark:bg-[#1e1e1e] px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wide">
+                  <Activity className="w-4 h-4 text-blue-500" />
+                  AI ranking
+                </div>
+                <div className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">
+                  {aiRankedCount} bài được xếp hạng bằng AI
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] bg-white dark:bg-[#1e1e1e] px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wide">
+                  <ShieldCheck className="w-4 h-4 text-amber-500" />
+                  Fallback
+                </div>
+                <div className="mt-2 text-sm font-semibold text-slate-800 dark:text-white">
+                  {fallbackRankedCount} bài đang dùng fallback
+                </div>
+              </div>
+              <div className="rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] bg-white dark:bg-[#1e1e1e] px-4 py-3 shadow-sm">
+                <div className="flex items-center gap-2 text-slate-500 dark:text-slate-400 text-xs uppercase font-bold tracking-wide">
+                  <Brain className="w-4 h-4 text-blue-500" />
+                  Schema
+                </div>
+                <div className="mt-2 text-sm font-semibold text-slate-800 dark:text-white font-mono">
+                  {feedSchemaVersion}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Feed Items */}
           {feedLoading ? (
             <div className="flex justify-center py-16">
@@ -731,9 +777,19 @@ function FeedPost({
           <SafeAvatar src={post.userAvatar} alt={post.username} />
         </div>
         <div className="flex-1 min-w-0">
-          <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2 truncate">
+            <div className="flex items-center justify-between mb-1">
+            <div className="flex items-center gap-2 truncate flex-wrap">
               <span onClick={navigateToProfile} className="font-bold text-slate-800 dark:text-[#e4e6eb] truncate cursor-pointer hover:underline">{post.username}</span>
+              {post.rankingProvider && (
+                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${post.rankingProvider === "AI" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-300"}`}>
+                  {post.rankingProvider}
+                </span>
+              )}
+              {post.aiScore != null && (
+                <span className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">
+                  score {post.aiScore.toFixed(3)}
+                </span>
+              )}
               <span className="text-slate-500 dark:text-neutral-400 text-sm">· {timeAgo(post.createdAt)}</span>
             </div>
             <div className="relative shrink-0">

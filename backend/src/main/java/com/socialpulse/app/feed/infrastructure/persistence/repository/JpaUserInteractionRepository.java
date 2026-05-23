@@ -18,7 +18,13 @@ public interface JpaUserInteractionRepository extends JpaRepository<UserInteract
             @Param("authorId") Long authorId,
             @Param("since") LocalDateTime since);
 
-    @Query("SELECT u.createdAt FROM UserInteractionEntity u WHERE u.viewerId = :viewerId AND u.authorId = :authorId ORDER BY u.createdAt DESC LIMIT 1")
+    @Query(value = """
+            SELECT created_at
+            FROM user_interactions
+            WHERE viewer_id = :viewerId AND author_id = :authorId
+            ORDER BY created_at DESC
+            LIMIT 1
+            """, nativeQuery = true)
     LocalDateTime findLatestInteractionTime(
             @Param("viewerId") Long viewerId,
             @Param("authorId") Long authorId);

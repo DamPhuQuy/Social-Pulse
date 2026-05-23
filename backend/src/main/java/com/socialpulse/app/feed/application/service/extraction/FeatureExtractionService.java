@@ -1,6 +1,7 @@
 package com.socialpulse.app.feed.application.service.extraction;
 
 import java.time.LocalDateTime;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -9,6 +10,7 @@ import java.util.stream.Collectors;
 import com.socialpulse.app.feed.application.dto.features.core.RankingFeatures;
 import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
+import com.socialpulse.app.feed.domain.model.UserInteractionAggregate;
 import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
@@ -55,13 +57,13 @@ public class FeatureExtractionService implements ExtractFeaturesUseCase {
         long viewerTotal = viewerId != null
                 ? userInteractionRepository.countTotalByViewerSince(viewerId, now.minusDays(30))
                 : 0L;
-        java.util.Map<Long, com.socialpulse.app.feed.domain.model.UserInteractionAggregate> aggregates = viewerId != null
+        Map<Long, UserInteractionAggregate> aggregates = viewerId != null
                 ? userInteractionRepository.findAggregatesByViewerAndAuthors(viewerId, authorIds, now.minusDays(30), now.minusDays(7))
-                : java.util.Collections.emptyMap();
- 
+                : Collections.emptyMap();
+
         return candidates.stream().map(candidate -> {
             Post post = candidate.getPost();
-            com.socialpulse.app.feed.domain.model.UserInteractionAggregate agg = aggregates.get(post.getUserId());
+            UserInteractionAggregate agg = aggregates.get(post.getUserId());
             return RankingFeatures.builder()
                     .postId(post.getId())
                     .postFeatures(postFeatureExtractor.extract(post, now))

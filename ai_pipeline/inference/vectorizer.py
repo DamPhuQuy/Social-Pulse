@@ -16,13 +16,6 @@ class PostFeatures:
     has_multimedia: bool | None = None
     is_share_post: bool | None = None
     post_age_hours: float | None = None
-    hot_score: float | None = None
-    upvote_ratio: float | None = None
-    upvote_count: int | None = None
-    downvote_count: int | None = None
-    comment_count: int | None = None
-    share_count: int | None = None
-    view_count: int | None = None
 
 
 @dataclass
@@ -50,7 +43,6 @@ class RankingFeatures:
 
 class FeatureVectorizer:
     FEATURE_ORDER = RankingFeatureSchema.FEATURE_ORDER
-    _DEFAULT_RATIO = RankingFeatureSchema.DEFAULT_UPVOTE_RATIO
     _DEFAULT_HOURS = RankingFeatureSchema.DEFAULT_LAST_INTERACTION_HOURS
 
     def __init__(self):
@@ -69,8 +61,6 @@ class FeatureVectorizer:
         values["has_multimedia"] = _to_binary(post_features.has_multimedia if post_features else None)
         values["is_share_post"] = _to_binary(post_features.is_share_post if post_features else None)
         values["post_age_hours"] = _safe(post_features.post_age_hours if post_features else None)
-        values["hot_score"] = _safe(post_features.hot_score if post_features else None)
-        values["upvote_ratio"] = _safe(post_features.upvote_ratio if post_features else None, self._DEFAULT_RATIO)
 
         values["author_seniority"] = _safe(author_features.seniority_years if author_features else None)
         values["author_post_count"] = _safe_int(author_features.post_count if author_features else None)
@@ -83,18 +73,6 @@ class FeatureVectorizer:
             self._DEFAULT_HOURS,
         )
         values["affinity_score"] = _safe(interaction_features.affinity_score if interaction_features else None)
-
-        upvote_count = _safe_int(post_features.upvote_count if post_features else None)
-        downvote_count = _safe_int(post_features.downvote_count if post_features else None)
-        comment_count = _safe_int(post_features.comment_count if post_features else None)
-        share_count = _safe_int(post_features.share_count if post_features else None)
-        view_count = _safe_int(post_features.view_count if post_features else None)
-
-        values["upvote_count"] = upvote_count
-        values["downvote_count"] = downvote_count
-        values["comment_count"] = comment_count
-        values["share_count"] = share_count
-        values["view_count"] = view_count
 
         self._apply_preprocessing(values)
         return values

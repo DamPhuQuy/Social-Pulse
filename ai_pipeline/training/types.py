@@ -20,8 +20,6 @@ class SubmissionRecord:
     num_crossposts: int
     has_multimedia: bool
     is_share_post: bool
-    hot_score: float
-    upvote_ratio: float
     # Snapshot of the author's aggregate BEFORE this post was counted.
     # Set by the scanner to avoid future-data leakage in author features.
     author_snapshot: AuthorAggregate | None = None
@@ -68,6 +66,7 @@ class TrainingRow:
     label: float
     viewer_id: str = "unknown"
     created_utc: float = 0.0
+    split_key: str | None = None
 
 
 @dataclass(frozen=True)
@@ -120,7 +119,6 @@ class TrainingHistoryPoint:
 class TrainedRankingModel:
     backend: str
     runtime_model: Any
-    model_dump: dict[str, Any] | None
     metrics: Metrics
     history: list[TrainingHistoryPoint]
     feature_importances: dict[str, float]
@@ -142,4 +140,5 @@ class TrainingRunResult:
 @dataclass(frozen=True)
 class InteractionScanResult:
     interactions: dict[str, dict[str, list[float]]]
+    post_interactions: dict[str, dict[str, list[float]]]
     stats: dict[str, int]

@@ -1,400 +1,48 @@
-# AI Current Structure And Interactions
+# Current AI Structure And Interactions
 
-Tai lieu nay mo ta package `backend/src/main/java/com/socialpulse/app/ai` theo code hien tai, khong dua tren muc tieu tach module trong tuong lai.
+This document describes the current AI integration after the schema v2 cleanup.
 
-Pham vi doc chinh:
+## Components
 
-- `backend/src/main/java/com/socialpulse/app/ai`
-- `backend/src/main/java/com/socialpulse/app/feed`
-- `backend/src/main/resources/ai`
-- `backend/src/test/java/com/socialpulse/app/ai`
+| Component | Path | Role |
+|---|---|---|
+| Training scanner | `ai_pipeline/training/scanner.py` | Reads Pushshift `.zst` files and filters rows |
+| Feature engineering | `ai_pipeline/training/feature_engineering.py` | Builds leakage-safe v2 rows |
+| Trainer | `ai_pipeline/training/trainer.py` | Trains LightGBM and computes metrics |
+| Inference service | `ai_pipeline/inference/ranking_service.py` | Loads `model.json` + `model.txt` |
+| Vectorizer | `ai_pipeline/inference/vectorizer.py` | Applies schema order and preprocessing |
+| Backend extractor | `backend/.../PostFeatureExtractor.java` | Builds live post features |
+| Backend ranking | `backend/.../FeedRankingService.java` | Calls AI and falls back safely |
 
-## 1. Ket luan nhanh
+## Model Runtime
 
-`ai` hien tai chua la mot module offline doc lap. No dang la mot package ben trong backend monolith, gom ca:
+The Python service owns model loading and prediction. Java backend no longer
+contains a local tree scorer. This keeps runtime behavior aligned with the
+actual LightGBM booster generated during training.
 
-- offline training pipeline tu Pushshift `.zst`
-- shared schema va scorer cho model dump
-- runtime service de backend load artifact JSON va score feed
+## Feature Contract
 
-Noi cach khac:
+Schema version: `v2`
 
-- training code va inference code dang song chung trong cung source set Maven
-- backend `feed` goi truc tiep vao `ai`
-- `ai` cung phu thuoc nguoc lai vao DTO va use case cua `feed`
+The schema contains only features available before or at serving time:
 
-Vi vay, ranh gioi hien tai la "package separation", chua phai "module separation".
+- post structure and age
+- historical author information
+- viewer-author prior interactions
 
-## 2. Cay package hien tai
+Final engagement snapshots from the training archive are not sent as features.
 
-```text
-com.socialpulse.app.ai
-|- inference
-|  |- FeatureVectorizer
-|  |- RankingService
-|  `- config
-|     `- RankingProperties
-|- shared
-|  |- RankingFeatureSchema
-|  |- TreeModel
-|  |- RankingModelArtifact
-|  `- TreeModelScorer
-`- training
-   |- GradientBoostedTreeTrainer
-   |- PushshiftDatasetScanner
-   |- PushshiftFeatureEngineering
-   |- PushshiftTrainingCli
-   |- PushshiftTrainingPipeline
-   |- TrainingArguments
-   |- TrainingJsonSupport
-   `- TrainingTypes
-```
+## Request Flow
 
-## 3. Vai tro tung package
+1. `FeedRankingService` selects candidates.
+2. `FeatureExtractionService` builds `RankingFeatures`.
+3. `AiRankingClient` sends the request to the AI service.
+4. `RankingService` validates artifact/schema and predicts with LightGBM.
+5. Backend accepts predictions only if IDs and schema match.
+6. Backend sorts the feed and caches the result.
 
-### 3.1. `inference/config`
+## Failure Mode
 
-`RankingProperties` la config runtime cho backend inference:
-
-- `ai.pipeline.enabled`
-- `ai.pipeline.model-location`
-- `ai.pipeline.feature-schema-version`
-
-Class nay khong dung cho training pipeline. No chi phuc vu backend khi load model artifact va nam trong boundary inference.
-
-### 3.2. `shared`
-
-Day la lop "shared AI core" cua he thong hien tai.
-
-- `RankingFeatureSchema`
-  - la source of truth cho `DEFAULT_SCHEMA_VERSION`
-  - khai bao `FEATURE_ORDER`
-  - khai bao default preprocessing values nhu `DEFAULT_UPVOTE_RATIO`
-- `TreeModel`
-  - object model de doc JSON dump
-- `RankingModelArtifact`
-  - object model cho wrapped artifact co metadata + `model_dump`
-- `TreeModelScorer`
-  - scorer local, duyet tree dump va tinh score trong Java
-
-Luu y quan trong:
-
-- `shared` la boundary dung cho contract va scorer dung chung
-- nhung training implementation hien tai khong dung thu vien XGBoost that
-- scorer chi can artifact JSON co shape tuong thich voi `TreeModel`
-
-### 3.3. `inference`
-
-Day la lop runtime adapter giua feed ranking va AI scorer.
-
-- `FeatureVectorizer`
-  - chuyen `RankingFeatures` cua backend thanh `Map<String, Double>`
-  - dam bao ten feature trung voi training contract
-- `RankingService`
-  - bridge giua AI va feed ranking runtime
-
-`RankingService` la bridge giua AI va feed ranking runtime.
-
-Trach nhiem:
-
-- nhan `RankingRequest`
-- check `enabled`
-- check schema version
-- load JSON artifact tu `ResourceLoader`
-- parse raw model dump hoac wrapped artifact
-- tao `TreeModelScorer`
-- score tung `RankingFeatures`
-- tra `RankingResponse`
-
-No implement truc tiep `PredictRankingUseCase`, nen boundary inference van chua doc lap voi `feed`.
-
-### 3.4. `training`
-
-Day la offline pipeline chay bang CLI trong cung backend source set.
-
-- `PushshiftTrainingCli`
-  - entry point
-  - parse args
-  - in ket qua JSON ra stdout
-- `TrainingArguments`
-  - parse va validate command arguments
-- `TrainingJsonSupport`
-  - doc `.zst` JSONL
-  - write artifact JSON
-- `PushshiftDatasetScanner`
-  - stream submissions/comments tu Pushshift
-  - loc du lieu
-  - reservoir sampling submissions
-  - tinh author aggregates
-- `PushshiftFeatureEngineering`
-  - bien `SubmissionRecord` thanh `TrainingRow`
-  - hash split train/validation
-- `GradientBoostedTreeTrainer`
-  - train custom boosted tree regressor
-  - export model dump co format tuong thich scorer
-- `PushshiftTrainingPipeline`
-  - orchestration toan bo flow
-  - wrap metadata thanh artifact cuoi
-
-## 4. Luong du lieu hien tai
-
-### 4.1. Offline training
-
-```text
-Pushshift .zst
--> PushshiftDatasetScanner
--> PushshiftFeatureEngineering
--> GradientBoostedTreeTrainer
--> JSON artifact
-```
-
-Chi tiet:
-
-1. `PushshiftTrainingCli` nhan:
-   - `--submissions`
-   - `--comments`
-   - `--output`
-   - cac hyperparameter khac
-2. `PushshiftDatasetScanner` doc streaming tu `.zst`, loc record khong hop le.
-3. Scanner xay `SubmissionRecord` voi cac field nhu:
-   - `titleLength`
-   - `bodyLength`
-   - `score`
-   - `numComments`
-   - `numCrossposts`
-   - `hasMultimedia`
-   - `isSharePost`
-   - `hotScore` (Reddit formula: sign * log10(|score|) + seconds/45000)
-   - `upvoteRatio` (extracted from Reddit `upvote_ratio` field, validated 0.0-1.0)
-4. `PushshiftFeatureEngineering` bien record thanh vector theo `RankingFeatureSchema.FEATURE_ORDER`.
-   - `upvote_ratio` dung gia tri that tu Reddit, khong hardcode
-   - `hot_score` dung Reddit formula
-5. `GradientBoostedTreeTrainer` train mot model regression tren label `log1p(popularity)`.
-6. `PushshiftTrainingPipeline` wrap artifact:
-   - `artifact_version`
-   - `feature_schema_version`
-   - `training_dataset`
-   - `trained_at`
-   - `label_strategy`
-   - `training_summary`
-   - `model_dump`
-
-### 4.2. Online inference trong backend
-
-```text
-Candidate posts
--> FeatureExtractionService
--> FeatureVectorizer
--> RankingService
--> TreeModelScorer
--> RankingResponse
--> FeedRankingService sort/fallback
-```
-
-Chi tiet:
-
-1. `FeedRankingService` lay candidate posts.
-2. `FeatureExtractionService` build `RankingFeatures` tu:
-   - post data
-   - author data
-   - viewer data
-   - follow relation
-   - Redis cache
-3. `FeedRankingService` tao `RankingRequest` kem `featureSchemaVersion`.
-4. `RankingService` load artifact tu file/resource.
-5. `FeatureVectorizer` doi `RankingFeatures` sang map feature-name -> value.
-6. `TreeModelScorer` score tung post.
-7. `FeedRankingService` validate prediction set:
-   - du so luong
-   - dung `postId`
-   - score finite
-   - dung `featureSchemaVersion`
-8. Neu prediction invalid hoac model unavailable, backend fallback sang ranking deterministic.
-
-## 5. Dependency map
-
-## 5.1. Backend goi vao `ai`
-
-`feed` phu thuoc vao `ai` o nhieu diem:
-
-- `FeedConfig`
-  - enable `RankingProperties`
-  - tao bean `FeatureVectorizer`
-  - tao bean `RankingService`
-  - expose `PredictRankingUseCase`
-- `RankingRequest`
-  - lay default schema version tu `RankingFeatureSchema`
-
-Dependency huong nay la hop ly cho runtime scoring.
-
-## 5.2. `ai` goi nguoc lai vao `feed`
-
-Day la coupling chat nhat trong code hien tai:
-
-- `FeatureVectorizer` import:
-  - `RankingFeatures`
-  - `PostFeatures`
-  - `UserFeatures`
-  - `InteractionFeatures`
-- `RankingService` import:
-  - `RankingRequest`
-  - `RankingResponse`
-  - `PredictRankingUseCase`
-
-Y nghia:
-
-- `ai` khong chi cung cap scorer
-- no dang biet truc tiep data contract va use-case contract cua `feed`
-
-Neu tach `ai` thanh module rieng, day la diem can xu ly dau tien.
-
-## 5.3. `training` phu thuoc gi?
-
-`training` khong phu thuoc truc tiep vao `feed`, `post`, `user`, `follow`, `auth`.
-No chu yeu phu thuoc vao:
-
-- `ai.shared.RankingFeatureSchema`
-- Jackson
-- zstd-jni
-- Java standard library
-
-Vi vay, phan offline training da "gan doc lap" hon inference layer.
-
-## 6. Contract chung giua training va inference
-
-Contract quan trong nhat la `RankingFeatureSchema`.
-
-No quyet dinh:
-
-- feature order
-- feature names
-- default numeric values
-- schema version
-
-Training dang dung contract nay o:
-
-- `PushshiftFeatureEngineering`
-- `GradientBoostedTreeTrainer`
-- `PushshiftTrainingPipeline`
-
-Inference dang dung contract nay o:
-
-- `FeatureVectorizer`
-- `RankingProperties`
-- `RankingRequest`
-
-Neu thay doi feature ma khong bump schema version, backend co nguy co:
-
-- load nham artifact
-- score sai do map feature khong con khop
-- cho ra ket qua hop le ve ky thuat nhung sai ve nghia
-
-## 7. Muc do "XGBoost" hien tai
-
-Can phan biet ro 2 viec:
-
-1. Runtime scorer dang doc dump theo shape tuong thich XGBoost.
-2. Training code hien tai la custom implementation, khong goi XGBoost library.
-
-Cu the:
-
-- `GradientBoostedTreeTrainer` tu xay boosted tree bang residual fitting
-- objective hien tai la `regression`
-- label la `log1p(popularity)`
-- split criterion la squared error
-
-Vi vay, ten "XGBoost" trong code hien tai dung hon cho:
-
-- artifact/scoring format
-- feature contract va runtime scorer
-
-Chu chua dung nghia "train bang XGBoost framework that".
-
-## 8. Chat luong feature va label hien tai
-
-Offline training hien tai van mang tinh proxy nhung da duoc cai thien:
-
-- `upvote_ratio` duoc extract tu Reddit data that (field `upvote_ratio`, validated 0.0-1.0)
-- `hot_score` dung Reddit formula: `sign(score) * log10(|score|) + seconds/45000`
-- interaction features duoc tinh tu bang user interaction khi backend co lich su viewer-author
-- `hours_since_last_interaction` default `999.0` cho truong hop cold-start/chua co tuong tac
-- label dung `log1p(popularity)` thay vi user engagement label that
-
-Online extraction da duoc align voi training:
-
-- `hot_score` dung cung formula Reddit-style: `sign(netScore) * log10(max(|netScore|, 1)) + postAgeHours / 12.5`
-- `upvote_ratio` tinh tu upvotes / (upvotes + downvotes)
-- `interactionCount7d` va `interactionCount30d` lay tu `UserInteractionRepository`
-- affinity duoc tinh bang interaction 30 ngay voi author / tong interaction 30 ngay cua viewer
-
-He qua:
-
-- pipeline da chay duoc end-to-end voi feature alignment dung
-- model hien tai nghieng ve "content popularity proxy" hon la "personalized feed ranking"
-- khi bo sung them loai behavior moi, can giu dung feature schema hoac bump schema version roi retrain
-
-## 9. Diem manh cua thiet ke hien tai
-
-- Co feature contract tap trung mot cho.
-- Co local scorer thuần Java, khong can native XGBoost runtime.
-- Artifact format co metadata schema version.
-- Runtime co guard:
-  - model missing -> bo qua
-  - schema mismatch -> bo qua
-  - prediction set invalid -> fallback
-- Training code da du clean de co the tach ra module rieng sau nay.
-
-## 10. Diem coupling va rui ro chinh
-
-### 10.1. Coupling hai chieu giua `ai` va `feed`
-
-Day la diem lon nhat.
-
-- `feed` can `ai` de score
-- `ai` can DTO/use case cua `feed` de vectorize va tra ket qua
-
-Ket qua:
-
-- kho tach `ai` thanh Maven module rieng
-- de vong phu thuoc neu tiep tuc day manh module hoa
-
-### 10.2. Training va runtime song chung trong backend source set
-
-Dieu nay co nghia:
-
-- build backend cung keo theo training code
-- dependency cho offline pipeline nam trong `backend/pom.xml`
-- boundary deploy/runtime va offline pipeline chua ro
-
-### 10.3. Artifact format va trainer implementation co the gay nham
-
-Ten package la `XGBoost`, nhung trainer la custom tree booster.
-Neu team nghi rang hien tai dang train bang XGBoost that, se de danh gia sai:
-
-- hyperparameter semantics
-- model parity voi Python XGBoost
-- expected scoring behavior
-
-## 11. Neu muon tach module sau nay, nen tach o dau
-
-Huong tach thuc te nhat:
-
-1. Tach `training` ra truoc.
-   - vi no da gan doc lap
-   - no chi can shared feature contract
-2. Tach `XGBoost` core thanh shared artifact package.
-   - `RankingFeatureSchema`
-   - `TreeModel`
-   - `RankingModelArtifact`
-   - `TreeModelScorer`
-3. Giu `FeatureVectorizer` va `RankingService` o backend feed layer, hoac doi chung sang contract trung gian.
-4. Neu muon `ai` doc lap hon nua, thay dependency vao `RankingFeatures` bang mot DTO trung gian khong thuoc `feed`.
-
-Noi ngan gon:
-
-- `training` la phan de tach nhat
-- `vectorizer` va `ranking service` la phan dang dinh chat voi backend feed
-
-## 12. Tom tat mot cau
-
-`com.socialpulse.app.ai` hien tai la mot package AI noi bo cua backend, gom offline Pushshift training + JSON model scoring runtime; no da co feature contract va fallback kha ro, nhung van coupling chat hai chieu voi `feed`, nen chua phai mot module `ai-training -> export artifact -> backend consume` tach biet hoan toan.
+When AI is disabled, unavailable, returns invalid scores, or has a schema
+mismatch, backend uses `FallbackRankingService`. This fallback may use live DB
+counters but it is separate from the AI model feature schema.

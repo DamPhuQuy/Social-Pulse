@@ -25,7 +25,7 @@ class RankingController:
 
     def __init__(self, ranking_service: RankingService) -> None:
         self._service = ranking_service
-        self.router   = APIRouter(prefix="/api/ranking", tags=["ranking"])
+        self.router = APIRouter(prefix="/api/ranking", tags=["ranking"])
         self._register_routes()
 
     def _register_routes(self) -> None:
@@ -50,7 +50,7 @@ class RankingController:
         3. Map domain results → response DTOs.
         """
         domain_features = [self._to_domain(f) for f in request.features]
-        results         = self._service.predict_scores(request.feature_schema_version, domain_features)
+        results = self._service.predict_scores(request.feature_schema_version, domain_features)
 
         return [
             RankingResponseDto(

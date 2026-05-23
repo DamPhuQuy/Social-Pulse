@@ -3,7 +3,7 @@ PYTHONPATH_ENV =
 
 .PHONY: train serve test lint docker clean
 
-## Training pipeline (data ingestion → feature engineering → preprocessing → training → evaluation)
+## Training pipeline (data ingestion -> feature engineering -> preprocessing -> training -> evaluation)
 train:
 	$(PYTHONPATH_ENV) $(PYTHON) -m ai_pipeline.training.main
 
@@ -13,7 +13,7 @@ serve:
 
 ## Verify pipeline (syntax + imports + smoke test)
 test:
-	$(PYTHONPATH_ENV) $(PYTHON) -c "import ast; from pathlib import Path; [ast.parse(f.read_text()) for f in Path('ai_pipeline').rglob('*.py') if '.venv' not in str(f)]; from ai_pipeline.training import PushshiftTrainingPipeline, TrainingArguments; from ai_pipeline.inference import RankingService, FeatureVectorizer; from ai_pipeline.shared import RankingFeatureSchema, TreeModelScorer; print('✓ All checks passed')"
+	$(PYTHONPATH_ENV) $(PYTHON) -c "import ast; from pathlib import Path; [ast.parse(f.read_text()) for f in Path('ai_pipeline').rglob('*.py') if '.venv' not in str(f)]; from ai_pipeline.training import PushshiftTrainingPipeline, TrainingArguments; from ai_pipeline.inference import RankingService, FeatureVectorizer; from ai_pipeline.shared import RankingFeatureSchema, RankingModelArtifact; print('All checks passed')"
 
 ## Docker build
 docker:
@@ -21,4 +21,4 @@ docker:
 
 ## Remove generated artifacts
 clean:
-	rm -f ai_pipeline/model/model.json ai_pipeline/model/metrics.json
+	rm -f ai_pipeline/model/model.json ai_pipeline/model/model.txt ai_pipeline/model/metrics.json

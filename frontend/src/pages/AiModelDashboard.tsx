@@ -84,6 +84,8 @@ export default function AiModelDashboard() {
                   </div>
                   <MetricRow label="AI enabled" value={status?.enabled ? "BẬT" : "TẮT"} valueClass={status?.enabled ? "text-green-500" : "text-amber-500"} />
                   <MetricRow label="Health check" value={status?.healthReachable ? "REACHABLE" : "UNREACHABLE"} valueClass={status?.healthReachable ? "text-green-500" : "text-red-500"} />
+                  <MetricRow label="Model artifact" value={status?.modelAvailable ? "AVAILABLE" : "MISSING"} valueClass={status?.modelAvailable ? "text-green-500" : "text-red-500"} />
+                  <MetricRow label="Model loaded" value={status?.modelLoaded ? "LOADED" : "NOT LOADED"} valueClass={status?.modelLoaded ? "text-green-500" : "text-amber-500"} />
                   <MetricRow label="Feature schema" value={status?.featureSchemaVersion ?? "N/A"} />
                   <MetricRow label="Training controls" value={status?.trainingControlsAvailable ? "AVAILABLE" : "NOT EXPOSED"} valueClass={status?.trainingControlsAvailable ? "text-green-500" : "text-slate-500"} />
                 </div>
@@ -104,6 +106,13 @@ export default function AiModelDashboard() {
                 <StatCard icon={Layers} label="User mới" value={metrics?.newUsers ?? 0} />
                 <StatCard icon={Brain} label="Tổng post" value={metrics?.totalPosts ?? 0} />
                 <StatCard icon={ShieldCheck} label="Post mới" value={metrics?.newPosts ?? 0} />
+              </div>
+
+              <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+                <StatCard icon={Layers} label="Feed impressions" value={metrics?.totalFeedImpressions ?? 0} />
+                <StatCard icon={Cpu} label="Impressions mới" value={metrics?.newFeedImpressions ?? 0} />
+                <StatCard icon={Brain} label="AI ranked" value={metrics?.aiRankedImpressions ?? 0} />
+                <StatCard icon={ShieldCheck} label="Fallback ranked" value={metrics?.fallbackRankedImpressions ?? 0} />
               </div>
 
               <div className="bg-white dark:bg-[#1e1e1e] p-6 rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-sm space-y-4">

@@ -7,6 +7,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.jdbc.core.JdbcTemplate;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.socialpulse.app.feed.adapter.persistence.FeedImpressionRepositoryAdapter;
 import com.socialpulse.app.feed.adapter.persistence.FeedRepositoryAdapter;
 import com.socialpulse.app.feed.adapter.persistence.UserInteractionRepositoryAdapter;
 import com.socialpulse.app.feed.application.service.cache.FeedCacheService;
@@ -24,6 +25,7 @@ import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUs
 import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
 import com.socialpulse.app.block.domain.repository.BlockRepository;
+import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
@@ -36,6 +38,11 @@ public class FeedConfig {
     @Bean
     public FeedRepository feedRepository(JdbcTemplate jdbcTemplate) {
         return new FeedRepositoryAdapter(jdbcTemplate);
+    }
+
+    @Bean
+    public FeedImpressionRepository feedImpressionRepository(JdbcTemplate jdbcTemplate) {
+        return new FeedImpressionRepositoryAdapter(jdbcTemplate);
     }
 
     @Bean

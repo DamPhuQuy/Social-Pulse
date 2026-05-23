@@ -27,41 +27,6 @@ class PostFeaturesDto(ApiDto):
         validation_alias=AliasChoices("post_age_hours", "postAgeHours"),
         serialization_alias="post_age_hours"
     )
-    hot_score: float | None = Field(
-        default=None,
-        validation_alias=AliasChoices("hot_score", "hotScore"),
-        serialization_alias="hot_score"
-    )
-    upvote_ratio: float | None = Field(
-        default=None,
-        validation_alias=AliasChoices("upvote_ratio", "upvoteRatio"),
-        serialization_alias="upvote_ratio"
-    )
-    upvote_count: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("upvote_count", "upvoteCount"),
-        serialization_alias="upvote_count"
-    )
-    downvote_count: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("downvote_count", "downvoteCount"),
-        serialization_alias="downvote_count"
-    )
-    comment_count: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("comment_count", "commentCount"),
-        serialization_alias="comment_count"
-    )
-    share_count: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("share_count", "shareCount"),
-        serialization_alias="share_count"
-    )
-    view_count: int | None = Field(
-        default=None,
-        validation_alias=AliasChoices("view_count", "viewCount"),
-        serialization_alias="view_count"
-    )
 
 
 class AuthorFeaturesDto(ApiDto):
@@ -129,7 +94,7 @@ class RankingFeaturesDto(ApiDto):
 
 class RankingRequestDto(ApiDto):
     feature_schema_version: str = Field(
-        default="v1",
+        default="v2",
         validation_alias=AliasChoices("feature_schema_version", "featureSchemaVersion"),
         serialization_alias="feature_schema_version",
     )
