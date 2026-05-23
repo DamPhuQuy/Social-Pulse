@@ -10,5 +10,7 @@ public class AiStatusResponse {
     private String baseUrl;
     private String featureSchemaVersion;
     private boolean healthReachable;
+    private boolean modelAvailable;
+    private boolean modelLoaded;
     private boolean trainingControlsAvailable;
 }

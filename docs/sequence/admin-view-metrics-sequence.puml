@@ -1,0 +1,63 @@
+@startuml
+!theme plain
+
+title Admin System Metrics Endpoint Sequence - GET /api/v1/admin/metrics
+
+autonumber
+
+actor Admin
+participant AdminController
+participant GetSystemMetricsUseCase
+participant GetSystemMetricsService
+database UserRepository
+database PostRepository
+
+group Get Metrics Summary
+  Admin -> AdminController: GET /api/v1/admin/metrics?period={period}\n[Authorization]
+  AdminController -> GetSystemMetricsUseCase: getMetrics(period)
+  GetSystemMetricsUseCase -> GetSystemMetricsService: getMetrics()
+  
+  GetSystemMetricsService -> GetSystemMetricsService: resolveSince(period)
+  
+  GetSystemMetricsService -> UserRepository: countAll()
+  UserRepository --> GetSystemMetricsService: totalUsers
+  
+  alt since != null
+    GetSystemMetricsService -> UserRepository: countByCreatedAtAfter(since)
+    UserRepository --> GetSystemMetricsService: newUsers
+  end
+  
+  GetSystemMetricsService -> UserRepository: countByStatus()
+  UserRepository --> GetSystemMetricsService: usersByStatusMap
+  
+  GetSystemMetricsService -> PostRepository: countAll()
+  PostRepository --> GetSystemMetricsService: totalPosts
+  
+  alt since != null
+    GetSystemMetricsService -> PostRepository: countByCreatedAtAfter(since)
+    PostRepository --> GetSystemMetricsService: newPosts
+    
+    GetSystemMetricsService -> PostRepository: countDeletedAfter(since)
+    PostRepository --> GetSystemMetricsService: deletedPosts
+  end
+  
+  GetSystemMetricsService -> PostRepository: countToxic()
+  PostRepository --> GetSystemMetricsService: toxicPosts
+  
+  GetSystemMetricsService --> GetSystemMetricsUseCase: SystemMetricsResponse
+  GetSystemMetricsUseCase --> AdminController: SystemMetricsResponse
+  AdminController --> Admin: 200 OK\nApiResponse<SystemMetricsResponse>
+end
+
+group Export CSV Report
+  Admin -> AdminController: GET /api/v1/admin/metrics/export?period={period}
+  AdminController -> GetSystemMetricsUseCase: exportCsv(period)
+  GetSystemMetricsUseCase -> GetSystemMetricsService: exportCsv(period)
+  GetSystemMetricsService -> GetSystemMetricsService: getMetrics(period)
+  note over GetSystemMetricsService: Formats metrics as CSV format byte array
+  GetSystemMetricsService --> GetSystemMetricsUseCase: byte[]
+  GetSystemMetricsUseCase --> AdminController: byte[]
+  AdminController --> Admin: 200 OK\nContent-Type: text/csv\nAttachment: metrics-{period}.csv
+end
+
+@enduml

@@ -23,6 +23,7 @@ import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
 import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
+import com.socialpulse.app.feed.domain.enums.RankingProvider;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
@@ -83,14 +84,15 @@ class FeedRankingServiceTest {
                 extractFeaturesUseCase,
                 predictRankingUseCase,
                 cacheFeedUseCase,
-                new FallbackRankingService("v1"),
+                new FallbackRankingService("v2"),
                 new ScoreBoostService(),
-                "v1");
+                "v2");
 
         List<FeedItem> rankedFeed = service.getRankedFeed(42L);
 
         assertEquals(2, rankedFeed.size());
         assertEquals(100L, rankedFeed.get(0).getPostId());
+        assertEquals(RankingProvider.FALLBACK, rankedFeed.get(0).getRankingProvider());
         assertEquals(200L, rankedFeed.get(1).getPostId());
         verify(predictRankingUseCase).predictScores(any());
         verify(cacheFeedUseCase).cacheFeed(eq(42L), any());
@@ -111,8 +113,8 @@ class FeedRankingServiceTest {
                 RankingFeatures.builder().postId(100L).build(),
                 RankingFeatures.builder().postId(200L).build());
         List<RankingResponse> predictions = List.of(
-                RankingResponse.builder().postId(100L).score(0.1).featureSchemaVersion("v1").build(),
-                RankingResponse.builder().postId(200L).score(0.9).featureSchemaVersion("v1").build());
+                RankingResponse.builder().postId(100L).score(0.1).featureSchemaVersion("v2").build(),
+                RankingResponse.builder().postId(200L).score(0.9).featureSchemaVersion("v2").build());
 
         when(cacheFeedUseCase.getCachedFeed(42L)).thenReturn(null);
         when(selectCandidatesUseCase.selectCandidates(42L)).thenReturn(candidates);
@@ -124,14 +126,15 @@ class FeedRankingServiceTest {
                 extractFeaturesUseCase,
                 predictRankingUseCase,
                 cacheFeedUseCase,
-                new FallbackRankingService("v1"),
+                new FallbackRankingService("v2"),
                 new ScoreBoostService(),
-                "v1");
+                "v2");
 
         var rankedFeed = service.getRankedFeed(42L);
 
         assertEquals(2, rankedFeed.size());
         assertEquals(200L, rankedFeed.get(0).getPostId());
+        assertEquals(RankingProvider.AI, rankedFeed.get(0).getRankingProvider());
         assertEquals(100L, rankedFeed.get(1).getPostId());
     }
 }

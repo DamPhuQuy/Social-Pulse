@@ -31,7 +31,8 @@ uv run train `
   --sample-size 50000 `
   --scan-limit-posts 300000 `
   --scan-limit-comments 2000000 `
-  --negative-samples-per-post 2 `
+  --negative-samples-per-positive 1 `
+  --max-positive-viewers-per-post 20 `
   --validation-ratio 0.2 `
   --test-ratio 0.1 `
   --n-estimators 600 `

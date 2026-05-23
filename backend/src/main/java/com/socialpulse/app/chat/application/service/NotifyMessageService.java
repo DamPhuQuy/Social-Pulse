@@ -50,21 +50,30 @@ public class NotifyMessageService {
         Long recipientId = event.recipientId();
         Long conversationId = message.getConversationId();
 
-        if (sessionManager.isUserOnline(recipientId)) {
+        log.info("Processing MessagePersistedEvent: messageId={}, conversationId={}, recipientId={}, senderId={}",
+                message.getId(), conversationId, recipientId, message.getSenderId());
+
+        boolean recipientOnline = sessionManager.isUserOnline(recipientId);
+        log.info("Recipient {} online status: {}", recipientId, recipientOnline);
+
+        if (recipientOnline) {
             try {
                 MessageResponse payload = buildMessageResponse(message);
                 String destination = TOPIC_PREFIX + conversationId;
+                log.info("Sending message {} to topic: {}, payload: {}", message.getId(), destination, payload);
                 messagingTemplate.convertAndSend(destination, payload);
 
                 messageRepository.updateStatus(message.getId(), MessageStatus.DELIVERED);
-                log.debug("Message {} delivered to recipient {} on conversation {}",
+                log.info("Message {} delivered successfully to recipient {} on conversation {}",
                         message.getId(), recipientId, conversationId);
             } catch (Exception e) {
-                log.warn("Failed to deliver message {} to recipient {}: {}",
-                        message.getId(), recipientId, e.getMessage());
+                log.error("Failed to deliver message {} to recipient {}: {}",
+                        message.getId(), recipientId, e.getMessage(), e);
                 incrementUnreadCount(conversationId, recipientId);
             }
         } else {
+            log.info("Recipient {} is offline, incrementing unread count for conversation {}",
+                    recipientId, conversationId);
             incrementUnreadCount(conversationId, recipientId);
         }
     }

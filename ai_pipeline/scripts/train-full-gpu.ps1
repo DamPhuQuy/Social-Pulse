@@ -2,17 +2,29 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 
 $root = Split-Path -Parent $PSScriptRoot
+$modelDir = Join-Path $root "model"
 $submissions = Join-Path $root "data\RS_2019-04.zst"
 $comments = Join-Path $root "data\RC_2019-04.zst"
-$output = Join-Path $root "model\model.json"
-$metrics = Join-Path $root "model\metrics.json"
-$plots = Join-Path $root "model\plots"
+$output = Join-Path $modelDir "model.json"
+$metrics = Join-Path $modelDir "metrics.json"
+$plots = Join-Path $modelDir "plots"
 
 if (-not (Test-Path $submissions)) {
     throw "Missing submissions archive: $submissions"
 }
 if (-not (Test-Path $comments)) {
     throw "Missing comments archive: $comments"
+}
+
+New-Item -ItemType Directory -Force -Path $modelDir | Out-Null
+if (Test-Path $output) {
+    Remove-Item $output -Force
+}
+if (Test-Path $metrics) {
+    Remove-Item $metrics -Force
+}
+if (Test-Path $plots) {
+    Remove-Item $plots -Recurse -Force
 }
 
 Write-Host "[train-full-gpu] Starting full GPU training..."
@@ -31,7 +43,8 @@ uv run train `
   --sample-size 200000 `
   --scan-limit-posts 0 `
   --scan-limit-comments 0 `
-  --negative-samples-per-post 3 `
+  --negative-samples-per-positive 2 `
+  --max-positive-viewers-per-post 20 `
   --validation-ratio 0.2 `
   --test-ratio 0.1 `
   --n-estimators 1200 `
@@ -45,4 +58,5 @@ uv run train `
   --max-bin 256 `
   --early-stopping-rounds 80 `
   --device cuda `
+  --allow-cpu-fallback false `
   --n-jobs 0

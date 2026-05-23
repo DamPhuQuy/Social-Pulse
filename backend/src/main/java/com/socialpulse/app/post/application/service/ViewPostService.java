@@ -57,7 +57,28 @@ public class ViewPostService implements ViewPostUseCase {
                 .map(this::toVote)
                 .orElse(0);
 
-        return postMapper.toViewPostResponse(viewedPost, author, myVote);
+        ViewPostResponse response = postMapper.toViewPostResponse(viewedPost, author, myVote);
+
+        if (viewedPost.getType() == com.socialpulse.app.post.domain.enums.PostType.SHARE && viewedPost.getParentPostId() != null) {
+            Post parent = postRepositoryPort.findById(viewedPost.getParentPostId()).orElse(null);
+            if (parent != null && parent.getDeletedAt() == null) {
+                User parentAuthor = userRepository.findById(parent.getUserId()).orElse(null);
+                com.socialpulse.app.feed.application.dto.response.OriginalPostData originalPost = 
+                    com.socialpulse.app.feed.application.dto.response.OriginalPostData.builder()
+                        .postId(parent.getId())
+                        .content(parent.getContent())
+                        .imageUrl(parent.getImageUrl())
+                        .topicSlugs(parent.getTopicSlugs())
+                        .userId(parent.getUserId())
+                        .username(parentAuthor != null ? parentAuthor.getUsername() : null)
+                        .userAvatar(parentAuthor != null && parentAuthor.getProfile() != null ? parentAuthor.getProfile().getAvatarUrl() : null)
+                        .createdAt(parent.getCreatedAt())
+                        .build();
+                response.setOriginalPost(originalPost);
+            }
+        }
+
+        return response;
     }
 
     private int toVote(ReactionType reactionType) {

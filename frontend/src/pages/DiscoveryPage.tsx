@@ -4,6 +4,7 @@ import { useNavigate, useSearchParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
 import {
   getPostsByHashtag,
@@ -114,10 +115,10 @@ export default function DiscoveryPage() {
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr] xl:grid-cols-[280px_1fr] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         <AppSidebar active="discovery" />
 
-        <div className="flex min-w-0 flex-col gap-6">
+        <div className="flex min-w-0 flex-col gap-6 pb-24 lg:pb-10">
 
         <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
           <div className="flex flex-col gap-4 md:flex-row md:items-center">
@@ -162,7 +163,7 @@ export default function DiscoveryPage() {
           </div>
         </section>
 
-          <div className="grid gap-6 lg:grid-cols-[1fr_280px]">
+          <div className="grid gap-6 grid-cols-1 lg:grid-cols-[1fr_280px]">
           <section className="rounded-2xl border border-slate-200/80 bg-white p-5 shadow-sm dark:border-[#2a2a2a] dark:bg-[#1e1e1e]">
             {loading ? (
               <div className="flex justify-center py-16">
@@ -262,6 +263,7 @@ export default function DiscoveryPage() {
           </div>
         </div>
       </div>
+      <BottomNavBar active="discovery" />
     </div>
   );
 }

@@ -11,6 +11,7 @@ from .types import TrainingHistoryPoint, TrainingRow
 def generate_training_visualizations(
     output_dir: Path,
     rows: list[TrainingRow],
+    splits: dict[str, list[TrainingRow]],
     history: list[TrainingHistoryPoint],
     feature_importances: dict[str, float],
 ) -> dict[str, str]:
@@ -19,6 +20,9 @@ def generate_training_visualizations(
 
     plots: dict[str, str] = {}
     plots["label_distribution"] = str(_plot_label_distribution(output_dir / "label_distribution.png", rows))
+    plots["split_label_distribution"] = str(
+        _plot_split_label_distribution(output_dir / "split_label_distribution.png", splits)
+    )
     if history:
         plots["training_curves"] = str(_plot_training_curves(output_dir / "training_curves.png", history))
     if feature_importances:
@@ -44,6 +48,27 @@ def _plot_label_distribution(path: Path, rows: list[TrainingRow]) -> Path:
     ax.set_xlabel("Label")
     ax.set_ylabel("Frequency")
     ax.grid(alpha=0.2)
+    fig.tight_layout()
+    fig.savefig(path, dpi=150)
+    plt.close(fig)
+    return path
+
+
+def _plot_split_label_distribution(path: Path, splits: dict[str, list[TrainingRow]]) -> Path:
+    import matplotlib.pyplot as plt
+
+    fig, ax = plt.subplots(figsize=(10, 6))
+    colors = {"train": "#2563eb", "validation": "#f59e0b", "test": "#16a34a"}
+    for name, rows in splits.items():
+        labels = np.array([row.label for row in rows], dtype=np.float32)
+        if len(labels) == 0:
+            continue
+        ax.hist(labels, bins=40, alpha=0.45, label=name, color=colors.get(name))
+    ax.set_title("Label Distribution by Split")
+    ax.set_xlabel("Label")
+    ax.set_ylabel("Frequency")
+    ax.grid(alpha=0.2)
+    ax.legend()
     fig.tight_layout()
     fig.savefig(path, dpi=150)
     plt.close(fig)
@@ -90,7 +115,7 @@ def _plot_feature_importance(path: Path, feature_importances: dict[str, float]) 
     values = [item[1] for item in ordered]
 
     fig, ax = plt.subplots(figsize=(10, 7))
-    ax.barh(labels[::-1], values[::-1], color="#7c3aed")
+    ax.barh(labels[::-1], values[::-1], color="#2563eb")
     ax.set_title("Top Feature Importances")
     ax.set_xlabel("Importance")
     ax.grid(axis="x", alpha=0.2)

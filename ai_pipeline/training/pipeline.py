@@ -13,19 +13,19 @@ from .arguments import TrainingArguments
 from .feature_engineering import PushshiftFeatureEngineering
 from .scanner import PushshiftDatasetScanner
 from .system_info import collect_runtime_info
-from .trainer import GradientBoostedTreeTrainer
+from .trainer import LightGbmRankingTrainer
 from .types import Metrics, TrainingRunResult
 from .visualization import generate_training_visualizations
 
 _DATASET_NAME = "pushshift_reddit_apr2019"
-_LABEL_STRATEGY = "log_popularity_proxy_personalized"
+_LABEL_STRATEGY = "log_popularity_proxy_viewer_time_hard_negative"
 
 
 class PushshiftTrainingPipeline:
     def __init__(self):
         self._scanner = PushshiftDatasetScanner()
         self._feature_eng = PushshiftFeatureEngineering()
-        self._trainer = GradientBoostedTreeTrainer()
+        self._trainer = LightGbmRankingTrainer()
 
     def run(self, arguments: TrainingArguments) -> TrainingRunResult:
         arguments.validate()
@@ -38,6 +38,7 @@ class PushshiftTrainingPipeline:
         post_author_map = {post.post_id: post.author for post in scan_result.sampled_posts}
 
         interactions: dict = {}
+        post_interactions: dict = {}
         interaction_stats = {"comments_scanned": 0, "interactions_extracted": 0}
         if arguments.comments_path:
             interaction_result = self._scanner.scan_interactions(
@@ -47,36 +48,37 @@ class PushshiftTrainingPipeline:
                 arguments,
             )
             interactions = interaction_result.interactions
+            post_interactions = interaction_result.post_interactions
             interaction_stats = interaction_result.stats
 
         dataset = self._feature_eng.build_training_dataset(
             scan_result.sampled_posts,
             scan_result.author_aggregates,
             interactions,
-            arguments.negative_samples_per_post,
+            post_interactions,
+            arguments.negative_samples_per_positive,
+            arguments.max_positive_viewers_per_post,
+            arguments.seed,
         )
         split = self._feature_eng.split_rows(dataset.rows, arguments.validation_ratio, arguments.test_ratio)
         if not split.train_rows or not split.validation_rows or not split.test_rows:
             raise RuntimeError("Unable to build train, validation, and test splits.")
 
         trained_model = self._trainer.train(arguments, split.train_rows, split.validation_rows)
-        test_metrics = self._trainer.evaluate(trained_model.backend, trained_model.runtime_model, split.test_rows)
+        test_metrics = self._trainer.evaluate(trained_model.runtime_model, split.test_rows)
         train_label_mean = float(np.mean([row.label for row in split.train_rows]))
         validation_baseline_metrics = self._trainer.evaluate_baseline(split.validation_rows, train_label_mean)
         test_baseline_metrics = self._trainer.evaluate_baseline(split.test_rows, train_label_mean)
         evaluation_diagnostics = {
             "train": self._trainer.evaluation_diagnostics(
-                trained_model.backend,
                 trained_model.runtime_model,
                 split.train_rows,
             ),
             "validation": self._trainer.evaluation_diagnostics(
-                trained_model.backend,
                 trained_model.runtime_model,
                 split.validation_rows,
             ),
             "test": self._trainer.evaluation_diagnostics(
-                trained_model.backend,
                 trained_model.runtime_model,
                 split.test_rows,
             ),
@@ -85,8 +87,9 @@ class PushshiftTrainingPipeline:
                 "validation": _metrics_to_test_dict(validation_baseline_metrics),
                 "test": _metrics_to_test_dict(test_baseline_metrics),
             },
+            "split_integrity": _split_integrity(split),
+            "feature_importance": _feature_importance_diagnostics(trained_model.feature_importances),
         }
-        evaluation_warnings = _build_evaluation_warnings(evaluation_diagnostics, final_metrics=None)
         final_metrics = Metrics(
             train_rmse=trained_model.metrics.train_rmse,
             validation_rmse=trained_model.metrics.validation_rmse,
@@ -108,6 +111,11 @@ class PushshiftTrainingPipeline:
         plot_paths = generate_training_visualizations(
             plots_output_dir,
             dataset.rows,
+            {
+                "train": split.train_rows,
+                "validation": split.validation_rows,
+                "test": split.test_rows,
+            },
             trained_model.history,
             trained_model.feature_importances,
         )
@@ -138,10 +146,9 @@ class PushshiftTrainingPipeline:
             summary=summary,
             preprocessing=dataset.preprocessing,
             model_backend=trained_model.backend,
-            model_dump=trained_model.model_dump,
         )
 
-        self._persist_runtime_model(arguments.output_path, trained_model.backend, trained_model.runtime_model)
+        self._persist_runtime_model(arguments.output_path, trained_model.runtime_model)
         js.write_json(arguments.output_path, artifact)
         if arguments.metrics_output_path:
             js.write_json(arguments.metrics_output_path, summary)
@@ -226,13 +233,14 @@ class PushshiftTrainingPipeline:
                 "validation_ratio": arguments.validation_ratio,
                 "test_ratio": arguments.test_ratio,
                 "negative_samples_per_post": arguments.negative_samples_per_post,
-                "trainer_backend": arguments.trainer_backend,
+                "negative_samples_per_positive": arguments.negative_samples_per_positive,
+                "max_positive_viewers_per_post": arguments.max_positive_viewers_per_post,
                 "device": arguments.device,
                 "n_jobs": arguments.n_jobs,
                 "allow_cpu_fallback": arguments.allow_cpu_fallback,
                 "seed": arguments.seed,
             },
-            "split_strategy": "time_ordered_train_validation_test",
+            "split_strategy": "time_ordered_positive_event_grouped_train_validation_test",
             "runtime": {
                 "duration_seconds": duration_seconds,
                 "hardware": runtime_info,
@@ -261,7 +269,6 @@ class PushshiftTrainingPipeline:
         summary: dict,
         preprocessing: dict,
         model_backend: str,
-        model_dump: dict | None,
     ) -> dict:
         artifact = {
             "artifact_version": "1",
@@ -273,19 +280,15 @@ class PushshiftTrainingPipeline:
             "preprocessing": preprocessing,
             "training_summary": summary,
         }
-        if model_backend == "xgboost":
-            artifact["model_file"] = "model.ubj"
-        else:
-            artifact["model_dump"] = model_dump
+        artifact["model_file"] = "model.txt"
         return artifact
 
     @staticmethod
-    def _persist_runtime_model(output_path: Path, model_backend: str, runtime_model) -> None:
-        if model_backend != "xgboost":
-            return
-        sidecar_path = output_path.with_suffix(".ubj")
+    def _persist_runtime_model(output_path: Path, runtime_model) -> None:
+        sidecar_path = output_path.with_suffix(".txt")
         sidecar_path.parent.mkdir(parents=True, exist_ok=True)
-        runtime_model.save_model(sidecar_path)
+        best_iteration = getattr(runtime_model, "best_iteration", None) or -1
+        runtime_model.save_model(str(sidecar_path), num_iteration=best_iteration)
 
 
 def _metrics_to_test_dict(metrics: Metrics) -> dict[str, float]:
@@ -307,11 +310,22 @@ def _build_evaluation_warnings(evaluation_diagnostics: dict, final_metrics: Metr
     validation_label = validation.get("label_stats", {})
     test_label = test.get("label_stats", {})
     test_ranking = test.get("ranking", {})
+    validation_ranking = validation.get("ranking", {})
+    baseline = evaluation_diagnostics.get("mean_label_baseline", {})
+    split_integrity = evaluation_diagnostics.get("split_integrity", {})
+    feature_importance = evaluation_diagnostics.get("feature_importance", {})
 
     if test_ranking.get("ranked_group_count", 0) < 1000:
         warnings.append(
             "test ranking metrics have low support; fewer than 1000 test groups contain mixed labels"
         )
+    test_group_count = int(test_ranking.get("group_count", 0) or 0)
+    if test_group_count > 0 and (int(test_ranking.get("ranked_group_count", 0) or 0) / test_group_count) < 0.2:
+        warnings.append("fewer than 20% of test viewer groups contain mixed labels; ranking metrics may be inflated")
+    if float(validation_ranking.get("pairwise_accuracy", 1.0) or 0.0) < 0.55:
+        warnings.append("validation pairwise accuracy is close to random; personalization signal is weak")
+    if float(test_ranking.get("pairwise_accuracy", 1.0) or 0.0) < 0.55:
+        warnings.append("test pairwise accuracy is close to random; personalization signal is weak")
     if test_label.get("zero_ratio", 0.0) > 0.9:
         warnings.append("test labels are highly sparse; more than 90% of test rows have zero relevance")
     if train_label and test_label:
@@ -328,5 +342,61 @@ def _build_evaluation_warnings(evaluation_diagnostics: dict, final_metrics: Metr
             warnings.append("validation/test label distribution is shifted; pilot scan limits may be too small")
     if final_metrics and final_metrics.test_r2 < 0.0:
         warnings.append("test R2 is negative; the model underperforms the test-set mean baseline on absolute labels")
+    if final_metrics:
+        if final_metrics.validation_rmse > 0 and final_metrics.train_rmse < final_metrics.validation_rmse * 0.75:
+            warnings.append("train RMSE is much lower than validation RMSE; possible overfitting")
+        if final_metrics.test_rmse > 0 and final_metrics.validation_rmse < final_metrics.test_rmse * 0.75:
+            warnings.append("validation RMSE is much lower than test RMSE; inspect split drift before trusting the model")
+        if final_metrics.validation_ndcg_k >= 0.995 or final_metrics.test_ndcg_k >= 0.995:
+            warnings.append("NDCG is near-perfect; verify leakage diagnostics before accepting the model")
+        baseline_validation = baseline.get("validation", {})
+        baseline_test = baseline.get("test", {})
+        validation_ndcg_uplift = final_metrics.validation_ndcg_k - float(baseline_validation.get("ndcg_k", 0.0) or 0.0)
+        test_ndcg_uplift = final_metrics.test_ndcg_k - float(baseline_test.get("ndcg_k", 0.0) or 0.0)
+        if validation_ndcg_uplift < 0.02:
+            warnings.append("validation NDCG uplift over mean-label baseline is below 0.02")
+        if test_ndcg_uplift < 0.02:
+            warnings.append("test NDCG uplift over mean-label baseline is below 0.02")
+    if split_integrity:
+        overlaps = split_integrity.get("split_key_overlap", {})
+        if any(int(value) > 0 for value in overlaps.values()):
+            warnings.append("split-key leakage detected across train/validation/test splits")
+    if feature_importance and float(feature_importance.get("top_feature_share", 0.0)) > 0.7:
+        warnings.append("one feature explains more than 70% of total gain; inspect feature leakage or over-reliance")
 
     return warnings
+
+
+def _split_integrity(split) -> dict[str, dict[str, int] | int]:
+    train_keys = {row.split_key or row.post_id for row in split.train_rows}
+    validation_keys = {row.split_key or row.post_id for row in split.validation_rows}
+    test_keys = {row.split_key or row.post_id for row in split.test_rows}
+    train_posts = {row.post_id for row in split.train_rows}
+    validation_posts = {row.post_id for row in split.validation_rows}
+    test_posts = {row.post_id for row in split.test_rows}
+    return {
+        "train_unique_split_keys": len(train_keys),
+        "validation_unique_split_keys": len(validation_keys),
+        "test_unique_split_keys": len(test_keys),
+        "split_key_overlap": {
+            "train_validation": len(train_keys & validation_keys),
+            "train_test": len(train_keys & test_keys),
+            "validation_test": len(validation_keys & test_keys),
+        },
+        "actual_post_id_overlap": {
+            "train_validation": len(train_posts & validation_posts),
+            "train_test": len(train_posts & test_posts),
+            "validation_test": len(validation_posts & test_posts),
+        },
+    }
+
+
+def _feature_importance_diagnostics(feature_importances: dict[str, float]) -> dict[str, float | str]:
+    if not feature_importances:
+        return {"top_feature": "", "top_feature_share": 0.0}
+    total = sum(max(float(value), 0.0) for value in feature_importances.values())
+    top_feature, top_value = max(feature_importances.items(), key=lambda item: item[1])
+    return {
+        "top_feature": top_feature,
+        "top_feature_share": float(max(top_value, 0.0) / total) if total > 0 else 0.0,
+    }

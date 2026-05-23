@@ -82,7 +82,7 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.HOME,
     element: HomePage,
-    isPrivate: true,
+    isPrivate: false,
   },
   {
     path: PATHS.DISCOVERY,
@@ -122,7 +122,7 @@ export const routesConfig: RouteConfig[] = [
   {
     path: PATHS.USER_PROFILE,
     element: ProfilePage,
-    isPrivate: false,
+    isPrivate: true,
   },
   {
     path: PATHS.ADMIN_REPORTS,

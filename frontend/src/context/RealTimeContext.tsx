@@ -127,6 +127,14 @@ export const RealTimeProvider: React.FC<{ children: React.ReactNode }> = ({ chil
                   console.error("Error parsing post stats event data:", error);
                 }
               },
+              feed_refresh: (payload) => {
+                try {
+                  const refresh = JSON.parse(payload);
+                  window.dispatchEvent(new CustomEvent("realtime:feed_refresh", { detail: refresh }));
+                } catch (error) {
+                  console.error("Error parsing feed refresh event data:", error);
+                }
+              },
             },
             controller.signal,
           );

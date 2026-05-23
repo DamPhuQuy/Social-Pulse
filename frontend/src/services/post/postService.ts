@@ -53,6 +53,17 @@ export interface PostUpdateResponse {
   updatedAt: string;
 }
 
+export interface OriginalPostData {
+  postId: number;
+  content: string | null;
+  imageUrl: string | null;
+  topicSlugs: string[];
+  userId: number;
+  username: string | null;
+  userAvatar: string | null;
+  createdAt: string;
+}
+
 export interface FeedItem {
   postId: number;
   parentPostId: number | null;
@@ -71,10 +82,13 @@ export interface FeedItem {
   myVote: number | null;
   aiScore: number | null;
   source: string | null;
+  rankingProvider: "AI" | "FALLBACK" | null;
+  featureSchemaVersion: string | null;
   rankedAt: string | null;
   privacy: Privacy;
   createdAt: string;
   updatedAt: string | null;
+  originalPost: OriginalPostData | null;
 }
 
 export type PulseReaction = "UPVOTE";

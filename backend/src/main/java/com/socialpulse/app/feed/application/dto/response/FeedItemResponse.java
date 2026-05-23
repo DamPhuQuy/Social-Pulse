@@ -34,8 +34,11 @@ public class FeedItemResponse {
     private Integer myVote;
     private Double aiScore;
     private String source;
+    private String rankingProvider;
+    private String featureSchemaVersion;
     private LocalDateTime rankedAt;
     private Privacy privacy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private OriginalPostData originalPost;
 }

@@ -15,6 +15,7 @@ import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUs
 import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
+import com.socialpulse.app.feed.domain.enums.RankingProvider;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
@@ -55,11 +56,11 @@ public class FeedRankingService implements RankFeedUseCase {
         List<CandidatePost> candidates = selectCandidates.selectCandidates(userId);
         if (candidates.isEmpty()) return List.of();
 
-        List<RankingResponse> scores = resolveScores(userId, candidates);
+        ScoreResolution resolution = resolveScores(userId, candidates);
         Map<Long, CandidatePost> candidateMap = candidates.stream()
                 .collect(Collectors.toMap(c -> c.getPost().getId(), c -> c));
 
-        List<FeedItem> ranked = scores.stream()
+        List<FeedItem> ranked = resolution.scores().stream()
                 .map(score -> {
                     CandidatePost candidate = candidateMap.get(score.getPostId());
                     double boosted = scoreBoost.boost(score.getScore() != null ? score.getScore() : 0.0, userId, candidate);
@@ -68,6 +69,8 @@ public class FeedRankingService implements RankFeedUseCase {
                             .userId(userId)
                             .aiScore(boosted)
                             .source(candidate.getSource())
+                            .rankingProvider(resolution.provider())
+                            .featureSchemaVersion(featureSchemaVersion)
                             .rankedAt(LocalDateTime.now())
                             .build();
                 })
@@ -91,11 +94,11 @@ public class FeedRankingService implements RankFeedUseCase {
         List<CandidatePost> candidates = selectCandidates.selectCandidatesByTopic(topicSlug);
         if (candidates.isEmpty()) return List.of();
 
-        List<RankingResponse> scores = resolveScores(userId, candidates);
+        ScoreResolution resolution = resolveScores(userId, candidates);
         Map<Long, CandidatePost> candidateMap = candidates.stream()
                 .collect(Collectors.toMap(c -> c.getPost().getId(), c -> c));
 
-        List<FeedItem> ranked = scores.stream()
+        List<FeedItem> ranked = resolution.scores().stream()
                 .map(score -> {
                     CandidatePost candidate = candidateMap.get(score.getPostId());
                     double boosted = scoreBoost.boost(score.getScore() != null ? score.getScore() : 0.0, userId, candidate);
@@ -104,6 +107,8 @@ public class FeedRankingService implements RankFeedUseCase {
                             .userId(userId)
                             .aiScore(boosted)
                             .source(candidate.getSource())
+                            .rankingProvider(resolution.provider())
+                            .featureSchemaVersion(featureSchemaVersion)
                             .rankedAt(LocalDateTime.now())
                             .build();
                 })
@@ -115,15 +120,16 @@ public class FeedRankingService implements RankFeedUseCase {
         return ranked.subList(start, Math.min(start + size, ranked.size()));
     }
 
-    private List<RankingResponse> resolveScores(Long userId, List<CandidatePost> candidates) {
+    private ScoreResolution resolveScores(Long userId, List<CandidatePost> candidates) {
         List<RankingFeatures> features = extractFeatures.extractFeatures(userId, candidates);
         if (!features.isEmpty()) {
             List<RankingResponse> predicted = predictRanking.predictScores(
                     RankingRequest.builder().featureSchemaVersion(featureSchemaVersion).features(features).build());
-            if (isValid(predicted, candidates)) return predicted;
-            log.debug("AI prediction invalid for userId={}, using fallback", userId);
+            if (isValid(predicted, candidates)) return new ScoreResolution(predicted, RankingProvider.AI);
+            log.warn("AI prediction invalid for userId={}, reason={}, using fallback",
+                    userId, validationFailureReason(predicted, candidates));
         }
-        return fallback.rank(candidates);
+        return new ScoreResolution(fallback.rank(candidates), RankingProvider.FALLBACK);
     }
 
     private boolean isValid(List<RankingResponse> scores, List<CandidatePost> candidates) {
@@ -134,5 +140,28 @@ public class FeedRankingService implements RankFeedUseCase {
                 s.getPostId() != null && s.getScore() != null
                         && featureSchemaVersion.equals(s.getFeatureSchemaVersion())
                         && ids.contains(s.getPostId()));
+    }
+
+    private String validationFailureReason(List<RankingResponse> scores, List<CandidatePost> candidates) {
+        if (scores == null) return "null response from AI";
+        if (scores.isEmpty()) return "empty response from AI";
+
+        Set<Long> ids = candidates.stream().map(c -> c.getPost().getId()).collect(Collectors.toSet());
+        if (scores.size() != ids.size()) {
+            return "response size " + scores.size() + " does not match candidate size " + ids.size();
+        }
+
+        return scores.stream()
+                .filter(s -> s.getPostId() == null || s.getScore() == null
+                        || !featureSchemaVersion.equals(s.getFeatureSchemaVersion())
+                        || !ids.contains(s.getPostId()))
+                .findFirst()
+                .map(s -> "invalid row postId=" + s.getPostId()
+                        + ", score=" + s.getScore()
+                        + ", schema=" + s.getFeatureSchemaVersion())
+                .orElse("unknown validation mismatch");
+    }
+
+    private record ScoreResolution(List<RankingResponse> scores, RankingProvider provider) {
     }
 }

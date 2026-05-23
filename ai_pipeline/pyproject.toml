@@ -6,7 +6,7 @@ requires-python = ">=3.11"
 dependencies = [
     "numpy>=1.26.0",
     "scikit-learn>=1.5.0",
-    "xgboost>=2.1.1",
+    "lightgbm>=4.5.0",
     "matplotlib>=3.9.0",
     "psutil>=6.0.0",
     "zstandard>=0.22.0",
@@ -27,6 +27,7 @@ package = true
 [tool.setuptools]
 packages = [
     "ai_pipeline",
+    "ai_pipeline.api",
     "ai_pipeline.inference",
     "ai_pipeline.shared",
     "ai_pipeline.training",

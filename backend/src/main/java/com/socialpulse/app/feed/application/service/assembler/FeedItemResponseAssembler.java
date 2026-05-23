@@ -12,7 +12,9 @@ import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.common.utils.ReactionType;
 import com.socialpulse.app.feed.application.dto.response.FeedItemResponse;
+import com.socialpulse.app.feed.application.dto.response.OriginalPostData;
 import com.socialpulse.app.feed.domain.model.FeedItem;
+import com.socialpulse.app.post.domain.enums.PostType;
 import com.socialpulse.app.post.domain.enums.Privacy;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.model.PostReactions;
@@ -56,15 +58,36 @@ public class FeedItemResponseAssembler {
                 .filter(Objects::nonNull)
                 .collect(Collectors.toSet());
 
-        Map<Long, User> userById = userRepository.findByIds(authorIds).stream()
+        // ── Collect parent post IDs for SHARE-type posts ──────────────────
+        Set<Long> parentPostIds = postById.values().stream()
+                .filter(p -> p.getType() == PostType.SHARE && p.getParentPostId() != null)
+                .map(Post::getParentPostId)
+                .filter(Objects::nonNull)
+                .collect(Collectors.toSet());
+
+        Map<Long, Post> parentPostById = parentPostIds.isEmpty()
+                ? java.util.Collections.emptyMap()
+                : postRepository.findByIds(parentPostIds).stream()
+                        .filter(p -> p.getDeletedAt() == null)   // show even if private/toxic
+                        .collect(Collectors.toMap(Post::getId, Function.identity()));
+
+        // Collect all author IDs (sharer authors + original post authors)
+        Set<Long> allAuthorIds = new java.util.HashSet<>(authorIds);
+        parentPostById.values().stream()
+                .map(Post::getUserId)
+                .filter(Objects::nonNull)
+                .forEach(allAuthorIds::add);
+
+        Map<Long, User> userById = userRepository.findByIds(allAuthorIds).stream()
                 .collect(Collectors.toMap(User::getId, Function.identity()));
 
-        Map<Long, ReactionType> reactionByPostId = postReactionsRepository
-                .findByUserIdAndPostIds(viewerUserId, postIds).stream()
-                .collect(Collectors.toMap(PostReactions::getPostId, PostReactions::getReactionType));
+        Map<Long, ReactionType> reactionByPostId = viewerUserId != null
+                ? postReactionsRepository.findByUserIdAndPostIds(viewerUserId, postIds).stream()
+                        .collect(Collectors.toMap(PostReactions::getPostId, PostReactions::getReactionType))
+                : java.util.Collections.emptyMap();
 
         return feedItems.stream()
-                .map(item -> toResponse(item, postById.get(item.getPostId()), userById, reactionByPostId))
+                .map(item -> toResponse(item, postById.get(item.getPostId()), userById, reactionByPostId, parentPostById))
                 .filter(Objects::nonNull)
                 .toList();
     }
@@ -73,7 +96,8 @@ public class FeedItemResponseAssembler {
             FeedItem item,
             Post post,
             Map<Long, User> userById,
-            Map<Long, ReactionType> reactionByPostId) {
+            Map<Long, ReactionType> reactionByPostId,
+            Map<Long, Post> parentPostById) {
         if (post == null) {
             return null;
         }
@@ -81,6 +105,25 @@ public class FeedItemResponseAssembler {
         User author = userById.get(post.getUserId());
         if (author == null) {
             return null;
+        }
+
+        // Build embedded original-post snapshot for SHARE-type items
+        OriginalPostData originalPost = null;
+        if (post.getType() == PostType.SHARE && post.getParentPostId() != null) {
+            Post parent = parentPostById.get(post.getParentPostId());
+            if (parent != null) {
+                User parentAuthor = userById.get(parent.getUserId());
+                originalPost = OriginalPostData.builder()
+                        .postId(parent.getId())
+                        .content(parent.getContent())
+                        .imageUrl(parent.getImageUrl())
+                        .topicSlugs(parent.getTopicSlugs())
+                        .userId(parent.getUserId())
+                        .username(parentAuthor != null ? parentAuthor.getUsername() : null)
+                        .userAvatar(parentAuthor != null ? extractAvatar(parentAuthor) : null)
+                        .createdAt(parent.getCreatedAt())
+                        .build();
+            }
         }
 
         ReactionType myReaction = reactionByPostId.get(post.getId());
@@ -102,10 +145,13 @@ public class FeedItemResponseAssembler {
                 .myVote(toVote(myReaction))
                 .aiScore(item.getAiScore())
                 .source(item.getSource() != null ? item.getSource().name() : null)
+                .rankingProvider(item.getRankingProvider() != null ? item.getRankingProvider().name() : null)
+                .featureSchemaVersion(item.getFeatureSchemaVersion())
                 .rankedAt(item.getRankedAt())
                 .privacy(post.getPrivacy())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())
+                .originalPost(originalPost)
                 .build();
     }
 

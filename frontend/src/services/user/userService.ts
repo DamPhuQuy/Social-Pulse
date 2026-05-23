@@ -1,4 +1,5 @@
 import { apiClient } from "@/lib/axiosClient";
+import type { OriginalPostData } from "@/services/post/postService";
 
 export interface UserProfile {
   userId: number;
@@ -36,6 +37,7 @@ export interface UserPost {
   privacy: "PUBLIC" | "FRIENDS_ONLY" | "PRIVATE";
   createdAt: string;
   updatedAt: string | null;
+  originalPost: OriginalPostData | null;
 }
 
 export interface PageResponse<T> {
@@ -63,6 +65,19 @@ export async function getMyProfile(): Promise<{ ok: boolean; data?: UserProfile;
 export async function getUserProfile(username: string): Promise<{ ok: boolean; data?: UserProfile; message?: string }> {
   try {
     const res = await apiClient.get<{ code: number; message: string; data: UserProfile }>(`/users/profile/${username}`);
+    return { ok: true, data: res.data.data };
+  } catch (err: unknown) {
+    const axiosErr = err as { response?: { data?: { message?: string } } };
+    return {
+      ok: false,
+      message: axiosErr?.response?.data?.message ?? "Failed to fetch profile.",
+    };
+  }
+}
+
+export async function getUserProfileById(userId: number): Promise<{ ok: boolean; data?: UserProfile; message?: string }> {
+  try {
+    const res = await apiClient.get<{ code: number; message: string; data: UserProfile }>(`/users/profile/id/${userId}`);
     return { ok: true, data: res.data.data };
   } catch (err: unknown) {
     const axiosErr = err as { response?: { data?: { message?: string } } };

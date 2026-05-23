@@ -2,6 +2,7 @@ import CommentSection from "@/components/comment/CommentSection";
 import CreatePostModal from "@/components/post/CreatePostModal";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
+import BottomNavBar from "@/components/social/BottomNavBar";
 import ReportModal from "@/components/social/ReportModal";
 import UserListModal from "@/components/social/UserListModal";
 import { PATHS } from "@/constants/paths";
@@ -10,6 +11,7 @@ import {
   deletePost,
   reactPost,
   uploadMedia,
+  type OriginalPostData,
   type Privacy,
   type PulseReaction,
 } from "@/services/post/postService";
@@ -46,6 +48,7 @@ import {
   Crop,
   Edit3,
   Eye,
+  Link,
   Loader2,
   MessageCircle,
   MessageSquare,
@@ -79,6 +82,7 @@ interface ProfilePostProps {
   isBookmarked: boolean;
   onToggleBookmark: (postId: number) => void;
   onReport: (postId: number) => void;
+  onShare?: (post: UserPost) => void;
 }
 
 function ProfilePost({
@@ -92,10 +96,12 @@ function ProfilePost({
   isBookmarked,
   onToggleBookmark,
   onReport,
+  onShare,
 }: ProfilePostProps) {
   const [showComments, setShowComments] = useState(false);
   const [cmtCount, setCmtCount] = useState(post.cmtCount);
   const [showMenu, setShowMenu] = useState(false);
+  const navigate = useNavigate();
   const isUpvoted = post.myVote === 1;
   const isAuthor = currentUserId === post.userId;
 
@@ -171,6 +177,11 @@ function ProfilePost({
 
           <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="profile" />
 
+          {/* ── Quoted original post for SHARE type ── */}
+          {post.type === "SHARE" && (
+            <ProfileOriginalPostBlock originalPost={post.originalPost} />
+          )}
+
           {post.topicSlugs?.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {post.topicSlugs.map((topic) => (
@@ -230,11 +241,14 @@ function ProfilePost({
             </button>
 
             <button
-              onClick={() => {
-                navigator.clipboard.writeText(
-                  `${window.location.origin}/posts/${post.postId}`,
-                );
-                toast.success("Đã sao chép liên kết bài viết.");
+              onClick={(e) => {
+                e.stopPropagation();
+                if (!currentUserId) {
+                  toast.error("Vui lòng đăng nhập để chia sẻ bài viết.");
+                  navigate(PATHS.LOGIN);
+                  return;
+                }
+                onShare?.(post);
               }}
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
@@ -278,6 +292,7 @@ export default function ProfilePage() {
     () => new Set(),
   );
   const [editingPost, setEditingPost] = useState<UserPost | null>(null);
+  const [sharingPost, setSharingPost] = useState<UserPost | null>(null);
   const [followLoading, setFollowLoading] = useState(false);
   const [followersList, setFollowersList] = useState<UserSummary[]>([]);
   const [followingList, setFollowingList] = useState<UserSummary[]>([]);
@@ -526,7 +541,7 @@ export default function ProfilePage() {
     });
   };
 
-  const handleReportSuccess = (options: {
+  const handleReportSuccess = async (options: {
     hidePost: boolean;
     hideUser: boolean;
   }) => {
@@ -534,6 +549,13 @@ export default function ProfilePage() {
 
     const reportedPost = posts.find((p) => p.postId === reportPostId);
     if (!reportedPost) return;
+
+    if (options.hideUser) {
+      await blockUser(reportedPost.userId);
+      setIsBlocked(true);
+      setProfile((prev) => (prev ? { ...prev, isFollowing: false } : null));
+      toast.success("Đã chặn người dùng này.");
+    }
 
     setPosts((prevPosts) => {
       let nextPosts = prevPosts;
@@ -881,7 +903,7 @@ export default function ProfilePage() {
     return (
       <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
         <AppHeader />
-        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
           <AppSidebar active="profile" />
           <div className="flex justify-center py-24">
             <Loader2 className="w-8 h-8 animate-spin text-blue-500" />
@@ -895,7 +917,7 @@ export default function ProfilePage() {
     return (
       <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
         <AppHeader />
-        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+        <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
           <AppSidebar active="profile" />
           <div className="flex flex-col items-center justify-center py-24 text-gray-500 dark:text-neutral-500">
             <h2 className="text-2xl font-bold mb-2 text-gray-900 dark:text-white">
@@ -926,12 +948,12 @@ export default function ProfilePage() {
       <AppHeader />
 
       {/* 3-COLUMN GRID */}
-      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-8 pt-24 px-6 lg:px-10">
+      <div className="w-full grid grid-cols-1 lg:grid-cols-[260px_1fr_320px] xl:grid-cols-[280px_1fr_350px] gap-6 lg:gap-8 pt-20 lg:pt-24 px-4 sm:px-6 lg:px-10">
         {/* LEFT COLUMN: SIDEBAR */}
         <AppSidebar active="profile" />
 
         {/* MIDDLE COLUMN: PROFILE HEADER & TIMELINE */}
-        <div className="flex flex-col gap-6 min-w-0">
+        <div className="flex flex-col gap-6 min-w-0 pb-24 lg:pb-10">
           {/* PROFILE CARD: COVER & AVATAR & BASIC DETAILS */}
           <div className="bg-white dark:bg-[#1e1e1e] rounded-2xl border border-slate-200/80 dark:border-[#2a2a2a] shadow-[0_4px_20px_rgba(0,0,0,0.03)] dark:shadow-[0_4px_25px_rgba(0,0,0,0.4)] overflow-hidden">
             {/* COVER */}
@@ -1199,6 +1221,7 @@ export default function ProfilePage() {
                   isBookmarked={bookmarkedPostIds.has(post.postId)}
                   onToggleBookmark={handleToggleBookmark}
                   onReport={setReportPostId}
+                  onShare={setSharingPost}
                 />
               ))
             )}
@@ -1331,6 +1354,20 @@ export default function ProfilePage() {
         currentUserAvatar={myProfile?.avatarUrl || undefined}
         currentUsername={myProfile?.displayName || myProfile?.username}
         onPostUpdated={handlePostUpdated}
+      />
+      <CreatePostModal
+        isOpen={!!sharingPost}
+        mode="create"
+        parentPostId={sharingPost?.postId}
+        parentPostAuthor={sharingPost?.username}
+        parentPostContent={sharingPost?.content}
+        onClose={() => setSharingPost(null)}
+        currentUserAvatar={myProfile?.avatarUrl || undefined}
+        currentUsername={myProfile?.displayName || myProfile?.username}
+        onPostCreated={() => {
+          setSharingPost(null);
+          loadData();
+        }}
       />
       <UserListModal
         isOpen={showFollowersModal}
@@ -1491,6 +1528,57 @@ export default function ProfilePage() {
             />
           </div>
         </div>
+      )}
+      <BottomNavBar active="profile" />
+    </div>
+  );
+}
+
+// ─── ProfileOriginalPostBlock ───────────────────────────────────────────────────
+function ProfileOriginalPostBlock({ originalPost }: { originalPost: OriginalPostData | null }) {
+  if (!originalPost) {
+    return (
+      <div className="mt-2 mb-3 px-4 py-3 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900/40 flex items-center gap-2 text-slate-400 dark:text-neutral-500">
+        <Link className="w-4 h-4 shrink-0" />
+        <span className="text-sm italic">Bài viết gốc không còn khả dụng.</span>
+      </div>
+    );
+  }
+
+  const imageUrls = originalPost.imageUrl
+    ? originalPost.imageUrl.split(",").map((u) => u.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <div className="mt-2 mb-3 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/30 overflow-hidden hover:border-slate-300 dark:hover:border-neutral-600 transition-colors">
+      {/* Original post header */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-100 dark:bg-neutral-800 shrink-0">
+          <SafeAvatar src={originalPost.userAvatar} alt={originalPost.username ?? "user"} />
+        </div>
+        <span className="text-sm font-bold text-slate-700 dark:text-neutral-300 truncate">
+          {originalPost.username ?? "Người dùng"}
+        </span>
+        <span className="text-xs text-slate-400 dark:text-neutral-500 shrink-0">
+          · {timeAgo(originalPost.createdAt)}
+        </span>
+      </div>
+
+      {/* Original post content */}
+      {originalPost.content && (
+        <p className="px-4 py-1 text-sm text-slate-700 dark:text-neutral-300 whitespace-pre-line break-words leading-relaxed line-clamp-5">
+          {originalPost.content}
+        </p>
+      )}
+
+      {/* Original post media */}
+      {imageUrls.length > 0 && (
+        <div className="px-4 pb-3 pt-1">
+          <PostMedia urls={imageUrls} variant="profile" />
+        </div>
+      )}
+      {!originalPost.content && imageUrls.length === 0 && (
+        <p className="px-4 pb-3 text-sm text-slate-400 dark:text-neutral-500 italic">Không có nội dung.</p>
       )}
     </div>
   );

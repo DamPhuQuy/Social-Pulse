@@ -16,6 +16,7 @@ import org.springframework.data.redis.core.StringRedisTemplate;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
+import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.model.Permission;
 import com.socialpulse.app.user.domain.model.Role;
@@ -26,12 +27,13 @@ class DeletePostServiceTest {
 
     @Mock private PostRepository postRepository;
     @Mock private StringRedisTemplate redisTemplate;
+    @Mock private SseEmitterRegistry sseEmitterRegistry;
 
     private DeletePostService service;
 
     @BeforeEach
     void setUp() {
-        service = new DeletePostService(postRepository, redisTemplate);
+        service = new DeletePostService(postRepository, redisTemplate, sseEmitterRegistry);
     }
 
     private CustomUserDetails userDetails(Long id) {

@@ -18,6 +18,6 @@ import lombok.NoArgsConstructor;
 @JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)
 public class RankingRequest {
     @Builder.Default
-    private String featureSchemaVersion = "v1";
+    private String featureSchemaVersion = "v2";
     private List<RankingFeatures> features;
 }

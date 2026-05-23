@@ -52,6 +52,7 @@ public interface PostMapper {
     @Mapping(target = "myVote", source = "myVote")
     @Mapping(target = "createdAt", source = "post.createdAt")
     @Mapping(target = "updatedAt", source = "post.updatedAt")
+    @Mapping(target = "originalPost", ignore = true)
     ViewPostResponse toViewPostResponse(Post post, User author, Integer myVote);
 
     PostUpdateResponse toPostUpdateResponse(Post post);

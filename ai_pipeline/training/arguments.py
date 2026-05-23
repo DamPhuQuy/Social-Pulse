@@ -36,7 +36,8 @@ class TrainingArguments:
     validation_ratio: float = 0.2
     test_ratio: float = 0.1
     negative_samples_per_post: int = 4
-    trainer_backend: str = "xgboost"
+    negative_samples_per_positive: int = 2
+    max_positive_viewers_per_post: int = 20
     device: str = "cuda"
     n_jobs: int = 0
     allow_cpu_fallback: bool = True
@@ -114,7 +115,11 @@ class TrainingArguments:
             validation_ratio=float_val("validation-ratio", 0.2),
             test_ratio=float_val("test-ratio", 0.1),
             negative_samples_per_post=int_val("negative-samples-per-post", 4),
-            trainer_backend=str_val("trainer-backend", "xgboost"),
+            negative_samples_per_positive=int_val(
+                "negative-samples-per-positive",
+                int_val("negative-samples-per-post", 2),
+            ),
+            max_positive_viewers_per_post=int_val("max-positive-viewers-per-post", 20),
             device=str_val("device", "cuda"),
             n_jobs=int_val("n-jobs", 0),
             allow_cpu_fallback=bool_val("allow-cpu-fallback", True),
@@ -155,8 +160,10 @@ class TrainingArguments:
             raise ValueError("validation_ratio + test_ratio must be less than 0.5.")
         if self.negative_samples_per_post < 0:
             raise ValueError("negative_samples_per_post must be non-negative.")
-        if self.trainer_backend not in {"xgboost", "sklearn"}:
-            raise ValueError("trainer_backend must be one of: xgboost, sklearn.")
+        if self.negative_samples_per_positive < 0:
+            raise ValueError("negative_samples_per_positive must be non-negative.")
+        if self.max_positive_viewers_per_post < 0:
+            raise ValueError("max_positive_viewers_per_post must be non-negative.")
         if self.device not in {"cuda", "cpu"}:
             raise ValueError("device must be either 'cuda' or 'cpu'.")
         if self.n_jobs < 0:

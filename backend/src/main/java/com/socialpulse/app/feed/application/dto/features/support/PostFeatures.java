@@ -19,12 +19,4 @@ public class PostFeatures {
     private Boolean hasMultimedia;
     private Boolean isSharePost;
     private Double postAgeHours;
-    private Double hotScore;
-    private Double upvoteRatio;
-    private Long upvoteCount;
-    private Long downvoteCount;
-    private Long commentCount;
-    private Long viewCount;
-    private Long shareCount;
-    private Double popularity;
 }

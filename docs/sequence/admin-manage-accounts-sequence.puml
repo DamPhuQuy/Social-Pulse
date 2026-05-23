@@ -1,0 +1,42 @@
+@startuml
+!theme plain
+
+title Admin User Management Sequence - PATCH /api/v1/admin/users/{userId}/ban
+
+autonumber
+
+actor Admin
+participant AdminController
+database UserRepository
+participant UserRoleService
+
+group Ban / Unban User Flow
+  Admin -> AdminController: PATCH /api/v1/admin/users/{userId}/ban\nPayload: [ban = true | false]
+  AdminController -> UserRepository: findById(userId)
+  UserRepository --> AdminController: User
+  
+  alt ban == true
+    AdminController -> AdminController: user.lockAccount()
+  else ban == false
+    AdminController -> AdminController: user.activeAccount()
+  end
+  
+  AdminController -> UserRepository: save(user)
+  UserRepository --> AdminController: savedUser
+  AdminController --> Admin: 200 OK\nApiResponse<Void>
+end
+
+group Change User Role Flow
+  Admin -> AdminController: PATCH /api/v1/admin/users/{userId}/role\nPayload: [roles]
+  AdminController -> UserRepository: findById(userId)
+  UserRepository --> AdminController: User
+  
+  AdminController -> UserRoleService: assignRoles(user, requestedRoles)
+  UserRoleService --> AdminController: void
+  
+  AdminController -> UserRepository: save(user)
+  UserRepository --> AdminController: savedUser
+  AdminController --> Admin: 200 OK\nApiResponse<Void>
+end
+
+@enduml

@@ -1,0 +1,50 @@
+@startuml
+!theme plain
+
+title User Block Endpoint Sequence - POST /api/v1/blocks/{userId}
+
+autonumber
+
+actor Member
+participant BlockController
+participant BlockUserUseCase
+participant BlockUserService
+database UserRepository
+database BlockRepository
+database FollowRepository
+
+Member -> BlockController: POST /api/v1/blocks/{userId}\n[Authorization]
+BlockController -> BlockUserUseCase: blockUser(blockedId, currentUser)
+BlockUserUseCase -> BlockUserService: blockUser(blockerId, blockedId)
+
+alt blockerId == blockedId
+  BlockUserService --> BlockController: throw CANNOT_BLOCK_YOURSELF
+  BlockController --> Member: 400 Bad Request
+end
+
+BlockUserService -> UserRepository: findById(blockerId)
+UserRepository --> BlockUserService: BlockerUser
+
+BlockUserService -> UserRepository: findById(blockedId)
+UserRepository --> BlockUserService: BlockedUser
+
+BlockUserService -> BlockRepository: existsByBlockerIdAndBlockedId(blockerId, blockedId)
+BlockRepository --> BlockUserService: exists (boolean)
+
+alt already blocked
+  BlockUserService --> BlockController: throw ALREADY_BLOCKED
+  BlockController --> Member: 400 Bad Request
+end
+
+BlockUserService -> BlockRepository: save(Block)
+BlockRepository --> BlockUserService: savedBlock
+
+BlockUserService -> FollowRepository: deleteByFollowerIdAndFollowingId(blockerId, blockedId)
+note right: Bidirectional follow cleanup
+BlockUserService -> FollowRepository: deleteByFollowerIdAndFollowingId(blockedId, blockerId)
+
+BlockUserService --> BlockUserUseCase: void
+BlockUserUseCase --> BlockController: void
+BlockController --> Member: 201 Created\nApiResponse<Void>
+
+@enduml

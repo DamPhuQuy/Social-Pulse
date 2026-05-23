@@ -22,9 +22,11 @@ import com.socialpulse.app.chat.domain.repository.MessageRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 
 @Service
 @Transactional
+@Slf4j
 @RequiredArgsConstructor
 public class SendMessageService implements SendMessageUseCase {
 
@@ -75,6 +77,8 @@ public class SendMessageService implements SendMessageUseCase {
 
         // 7. Publish domain event for message delivery
         Long recipientId = conversation.getOtherParticipant(senderId);
+        log.info("Publishing MessagePersistedEvent: messageId={}, conversationId={}, senderId={}, recipientId={}",
+                savedMessage.getId(), conversationId, senderId, recipientId);
         applicationEventPublisher.publishEvent(new MessagePersistedEvent(savedMessage, recipientId));
 
         // 8. Return MessageResponse
