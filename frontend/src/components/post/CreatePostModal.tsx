@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
+import React, { useEffect, useMemo, useRef, useState, type ChangeEvent, type ReactNode } from "react";
 import {
   ArrowLeft,
   Check,
@@ -60,8 +60,8 @@ const PRIVACY_OPTIONS: { value: Privacy; label: string; description: string; ico
 ];
 
 const MAX_CHARS = 5000;
-const MAX_TOTAL_SIZE_MB = 25;
-const MAX_FILES = 4;
+const MAX_TOTAL_SIZE_MB = 50;
+const MAX_FILES = 6;
 const MAX_TOPICS = 5;
 
 export default function CreatePostModal({
@@ -90,6 +90,8 @@ export default function CreatePostModal({
   const [uploadProgress, setUploadProgress] = useState(0);
 
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
 
   useEffect(() => {
     if (!isOpen) return;
@@ -98,6 +100,17 @@ export default function CreatePostModal({
       if (res.ok && res.data) setTopics(res.data);
       else toast.error(res.message ?? "Không tải được danh sách chủ đề.");
     });
+  }, [isOpen]);
+
+  useEffect(() => {
+    if (isOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
   }, [isOpen]);
 
   useEffect(() => {
@@ -145,6 +158,14 @@ export default function CreatePostModal({
     if (effectiveLength <= 280) return 13;
     return Math.max(10, Math.round(13 * Math.sqrt(280 / effectiveLength)));
   })();
+
+  useEffect(() => {
+    if (textareaRef.current) {
+      textareaRef.current.style.fontSize = `${dynamicFontSize}px`;
+      textareaRef.current.style.overflowWrap = "anywhere";
+      textareaRef.current.style.wordBreak = "break-word";
+    }
+  }, [dynamicFontSize, content]);
 
   if (!isOpen) return null;
 
@@ -283,7 +304,11 @@ export default function CreatePostModal({
     <div className="fixed inset-0 z-[100] flex items-end sm:items-center justify-center sm:p-4">
       <div className="absolute inset-0 bg-black/55 backdrop-blur-sm" onClick={handleClose} />
       <div className="relative w-full sm:max-w-2xl h-[92dvh] sm:h-[620px] bg-white dark:bg-[#1a1a1a] rounded-t-2xl sm:rounded-xl shadow-2xl overflow-hidden flex flex-col animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200">
-        <div className="flex h-full w-[300%] transition-transform duration-300 ease-in-out" style={{ transform: view === "COMPOSER" ? "translateX(0)" : view === "PRIVACY" ? "translateX(-33.3333%)" : "translateX(-66.6666%)" }}>
+        <div
+          className={`flex h-full w-[300%] transition-transform duration-300 ease-in-out ${
+            view === "COMPOSER" ? "translate-x-0" : view === "PRIVACY" ? "-translate-x-1/3" : "-translate-x-2/3"
+          }`}
+        >
           <div className="w-1/3 shrink-0 flex flex-col h-full relative">
             <ModalHeader title={mode === "edit" ? "Chỉnh sửa bài viết" : parentPostId ? "Chia sẻ bài viết" : "Tạo bài viết"} onClose={handleClose} />
 
@@ -311,12 +336,12 @@ export default function CreatePostModal({
               </div>
 
               <textarea
+                ref={textareaRef}
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
                 placeholder={parentPostId ? "Thêm bình luận cho chia sẻ này..." : "Bạn đang nghĩ gì thế?"}
-                rows={4}
-                style={{ fontSize: `${dynamicFontSize}px`, overflowWrap: "anywhere", wordBreak: "break-word" }}
-                className="w-full min-h-[120px] bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 leading-normal outline-none border-none resize-none"
+                rows={2}
+                className="w-full min-h-[60px] bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 leading-normal outline-none border-none resize-none"
               />
 
               {parentPostId && (
@@ -355,7 +380,7 @@ export default function CreatePostModal({
 
             <div className="px-6 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between bg-white dark:bg-[#1a1a1a] shrink-0">
               <div className="flex items-center gap-1">
-                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*" multiple className="hidden" />
+                <input type="file" ref={fileInputRef} onChange={handleFileSelect} accept="image/*,video/*" multiple className="hidden" title="Chọn tệp tin" />
                 <button onClick={() => fileInputRef.current?.click()} disabled={totalMediaCount >= MAX_FILES} className="p-2 rounded-full text-green-500 hover:bg-green-50 dark:hover:bg-green-500/10 transition-colors disabled:opacity-50 disabled:cursor-not-allowed" title="Thêm ảnh/video">
                   <ImageIcon className="w-5 h-5" />
                 </button>
@@ -368,7 +393,16 @@ export default function CreatePostModal({
                 </button>
               </div>
             </div>
-            {isSubmitting && <div className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-300 z-20" style={{ width: `${uploadProgress}%` }} />}
+            {isSubmitting && (
+              <div
+                ref={(el) => {
+                  if (el) {
+                    el.style.width = `${uploadProgress}%`;
+                  }
+                }}
+                className="absolute bottom-0 left-0 h-1 bg-blue-500 transition-all duration-300 z-20"
+              />
+            )}
           </div>
 
           <SelectionPane title="Đối tượng của bài viết" onBack={() => setView("COMPOSER")}>
@@ -436,7 +470,7 @@ function ModalHeader({ title, onClose }: { title: string; onClose: () => void })
         <Sparkles className="w-5 h-5 text-blue-500" />
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100">{title}</h2>
       </div>
-      <button onClick={onClose} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors">
+      <button onClick={onClose} title="Đóng" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors">
         <X className="w-5 h-5" />
       </button>
     </div>
@@ -457,7 +491,7 @@ function SelectionPane({
   return (
     <div className="w-1/3 shrink-0 flex flex-col h-full bg-white dark:bg-[#1a1a1a]">
       <div className="flex items-center px-6 py-4 border-b border-gray-200 dark:border-gray-800 relative">
-        <button onClick={onBack} className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors absolute left-4">
+        <button onClick={onBack} title="Quay lại" className="p-2 rounded-full hover:bg-gray-100 dark:hover:bg-gray-800 text-gray-500 dark:text-gray-400 transition-colors absolute left-4">
           <ArrowLeft className="w-5 h-5" />
         </button>
         <h2 className="text-lg font-bold text-gray-900 dark:text-gray-100 w-full text-center">{title}</h2>
@@ -483,7 +517,7 @@ function MediaPreview({ url, type, onRemove }: { url: string; type?: string; onR
           <img src={url} alt="preview" className="w-full h-full object-cover" />
         </div>
       )}
-      <button onClick={onRemove} className="absolute top-2 right-2 w-8 h-8 bg-black/60 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100">
+      <button onClick={onRemove} title="Xóa tệp" className="absolute top-2 right-2 w-8 h-8 bg-black/60 hover:bg-red-500 rounded-full flex items-center justify-center text-white transition-all opacity-0 group-hover:opacity-100">
         <Trash2 className="w-4 h-4" />
       </button>
     </div>

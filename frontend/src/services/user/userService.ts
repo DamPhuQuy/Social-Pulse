@@ -104,6 +104,7 @@ export async function getUserPosts(userId: number, page = 0, size = 20): Promise
 }
 
 export interface UpdateProfileRequest {
+  username?: string;
   displayName?: string;
   bio?: string;
   avatarUrl?: string;

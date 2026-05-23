@@ -3,7 +3,7 @@ package com.socialpulse.app.comment.application.dto.mapper;
 import org.mapstruct.Mapper;
 import org.mapstruct.Mapping;
 
-import com.socialpulse.app.comment.application.dto.request.CommentReactionRequest;
+
 import com.socialpulse.app.comment.application.dto.request.CommentCreationRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentReactionResponse;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;

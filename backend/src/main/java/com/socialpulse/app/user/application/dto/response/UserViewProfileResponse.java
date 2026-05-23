@@ -24,6 +24,7 @@ public class UserViewProfileResponse {
     private long postCount;
     private long followers;
     private long following;
+    @SuppressWarnings("unused")
     private boolean isFollowing;
     private String avatarPublicId;
     private String coverImagePublicId;

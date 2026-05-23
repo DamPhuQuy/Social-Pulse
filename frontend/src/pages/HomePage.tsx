@@ -66,6 +66,17 @@ export default function HomePage() {
     };
   }, []);
 
+  useEffect(() => {
+    if (isDropdownOpen) {
+      document.body.style.overflow = "hidden";
+    } else {
+      document.body.style.overflow = "";
+    }
+    return () => {
+      document.body.style.overflow = "";
+    };
+  }, [isDropdownOpen]);
+
   const filteredDropdownTopics = topics.filter(topic =>
     topic.label.toLowerCase().includes(dropdownSearch.toLowerCase()) ||
     topic.slug.toLowerCase().includes(dropdownSearch.toLowerCase())
@@ -449,7 +460,7 @@ export default function HomePage() {
         <main className="flex flex-col gap-6 pb-24 lg:pb-10 min-w-0">
 
           {/* Topic Selector & Search Dropdown */}
-          <div className="flex gap-2 items-center relative z-30 pb-2 overflow-x-auto scrollbar-none flex-nowrap">
+          <div className="flex gap-2 items-center relative z-30 pb-2 flex-wrap">
             <button
               onClick={() => {
                 setSelectedTopic(null);
@@ -485,6 +496,7 @@ export default function HomePage() {
                       setSelectedTopic(null);
                       setIsDropdownOpen(false);
                     }}
+                    title="Xóa chủ đề đã chọn"
                     className="p-1 rounded-full bg-blue-100/60 dark:bg-blue-900/50 hover:bg-blue-200/80 dark:hover:bg-blue-800 text-blue-600 dark:text-blue-300 transition-colors"
                   >
                     <X className="w-3.5 h-3.5" />
@@ -494,9 +506,7 @@ export default function HomePage() {
 
               {/* Popover Dropdown Panel */}
               {isDropdownOpen && (
-                <div className="absolute top-full mt-2 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200"
-                  style={{ width: 'min(320px, calc(100vw - 2rem))', left: 0, maxWidth: 'calc(100vw - 2rem)' }}
-                >
+                <div className="absolute top-full mt-2 bg-white dark:bg-[#1c1c1e] border border-slate-200/80 dark:border-neutral-800 rounded-2xl shadow-[0_12px_30px_rgba(0,0,0,0.1)] dark:shadow-[0_15px_45px_rgba(0,0,0,0.6)] z-50 p-4 gap-3 flex flex-col animate-in fade-in slide-in-from-top-2 duration-200 w-[min(320px,calc(100vw-2rem))] left-0 max-w-[calc(100vw-2rem)]">
                   {/* Search Header */}
                   <div className="relative">
                     <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
@@ -511,6 +521,7 @@ export default function HomePage() {
                     {dropdownSearch && (
                       <button
                         onClick={() => setDropdownSearch("")}
+                        title="Xóa tìm kiếm"
                         className="absolute right-3 top-1/2 -translate-y-1/2 p-1 rounded-full hover:bg-slate-200 dark:hover:bg-neutral-800 text-slate-400"
                       >
                         <X className="w-3 h-3" />
@@ -793,7 +804,7 @@ function FeedPost({
               <span className="text-slate-500 dark:text-neutral-400 text-sm">· {timeAgo(post.createdAt)}</span>
             </div>
             <div className="relative shrink-0">
-              <button onClick={() => setShowMenu((value) => !value)} className="text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 p-1 rounded-full">
+              <button onClick={() => setShowMenu((value) => !value)} title="Tùy chọn bài viết" className="text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 p-1 rounded-full">
                 <MoreHorizontal className="w-5 h-5" />
               </button>
               {showMenu && (
@@ -822,9 +833,11 @@ function FeedPost({
             </div>
           </div>
 
-          <p className="text-slate-800 dark:text-[#e4e6eb] text-[18px] leading-relaxed mb-3 whitespace-pre-line break-words">
-            {post.content}
-          </p>
+          {post.content && post.content.trim() && (
+            <p className="text-slate-800 dark:text-[#e4e6eb] text-[18px] leading-relaxed mb-3 whitespace-pre-line break-words">
+              {post.content}
+            </p>
+          )}
 
           <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="feed" />
 
@@ -847,7 +860,7 @@ function FeedPost({
           <div className="flex items-center gap-8 text-gray-500 dark:text-neutral-500 border-b border-transparent pb-1">
             {/* Upvote */}
             <button disabled={isReacting} onClick={() => onReact(post.postId, "UPVOTE")}
-              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isUpvoted ? "text-blue-600 dark:text-blue-400" : ""}`}>
+              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isUpvoted ? "text-slate-900 dark:text-white font-semibold" : ""}`}>
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
                 <Activity className={`w-5 h-5 ${isUpvoted ? "stroke-[2.5px]" : "stroke-2"}`} />
               </div>
@@ -864,7 +877,7 @@ function FeedPost({
                 }
                 setShowComments(!showComments);
               }}
-              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${showComments ? "text-slate-905 dark:text-white font-bold" : ""}`}
+              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${showComments ? "text-slate-900 dark:text-white font-bold" : ""}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
                 <MessageCircle className={`w-5 h-5 ${showComments ? "stroke-[2.5px]" : "stroke-2"}`} />
@@ -872,7 +885,7 @@ function FeedPost({
               <span className="text-sm">{cmtCount}</span>
             </button>
 
-            <button onClick={() => onToggleBookmark(post.postId)} className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-blue-600 dark:text-blue-400" : ""}`}>
+            <button onClick={() => onToggleBookmark(post.postId)} title={isBookmarked ? "Bỏ lưu bài viết" : "Lưu bài viết"} className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-slate-900 dark:text-white" : ""}`}>
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
                 <Bookmark className={`w-5 h-5 stroke-2 ${isBookmarked ? "fill-current" : ""}`} />
               </div>
@@ -887,9 +900,10 @@ function FeedPost({
                 }
                 onShare?.(post);
               }}
+              title="Chia sẻ bài viết"
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
-              <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
+              <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-850">
                 <Share2 className="w-5 h-5 stroke-2" />
               </div>
             </button>

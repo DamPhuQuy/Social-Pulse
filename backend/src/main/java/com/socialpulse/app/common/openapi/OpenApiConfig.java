@@ -17,7 +17,7 @@ public class OpenApiConfig {
     @Bean
     public OpenAPI customOpenAPI(@Value("${app.version}") String appVersion) {
         var bearer = "bearer-key";
-        var cookie = "cookie-key";
+
         return new OpenAPI()
                 .info(new Info().title("API documentation for SocialPulse backend").version(appVersion)
                         .license(new License().name("Apache 2.0").url("https://springdoc.org"))

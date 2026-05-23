@@ -2,11 +2,11 @@ package com.socialpulse.app.report.application.service;
 
 import org.springframework.stereotype.Service;
 
-import com.socialpulse.app.comment.domain.model.Comment;
+
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.ReportCode;
-import com.socialpulse.app.post.domain.model.Post;
+
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.report.domain.enums.ReportTargetType;
 import com.socialpulse.app.user.domain.repository.UserRepository;
