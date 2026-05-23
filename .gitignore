@@ -47,7 +47,4 @@ build/
 .jqwik-database
 
 __pycache__
-ai_pipeline/model/*.json
-ai_pipeline/model/*.ubj
-ai_pipeline/model/*.txt
 ai_pipeline/model/plots/
