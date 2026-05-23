@@ -37,6 +37,11 @@ public class ViewPostResponse {
     private int shareCount;
 
     private Integer myVote;   // +1, -1, 0
+    private com.socialpulse.app.feed.application.dto.response.OriginalPostData originalPost;
+
+    public void setOriginalPost(com.socialpulse.app.feed.application.dto.response.OriginalPostData originalPost) {
+        this.originalPost = originalPost;
+    }
 
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

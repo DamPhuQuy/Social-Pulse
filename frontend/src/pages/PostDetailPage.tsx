@@ -1,14 +1,16 @@
 import { useEffect, useState } from "react";
-import { Activity, ArrowLeft, Loader2, MessageCircle } from "lucide-react";
+import { Activity, ArrowLeft, Loader2, MessageCircle, Link } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/components/social/AppHeader";
 import AppSidebar from "@/components/social/AppSidebar";
 import CommentSection from "@/components/comment/CommentSection";
 import { SafeAvatar } from "@/components/ui/SafeAvatar";
-import { reactPost } from "@/services/post/postService";
+import { PostMedia } from "@/components/post/PostMedia";
+import { reactPost, type OriginalPostData } from "@/services/post/postService";
 import { getPostDetail, type ViewPostResponse } from "@/services/social/postDetailService";
 import { nextPostPulseState } from "@/lib/postUtils";
+import { timeAgo } from "@/lib/dateUtils";
 
 export default function PostDetailPage() {
   const navigate = useNavigate();
@@ -106,6 +108,15 @@ export default function PostDetailPage() {
 
               <p className="whitespace-pre-line text-[15px] leading-7 text-slate-800 dark:text-neutral-200">{post.content}</p>
 
+              <div className="mt-3">
+                <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="feed" />
+              </div>
+
+              {/* ── Quoted original post for SHARE type ── */}
+              {post.type === "SHARE" && (
+                <DetailOriginalPostBlock originalPost={post.originalPost} />
+              )}
+
               {post.topicSlugs?.length > 0 && (
                 <div className="mt-4 flex flex-wrap gap-2">
                   {post.topicSlugs.map((topic) => (
@@ -133,6 +144,56 @@ export default function PostDetailPage() {
           </section>
         </div>
       </div>
+    </div>
+  );
+}
+
+// ─── DetailOriginalPostBlock ───────────────────────────────────────────────────
+function DetailOriginalPostBlock({ originalPost }: { originalPost: OriginalPostData | null }) {
+  if (!originalPost) {
+    return (
+      <div className="mt-2 mb-3 px-4 py-3 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900/40 flex items-center gap-2 text-slate-400 dark:text-neutral-500">
+        <Link className="w-4 h-4 shrink-0" />
+        <span className="text-sm italic">Bài viết gốc không còn khả dụng.</span>
+      </div>
+    );
+  }
+
+  const imageUrls = originalPost.imageUrl
+    ? originalPost.imageUrl.split(",").map((u) => u.trim()).filter(Boolean)
+    : [];
+
+  return (
+    <div className="mt-2 mb-3 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/30 overflow-hidden hover:border-slate-300 dark:hover:border-neutral-600 transition-colors">
+      {/* Original post header */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <div className="w-7 h-7 rounded-full overflow-hidden bg-slate-100 dark:bg-neutral-800 shrink-0">
+          <SafeAvatar src={originalPost.userAvatar} alt={originalPost.username ?? "user"} />
+        </div>
+        <span className="text-sm font-bold text-slate-700 dark:text-neutral-300 truncate">
+          {originalPost.username ?? "Người dùng"}
+        </span>
+        <span className="text-xs text-slate-400 dark:text-neutral-500 shrink-0">
+          · {timeAgo(originalPost.createdAt)}
+        </span>
+      </div>
+
+      {/* Original post content */}
+      {originalPost.content && (
+        <p className="px-4 py-1 text-sm text-slate-700 dark:text-neutral-300 whitespace-pre-line break-words leading-relaxed line-clamp-5">
+          {originalPost.content}
+        </p>
+      )}
+
+      {/* Original post media */}
+      {imageUrls.length > 0 && (
+        <div className="px-4 pb-3 pt-1">
+          <PostMedia urls={imageUrls} variant="feed" />
+        </div>
+      )}
+      {!originalPost.content && imageUrls.length === 0 && (
+        <p className="px-4 pb-3 text-sm text-slate-400 dark:text-neutral-500 italic">Không có nội dung.</p>
+      )}
     </div>
   );
 }

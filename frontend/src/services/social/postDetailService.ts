@@ -19,6 +19,7 @@ export interface ViewPostResponse {
   myVote: number | null;
   createdAt: string;
   updatedAt: string | null;
+  originalPost: import("@/services/post/postService").OriginalPostData | null;
 }
 
 export async function getPostDetail(postId: number): Promise<{ ok: boolean; data?: ViewPostResponse; message?: string }> {
