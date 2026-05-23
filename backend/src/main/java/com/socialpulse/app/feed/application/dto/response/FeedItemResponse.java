@@ -38,4 +38,5 @@ public class FeedItemResponse {
     private Privacy privacy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;
+    private OriginalPostData originalPost;
 }

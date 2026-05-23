@@ -3,13 +3,13 @@ import {
   Search, MoreHorizontal,
   MessageCircle, Share2, Bookmark,
   Activity, Moon, Sun, Loader2, Plus, Edit3, Trash2,
-  ChevronDown, X, UserX
+  ChevronDown, X, UserX, Link
 } from "lucide-react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/constants/paths";
 import { useAuth } from "@/hooks/useAuth";
-import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type Privacy, type PostTopic, type PulseReaction } from "@/services/post/postService";
+import { deletePost, getFeed, reactPost, getPostTopics, type FeedItem, type OriginalPostData, type Privacy, type PostTopic, type PulseReaction } from "@/services/post/postService";
 import { getMyProfile, type UserPost, type UserProfile } from "@/services/user/userService";
 import { getTrendingHashtags, type TrendingHashtagResponse } from "@/services/social/discoveryService";
 import { createBookmark, deleteBookmark, getBookmarks } from "@/services/social/bookmarkService";
@@ -772,6 +772,11 @@ function FeedPost({
 
           <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="feed" />
 
+          {/* ── Quoted original post for SHARE type ── */}
+          {post.type === "SHARE" && (
+            <OriginalPostBlock originalPost={post.originalPost} onNavigateToProfile={navigateToProfile} />
+          )}
+
           {post.topicSlugs?.length > 0 && (
             <div className="mb-3 flex flex-wrap gap-2">
               {post.topicSlugs.map((topic) => (
@@ -845,5 +850,66 @@ function FeedPost({
         </div>
       </div>
     </article>
+  );
+}
+
+// ─── OriginalPostBlock ──────────────────────────────────────────────────────────
+function OriginalPostBlock({
+  originalPost,
+  onNavigateToProfile,
+}: {
+  originalPost: OriginalPostData | null;
+  onNavigateToProfile: (e: React.MouseEvent) => void;
+}) {
+  if (!originalPost) {
+    // The original post was deleted or is inaccessible
+    return (
+      <div className="mt-2 mb-3 px-4 py-3 rounded-xl border border-dashed border-slate-300 dark:border-neutral-700 bg-slate-50 dark:bg-neutral-900/40 flex items-center gap-2 text-slate-400 dark:text-neutral-500">
+        <Link className="w-4 h-4 shrink-0" />
+        <span className="text-sm italic">Bài viết gốc không còn khả dụng.</span>
+      </div>
+    );
+  }
+
+  const imageUrls = originalPost.imageUrl ? originalPost.imageUrl.split(",").map(u => u.trim()).filter(Boolean) : [];
+
+  return (
+    <div className="mt-2 mb-3 rounded-xl border border-slate-200 dark:border-neutral-700 bg-slate-50/60 dark:bg-neutral-900/30 overflow-hidden hover:border-slate-300 dark:hover:border-neutral-600 transition-colors">
+      {/* Original post header */}
+      <div className="flex items-center gap-2 px-4 pt-3 pb-1">
+        <div
+          onClick={onNavigateToProfile}
+          className="w-7 h-7 rounded-full overflow-hidden bg-slate-100 dark:bg-neutral-800 cursor-pointer hover:opacity-80 transition-opacity shrink-0"
+        >
+          <SafeAvatar src={originalPost.userAvatar} alt={originalPost.username ?? "user"} />
+        </div>
+        <span
+          onClick={onNavigateToProfile}
+          className="text-sm font-bold text-slate-700 dark:text-neutral-300 cursor-pointer hover:underline truncate"
+        >
+          {originalPost.username ?? "Người dùng"}
+        </span>
+        <span className="text-xs text-slate-400 dark:text-neutral-500 shrink-0">
+          · {timeAgo(originalPost.createdAt)}
+        </span>
+      </div>
+
+      {/* Original post content */}
+      {originalPost.content && (
+        <p className="px-4 py-1 text-sm text-slate-700 dark:text-neutral-300 whitespace-pre-line break-words leading-relaxed line-clamp-5">
+          {originalPost.content}
+        </p>
+      )}
+
+      {/* Original post media */}
+      {imageUrls.length > 0 && (
+        <div className="px-4 pb-3 pt-1">
+          <PostMedia urls={imageUrls} variant="feed" />
+        </div>
+      )}
+      {!originalPost.content && imageUrls.length === 0 && (
+        <p className="px-4 pb-3 text-sm text-slate-400 dark:text-neutral-500 italic">Không có nội dung.</p>
+      )}
+    </div>
   );
 }
