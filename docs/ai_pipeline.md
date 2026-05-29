@@ -32,12 +32,12 @@ Dữ liệu huấn luyện được mô hình hóa từ hai thực thể chính 
 
 ### Cấu trúc dòng dữ liệu huấn luyện (Row Composition):
 *   **Positive Rows (Dòng tích cực):** Đại diện cho một viewer đã thực sự có tương tác (bình luận) vào bài đăng của author trước đó. Nhãn (label) là giá trị liên tục được biến đổi từ độ tương tác thực tế của bài đăng.
-*   **Negative Rows (Dòng tiêu cực):** Đại diện cho các viewer được lấy mẫu ngẫu nhiên (sampled) chưa từng tương tác với author của bài đăng đó trong khoảng thời gian xác định. Dòng này nhận nhãn bằng `0.0`.
+*   **Negative Rows (Dòng tiêu cực/Không tương tác):** Đại diện cho các viewer được lấy mẫu ngẫu nhiên (sampled) chưa từng tương tác với author của bài đăng đó trong khoảng thời gian xác định. Dòng này nhận nhãn bằng `0.0`. *(Lưu ý: Giao diện Social Pulse hiện tại không có tính năng "Dislike" hay phản ứng tiêu cực trực tiếp. Khái niệm "Negative" ở đây mang ý nghĩa "Implicit Negative" - tức là việc người dùng bỏ qua, không có hành động tương tác nào với bài viết).*
 *   **Fallback Rows:** Dành cho các bài viết không có dữ liệu tương tác lịch sử nào từ người xem, sử dụng các đặc trưng tác giả/bài viết làm cơ sở và nhãn gốc.
 
-### Negative Sampling Strategy (Chiến lược Lấy mẫu Tiêu cực)
-Để huấn luyện một mô hình xếp hạng cá nhân hóa dạng Pointwise, việc thu thập dữ liệu chỉ dựa trên các tương tác thực tế (Positive) là chưa đủ vì mô hình sẽ không học được ranh giới quyết định. Do đó, hệ thống tích hợp một quy trình lấy mẫu âm nghiêm ngặt trong [feature_engineering.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/feature_engineering.py):
-*   **Temporal-Safe Negative Sampling (Lấy mẫu âm an toàn theo thời gian):** Đối với mỗi tương tác tích cực (viewer tương tác với post A của tác giả X vào thời điểm $t$), hệ thống tìm kiếm các bài viết tiêu cực (âm) từ các tác giả khác mà người dùng *không* tương tác trong cùng một cửa sổ thời gian gần kề.
+### Negative Sampling Strategy (Chiến lược Lấy mẫu Tiêu cực / Implicit Negative)
+Để huấn luyện một mô hình xếp hạng cá nhân hóa dạng Pointwise, việc thu thập dữ liệu chỉ dựa trên các tương tác thực tế (Positive) là chưa đủ vì mô hình sẽ không học được ranh giới quyết định. Do không có dữ liệu "Dislike" hoặc "Angry" trực tiếp từ frontend, hệ thống tích hợp một quy trình sinh dữ liệu không tương tác nhân tạo (lấy mẫu âm nghiêm ngặt) trong [feature_engineering.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/feature_engineering.py):
+*   **Temporal-Safe Negative Sampling (Lấy mẫu âm an toàn theo thời gian):** Đối với mỗi tương tác tích cực (viewer tương tác với post A của tác giả X vào thời điểm $t$), hệ thống tìm kiếm các bài viết "tiêu cực" (các bài viết mà người dùng *không* tương tác) từ các tác giả khác trong cùng một cửa sổ thời gian gần kề.
 *   **Hard Negative Sampling (Lấy mẫu âm khó):** Thay vì chọn ngẫu nhiên bài viết bất kỳ trên toàn hệ thống (dễ làm mô hình lười biếng), hệ thống lấy mẫu bài đăng âm của các tác giả khác tạo ra trong khoảng thời gian $\pm 72$ giờ (`_NEGATIVE_LOOKBACK_HOURS`) xung quanh thời điểm tương tác tích cực. Đây là những bài viết cạnh tranh trực tiếp sự chú ý của người dùng tại thời điểm đó.
 *   **Author Exposure Bias & Popularity-balanced Negatives:** Quá trình lấy mẫu âm bỏ qua bài đăng của chính tác giả mà người dùng đã tương tác để tránh làm nhiễu tín hiệu cá nhân hóa, đồng thời đảm bảo bài đăng âm được chọn ngẫu nhiên từ kho lưu trữ các bài viết đang hoạt động để phản ánh phân phối bài viết thực tế.
 *   **Tác động của tham số `negative_samples_per_positive = 2`:**
@@ -47,12 +47,12 @@ Dữ liệu huấn luyện được mô hình hóa từ hai thực thể chính 
 
 ---
 
-## 3. Data Collection Pipeline
-Quy trình thu thập dữ liệu được thực hiện thông qua module [scanner.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/scanner.py) với lớp `PushshiftDatasetScanner`.
+## 3. Data Extraction & Raw Filtering (ETL)
+Quy trình thu thập và làm sạch dữ liệu thô (ETL - Extract, Transform, Load) được thực hiện thông qua module [scanner.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/scanner.py) với lớp `PushshiftDatasetScanner`. Mục tiêu của bước này là loại bỏ rác và trích xuất dữ liệu thô.
 
 ### Quy trình quét Submissions (`scan_submissions`):
 1.  **Streaming:** Đọc tuần tự luồng file nén `.zst` để tiết kiệm bộ nhớ thông qua `JsonLineReader`.
-2.  **Bộ lọc chất lượng và tiền xử lý thô (`_preprocess_submission`):**
+2.  **Bộ lọc chất lượng (Quality Filters):**
     *   **Trường bắt buộc:** Loại bỏ các bản ghi thiếu `id`, `author`, hoặc `created_utc`.
     *   **Bộ lọc Bot:** Loại bỏ các tác giả trong danh sách nghi ngờ (`_LIKELY_BOT_AUTHORS` như `automoderator`, `tweetposter`, v.v.) hoặc có tên kết thúc bằng `bot`/`_bot`/`-bot`.
     *   **Bộ lọc NSFW:** Loại bỏ bài viết người lớn nếu `exclude_nsfw=True`.
@@ -69,8 +69,8 @@ Quy trình thu thập dữ liệu được thực hiện thông qua module [scan
 
 ---
 
-## 4. Data Preprocessing Pipeline
-Tiền xử lý dữ liệu học máy được thực hiện bởi lớp `PushshiftFeatureEngineering` trong [feature_engineering.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/feature_engineering.py). Quy trình được học từ tập huấn luyện và áp dụng nhất quán tại thời điểm dự đoán (Inference).
+## 4. Machine Learning Feature Transformation
+Nếu Phần 3 tập trung vào việc **loại bỏ các dòng dữ liệu rác**, thì Phần 4 này tập trung vào việc **biến đổi toán học các cột đặc trưng (features)** để tối ưu cho mô hình học máy. Quá trình này được thực hiện bởi lớp `PushshiftFeatureEngineering` trong [feature_engineering.py](file:///home/phuquydam/Documents/Social-Pulse/ai_pipeline/training/feature_engineering.py). Quy trình được học từ tập huấn luyện và áp dụng nhất quán tại thời điểm dự đoán (Inference).
 
 1.  **Xử lý giá trị khuyết thiếu (Imputation & Defaults):**
     *   Thay thế các trường số bị thiếu bằng giá trị mặc định `0.0`.
