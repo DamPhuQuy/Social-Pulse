@@ -68,7 +68,7 @@ SELECT
     'ACTIVE', 'VERIFIED', false, 0,
     NOW() - make_interval(days => gs % 45),
     NOW() - make_interval(days => gs % 45)
-FROM generate_series(1, 40) AS gs
+FROM generate_series(1, 5) AS gs
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
@@ -96,7 +96,7 @@ SELECT
 FROM users u
 JOIN (
     SELECT format('seed_user_%s', lpad(gs::text, 3, '0')) AS username, gs AS ordinal
-    FROM generate_series(1, 40) AS gs
+    FROM generate_series(1, 5) AS gs
 ) AS seed ON seed.username = u.username
 ON CONFLICT (user_id) DO NOTHING;
 
@@ -170,7 +170,7 @@ JOIN LATERAL (
             - make_interval(days => (slot + author.author_rank) % 60)
             - make_interval(hours => (slot * 3 + author.author_rank) % 24)
             - make_interval(mins => (slot * 11 + author.author_rank) % 60) AS created_at
-    FROM generate_series(1, 30) AS slot
+    FROM generate_series(1, 2) AS slot
 ) AS blueprint ON TRUE
 WHERE NOT EXISTS (SELECT 1 FROM posts p WHERE p.user_id = author.id AND p.content = blueprint.content);
 
@@ -229,7 +229,7 @@ SELECT sp.id, sa.id, NULL,
     ((sp.post_rank + slot.comment_slot) % 4)::BIGINT,
     false, false
 FROM seed_posts sp
-CROSS JOIN generate_series(1, 4) AS slot(comment_slot)
+CROSS JOIN generate_series(1, 2) AS slot(comment_slot)
 CROSS JOIN author_pool ap
 JOIN seed_authors sa ON sa.author_rank = ((sp.post_rank + slot.comment_slot - 1) % ap.total_authors) + 1
 WHERE sa.id <> sp.user_id

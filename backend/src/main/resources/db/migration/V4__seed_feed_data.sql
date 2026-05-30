@@ -4,6 +4,10 @@
 --         20000+ comments, 5000+ follows, 30000+ interactions
 -- ============================================================
 
+DO $$
+BEGIN
+IF ${seedDemoData} THEN
+
 -- ============================================================
 -- 500 USERS (seed_user_001 to seed_user_500)
 -- ============================================================
@@ -16,7 +20,7 @@ SELECT
     'ACTIVE', 'VERIFIED', false, 0,
     NOW() - make_interval(days => (gs % 180) + 30),
     NOW() - make_interval(days => gs % 30)
-FROM generate_series(41, 500) AS gs
+FROM generate_series(6, 10) AS gs
 ON CONFLICT DO NOTHING;
 
 -- Profiles for new users
@@ -122,7 +126,7 @@ FROM (
     SELECT id, row_number() OVER (ORDER BY id)::INT AS rank
     FROM users WHERE username LIKE 'seed_user_%'
 ) AS author
-CROSS JOIN generate_series(1, 30) AS slot
+CROSS JOIN generate_series(1, 2) AS slot
 WHERE NOT EXISTS (
     SELECT 1 FROM posts p WHERE p.user_id = author.id
     AND p.content LIKE format('%%#%s%%', (ARRAY['tech','gaming','music','sports','food','travel','fashion','science','art','books','coding','design','health','finance','education'])[((author.rank + slot) % 15) + 1])
@@ -426,3 +430,6 @@ WHERE NOT EXISTS (
     FROM post_topics pt
     WHERE pt.post_id = p.id
 );
+
+END IF;
+END $$;
