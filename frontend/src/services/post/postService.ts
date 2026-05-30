@@ -85,6 +85,8 @@ export interface FeedItem {
   rankingProvider: "AI" | "FALLBACK" | null;
   featureSchemaVersion: string | null;
   rankedAt: string | null;
+  affinityScore: number | null;
+  interactionCount30d: number | null;
   privacy: Privacy;
   createdAt: string;
   updatedAt: string | null;

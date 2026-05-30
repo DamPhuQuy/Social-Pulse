@@ -608,10 +608,11 @@ export default function HomePage() {
             </div>
           ) : (
             <div className="flex flex-col gap-4">
-              {feed.map(post => (
+              {feed.map((post, index) => (
                 <FeedPost
                   key={post.postId}
                   post={post}
+                  rank={index + 1}
                   onReact={handleReact}
                   isReacting={reactingPostIds.has(post.postId)}
                   currentUserId={currentUser?.userId}
@@ -737,6 +738,7 @@ export default function HomePage() {
 
 function FeedPost({
   post,
+  rank,
   onReact,
   isReacting,
   currentUserId,
@@ -749,6 +751,7 @@ function FeedPost({
   onShare,
 }: {
   post: FeedItem;
+  rank: number;
   onReact: (id: number, type: PulseReaction) => void;
   isReacting: boolean;
   currentUserId?: number;
@@ -789,20 +792,31 @@ function FeedPost({
         </div>
         <div className="flex-1 min-w-0">
             <div className="flex items-center justify-between mb-1">
-            <div className="flex items-center gap-2 truncate flex-wrap">
-              <span onClick={navigateToProfile} className="font-bold text-slate-800 dark:text-[#e4e6eb] truncate cursor-pointer hover:underline">{post.username}</span>
-              {post.rankingProvider && (
-                <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${post.rankingProvider === "AI" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-300"}`}>
-                  {post.rankingProvider}
-                </span>
-              )}
-              {post.aiScore != null && (
-                <span className="text-[11px] font-mono text-slate-400 dark:text-neutral-500">
-                  score {post.aiScore.toFixed(3)}
-                </span>
-              )}
-              <span className="text-slate-500 dark:text-neutral-400 text-sm">· {timeAgo(post.createdAt)}</span>
-            </div>
+              <div className="flex flex-col gap-1 min-w-0">
+                <div className="flex items-center gap-2 truncate flex-wrap">
+                  <span onClick={navigateToProfile} className="font-bold text-slate-800 dark:text-[#e4e6eb] truncate cursor-pointer hover:underline">{post.username}</span>
+                  <span className="inline-flex items-center rounded-full bg-slate-900 text-white dark:bg-white dark:text-slate-900 px-2.5 py-0.5 text-[10px] font-extrabold uppercase tracking-wide shadow-sm">
+                    Rank #{rank}
+                  </span>
+                  {post.rankingProvider && (
+                    <span className={`inline-flex items-center rounded-full px-2 py-0.5 text-[10px] font-extrabold uppercase tracking-wide ${post.rankingProvider === "AI" ? "bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300" : "bg-amber-50 text-amber-700 dark:bg-amber-950/35 dark:text-amber-300"}`}>
+                      {post.rankingProvider}
+                    </span>
+                  )}
+                  <span className="text-slate-500 dark:text-neutral-400 text-sm">· {timeAgo(post.createdAt)}</span>
+                </div>
+                {post.aiScore != null && (
+                  <div className="flex flex-wrap gap-x-2 gap-y-0.5 text-[10.5px] font-mono text-slate-500 dark:text-neutral-400 bg-slate-100/50 dark:bg-neutral-900/60 px-2 py-0.5 rounded border border-slate-200/50 dark:border-neutral-800 w-fit">
+                    <span>AI Score: {post.aiScore.toFixed(3)}</span>
+                    <span className="text-slate-300 dark:text-neutral-700">•</span>
+                    <span>Affinity: {post.affinityScore !== null && post.affinityScore !== undefined ? post.affinityScore.toFixed(3) : "0.000"}</span>
+                    <span className="text-slate-300 dark:text-neutral-700">•</span>
+                    <span>Interactions: {post.interactionCount30d !== null && post.interactionCount30d !== undefined ? post.interactionCount30d : 0}</span>
+                    <span className="text-slate-300 dark:text-neutral-700">•</span>
+                    <span>Following: {post.source === "FOLLOWING" ? "Yes" : "No"}</span>
+                  </div>
+                )}
+              </div>
             <div className="relative shrink-0">
               <button onClick={() => setShowMenu((value) => !value)} title="Tùy chọn bài viết" className="text-slate-400 dark:text-neutral-500 hover:text-slate-600 dark:hover:text-neutral-300 p-1 rounded-full">
                 <MoreHorizontal className="w-5 h-5" />

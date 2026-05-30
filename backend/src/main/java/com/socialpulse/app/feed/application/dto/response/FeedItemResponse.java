@@ -37,6 +37,8 @@ public class FeedItemResponse {
     private String rankingProvider;
     private String featureSchemaVersion;
     private LocalDateTime rankedAt;
+    private Double affinityScore;
+    private Long interactionCount30d;
     private Privacy privacy;
     private LocalDateTime createdAt;
     private LocalDateTime updatedAt;

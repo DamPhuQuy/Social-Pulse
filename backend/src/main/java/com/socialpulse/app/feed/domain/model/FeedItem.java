@@ -22,4 +22,6 @@ public class FeedItem {
     private RankingProvider rankingProvider;
     private String featureSchemaVersion;
     private LocalDateTime rankedAt;
+    private Double affinityScore;
+    private Long interactionCount30d;
 }
