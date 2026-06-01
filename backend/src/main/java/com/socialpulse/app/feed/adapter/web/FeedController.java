@@ -3,7 +3,7 @@ package com.socialpulse.app.feed.adapter.web;
 import java.util.List;
 
 
-import com.socialpulse.app.security.permission.RequiresPermission;
+
 
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;

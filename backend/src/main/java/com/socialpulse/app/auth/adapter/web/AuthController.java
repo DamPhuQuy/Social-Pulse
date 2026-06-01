@@ -204,7 +204,7 @@ public class AuthController {
         // Remove refresh token cookie by setting maxAge=0.
         ResponseCookie clearRefreshCookie = ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, "")
                 .httpOnly(true)
-                .secure(false) // TODO: set true when deploying with HTTPS
+                .secure(false) // Set true when deploying with HTTPS
                 .path("/api/v1/auth")
                 .sameSite("Lax")
                 .maxAge(0)
@@ -226,7 +226,7 @@ public class AuthController {
 
                 return ResponseCookie.from(REFRESH_TOKEN_COOKIE_NAME, refreshToken)
                                 .httpOnly(true)
-                                .secure(false) // TODO: set true when deploying with HTTPS
+                                .secure(false) // Set true when deploying with HTTPS
                                 .path("/api/v1/auth")
                                 .sameSite("Lax")
                                 .maxAge(refreshExpiresInMs / 1000)

@@ -3,6 +3,10 @@
 -- Adds: follows, post reactions, user interactions, bookmarks
 -- ============================================================
 
+DO $$
+BEGIN
+IF ${seedDemoData} THEN
+
 -- ============================================================
 -- FOLLOWS (each user follows 8-15 others = ~500 follow edges)
 -- ============================================================
@@ -186,3 +190,6 @@ SELECT f.following_id, f.follower_id, 'FOLLOWED_YOU', 'USER', f.follower_id,
 FROM follows f
 WHERE (f.id % 3 = 0)  -- only 33%
 LIMIT 200;
+
+END IF;
+END $$;

@@ -128,6 +128,7 @@ function ProfilePost({
             <div className="relative shrink-0">
               <button
                 onClick={() => setShowMenu((value) => !value)}
+                title="Tùy chọn bài viết"
                 className="text-slate-400 dark:text-neutral-500 hover:text-blue-500 p-1.5 rounded-full transition-colors"
               >
                 <MoreHorizontal className="w-4 h-4" />
@@ -171,9 +172,11 @@ function ProfilePost({
             </div>
           </div>
 
-          <p className="text-[15px] leading-relaxed mb-3 whitespace-pre-line break-words text-gray-800 dark:text-neutral-200">
-            {post.content}
-          </p>
+          {post.content && post.content.trim() && (
+            <p className="text-[15px] leading-relaxed mb-3 whitespace-pre-line break-words text-gray-800 dark:text-neutral-200">
+              {post.content}
+            </p>
+          )}
 
           <PostMedia urls={post.imageUrl ? post.imageUrl.split(",") : []} variant="profile" />
 
@@ -202,7 +205,7 @@ function ProfilePost({
                 e.stopPropagation();
                 handleReact(post.postId, "UPVOTE");
               }}
-              className={`flex items-center gap-2 transition-colors group ${isUpvoted ? "text-blue-600 dark:text-blue-400" : "hover:text-slate-900 dark:hover:text-white"}`}
+              className={`flex items-center gap-2 transition-colors group ${isUpvoted ? "text-slate-900 dark:text-white font-semibold" : "hover:text-slate-900 dark:hover:text-white"}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
                 <Activity
@@ -231,7 +234,8 @@ function ProfilePost({
 
             <button
               onClick={() => onToggleBookmark(post.postId)}
-              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-blue-600 dark:text-blue-400" : ""}`}
+              title={isBookmarked ? "Bỏ lưu bài viết" : "Lưu bài viết"}
+              className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${isBookmarked ? "text-slate-900 dark:text-white" : ""}`}
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
                 <Bookmark
@@ -250,6 +254,7 @@ function ProfilePost({
                 }
                 onShare?.(post);
               }}
+              title="Chia sẻ bài viết"
               className="flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group"
             >
               <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
@@ -326,7 +331,25 @@ export default function ProfilePage() {
   const [isDragging, setIsDragging] = useState(false);
   const [dragStart, setDragStart] = useState({ x: 0, y: 0 });
   const cropperImgRef = useRef<HTMLImageElement>(null);
+  const cropperContainerRef = useRef<HTMLDivElement>(null);
   const [viewingImageUrl, setViewingImageUrl] = useState<string | null>(null);
+
+  // Cover Circular/Rect Cropper States
+  const [coverPreviewSrc, setCoverPreviewSrc] = useState<string | null>(null);
+  const [originalCoverFile, setOriginalCoverFile] = useState<File | null>(null);
+  const [coverPreviewAspect, setCoverPreviewAspect] = useState<number>(1);
+  const [coverZoom, setCoverZoom] = useState(1);
+  const [coverOffset, setCoverOffset] = useState({ x: 0, y: 0 });
+  const [isCoverDragging, setIsCoverDragging] = useState(false);
+  const [coverDragStart, setCoverDragStart] = useState({ x: 0, y: 0 });
+  const cropperCoverImgRef = useRef<HTMLImageElement>(null);
+  const cropperCoverContainerRef = useRef<HTMLDivElement>(null);
+
+  const baseWidth = previewAspect > 1 ? 380 * previewAspect : 380;
+  const baseHeight = previewAspect > 1 ? 380 : 380 / previewAspect;
+
+  const coverBaseWidth = coverPreviewAspect > 2.5 ? 288 * coverPreviewAspect : 720;
+  const coverBaseHeight = coverPreviewAspect > 2.5 ? 288 : 720 / coverPreviewAspect;
 
   useEffect(() => {
     getMyProfile().then((res) => {
@@ -342,6 +365,98 @@ export default function ProfilePage() {
       }
     });
   }, []);
+
+  useEffect(() => {
+    const container = cropperContainerRef.current;
+    if (!container) return;
+
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.05 : 0.95;
+      setZoom((prev) => {
+        const nextZoom = Math.max(1, Math.min(4, prev * factor));
+        setOffset((prevOffset) => {
+          const w = baseWidth * nextZoom;
+          const h = baseHeight * nextZoom;
+          const maxX = w / 2 - 190;
+          const minX = 190 - w / 2;
+          const maxY = h / 2 - 190;
+          const minY = 190 - h / 2;
+          return {
+            x: Math.max(minX, Math.min(maxX, prevOffset.x)),
+            y: Math.max(minY, Math.min(maxY, prevOffset.y)),
+          };
+        });
+        return nextZoom;
+      });
+    };
+
+    container.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", onWheelNative);
+    };
+  }, [avatarPreviewSrc]);
+
+  useEffect(() => {
+    const container = cropperCoverContainerRef.current;
+    if (!container) return;
+
+    const onWheelNative = (e: WheelEvent) => {
+      e.preventDefault();
+      const factor = e.deltaY < 0 ? 1.05 : 0.95;
+      setCoverZoom((prev) => {
+        const nextZoom = Math.max(1, Math.min(4, prev * factor));
+        setCoverOffset((prevOffset) => {
+          const w = coverBaseWidth * nextZoom;
+          const h = coverBaseHeight * nextZoom;
+          const maxX = w / 2 - 360;
+          const minX = 360 - w / 2;
+          const maxY = h / 2 - 144;
+          const minY = 144 - h / 2;
+          return {
+            x: Math.max(minX, Math.min(maxX, prevOffset.x)),
+            y: Math.max(minY, Math.min(maxY, prevOffset.y)),
+          };
+        });
+        return nextZoom;
+      });
+    };
+
+    container.addEventListener("wheel", onWheelNative, { passive: false });
+    return () => {
+      container.removeEventListener("wheel", onWheelNative);
+    };
+  }, [coverPreviewSrc]);
+
+  // Synchronize avatar cropper style to avoid inline styles warning
+  useEffect(() => {
+    const el = cropperImgRef.current;
+    if (el) {
+      el.style.transform = `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`;
+      el.style.transformOrigin = "center center";
+      el.style.left = "50%";
+      el.style.top = "50%";
+      el.style.width = `${baseWidth}px`;
+      el.style.height = `${baseHeight}px`;
+      el.style.marginLeft = `${-baseWidth / 2}px`;
+      el.style.marginTop = `${-baseHeight / 2}px`;
+    }
+  }, [offset, zoom, baseWidth, baseHeight, avatarPreviewSrc]);
+
+  // Synchronize cover cropper style to avoid inline styles warning
+  useEffect(() => {
+    const el = cropperCoverImgRef.current;
+    if (el) {
+      el.style.transform = `translate(${coverOffset.x}px, ${coverOffset.y}px) scale(${coverZoom})`;
+      el.style.transformOrigin = "center center";
+      el.style.left = "50%";
+      el.style.top = "50%";
+      el.style.width = `${coverBaseWidth}px`;
+      el.style.height = `${coverBaseHeight}px`;
+      el.style.marginLeft = `${-coverBaseWidth / 2}px`;
+      el.style.marginTop = `${-coverBaseHeight / 2}px`;
+    }
+  }, [coverOffset, coverZoom, coverBaseWidth, coverBaseHeight, coverPreviewSrc]);
 
   const loadData = useCallback(async () => {
     setLoading(true);
@@ -624,49 +739,267 @@ export default function ProfilePage() {
     setShowFollowingModal(true);
   };
 
+  // Helper to generate a clean username from display name
+  const generateUsernameFromDisplayName = (name: string): string => {
+    return name
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "") // Remove accents
+      .replace(/[đĐ]/g, "d")
+      .toLowerCase()
+      .replace(/[^a-z0-9]/g, "_") // Replace non-alphanumeric with underscore
+      .replace(/_+/g, "_") // Collapse multiple underscores
+      .replace(/^_+|_+$/g, ""); // Trim leading/trailing underscores
+  };
+
   // Text profile save handler
   const handleSaveProfile = async () => {
+    if (!profile) return;
+
+    const trimmedDisplayName = editDisplayName.trim();
+    if (!trimmedDisplayName) {
+      toast.error("Tên hiển thị không được để trống.");
+      return;
+    }
+
+    if (trimmedDisplayName.length < 3 || trimmedDisplayName.length > 27) {
+      toast.error("Tên hiển thị phải từ 3 đến 27 ký tự.");
+      return;
+    }
+
+    if (editBio.length > 300) {
+      toast.error("Mô tả bản thân không được vượt quá 300 ký tự.");
+      return;
+    }
+
+    const targetUsername = generateUsernameFromDisplayName(trimmedDisplayName);
+    
+    if (targetUsername.length < 3 || targetUsername.length > 27) {
+      toast.error("Tên hiển thị tương ứng với tên @ không hợp lệ (phải từ 3 đến 27 ký tự không dấu).");
+      return;
+    }
+
+    if (targetUsername !== profile.username) {
+      toast.loading("Đang kiểm tra tính khả dụng của tên @...", { id: "profile-save" });
+      const checkRes = await getUserProfile(targetUsername);
+      if (checkRes.ok) {
+        toast.error(`Tên @${targetUsername} tương ứng đã có người sử dụng. Vui lòng đổi tên hiển thị khác.`, { id: "profile-save" });
+        return;
+      }
+    }
+
+    toast.loading("Đang cập nhật thông tin hồ sơ...", { id: "profile-save" });
     const res = await updateProfile({
-      displayName: editDisplayName,
+      displayName: trimmedDisplayName,
+      username: targetUsername !== profile.username ? targetUsername : undefined,
       bio: editBio,
     });
 
     if (res.ok) {
-      toast.success("Cập nhật thông tin thành công!");
+      toast.success("Cập nhật thông tin thành công!", { id: "profile-save" });
       setShowEditModal(false);
-      loadData();
+      if (res.data) {
+        setProfile(res.data);
+        setMyProfile(res.data);
+      }
+      if (targetUsername !== profile.username) {
+        navigate(`/profile/${targetUsername}`, { replace: true });
+      } else {
+        loadData();
+      }
     } else {
-      toast.error(res.message || "Cập nhật thất bại.");
+      toast.error(res.message || "Cập nhật thất bại.", { id: "profile-save" });
     }
   };
 
-  // Cover photo upload handler
-  const handleCoverUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  // Cover select triggers adjust modal
+  const handleCoverSelect = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
     if (!file) return;
+    setOriginalCoverFile(file);
 
-    setUploadingCover(true);
-    toast.loading("Đang tải ảnh bìa lên...", { id: "cover-upload" });
-
-    const uploadRes = await uploadMedia(file);
-    if (uploadRes.ok && uploadRes.data) {
-      const updateRes = await updateProfile({ coverImageUrl: uploadRes.data });
-      if (updateRes.ok) {
-        toast.success("Đã thay đổi ảnh bìa thành công!", {
-          id: "cover-upload",
-        });
-        loadData();
-      } else {
-        toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", {
-          id: "cover-upload",
-        });
+    const reader = new FileReader();
+    reader.onload = () => {
+      if (typeof reader.result === "string") {
+        const img = new Image();
+        img.src = reader.result;
+        img.onload = () => {
+          setCoverPreviewAspect(img.width / img.height);
+          setCoverPreviewSrc(reader.result as string);
+          setCoverZoom(1);
+          setCoverOffset({ x: 0, y: 0 });
+        };
       }
-    } else {
-      toast.error(uploadRes.message || "Tải ảnh lên thất bại.", {
-        id: "cover-upload",
+    };
+    reader.readAsDataURL(file);
+  };
+
+  // Cover Cropper Mouse/Touch Event Handlers
+  const handleCoverMouseDown = (e: React.MouseEvent) => {
+    setIsCoverDragging(true);
+    setCoverDragStart({ x: e.clientX - coverOffset.x, y: e.clientY - coverOffset.y });
+  };
+
+  const handleCoverMouseMove = (e: React.MouseEvent) => {
+    if (!isCoverDragging) return;
+    const rawX = e.clientX - coverDragStart.x;
+    const rawY = e.clientY - coverDragStart.y;
+    const w = coverBaseWidth * coverZoom;
+    const h = coverBaseHeight * coverZoom;
+    const maxX = w / 2 - 360;
+    const minX = 360 - w / 2;
+    const maxY = h / 2 - 144;
+    const minY = 144 - h / 2;
+    const constrainedX = Math.max(minX, Math.min(maxX, rawX));
+    const constrainedY = Math.max(minY, Math.min(maxY, rawY));
+    setCoverOffset({ x: constrainedX, y: constrainedY });
+    setCoverDragStart({
+      x: e.clientX - constrainedX,
+      y: e.clientY - constrainedY,
+    });
+  };
+
+  const handleCoverMouseUp = () => {
+    setIsCoverDragging(false);
+  };
+
+  const handleCoverTouchStart = (e: React.TouchEvent) => {
+    if (e.touches.length === 1) {
+      setIsCoverDragging(true);
+      setCoverDragStart({
+        x: e.touches[0].clientX - coverOffset.x,
+        y: e.touches[0].clientY - coverOffset.y,
       });
     }
-    setUploadingCover(false);
+  };
+
+  const handleCoverTouchMove = (e: React.TouchEvent) => {
+    if (!isCoverDragging || e.touches.length !== 1) return;
+    const rawX = e.touches[0].clientX - coverDragStart.x;
+    const rawY = e.touches[0].clientY - coverDragStart.y;
+    const w = coverBaseWidth * coverZoom;
+    const h = coverBaseHeight * coverZoom;
+    const maxX = w / 2 - 360;
+    const minX = 360 - w / 2;
+    const maxY = h / 2 - 144;
+    const minY = 144 - h / 2;
+    const constrainedX = Math.max(minX, Math.min(maxX, rawX));
+    const constrainedY = Math.max(minY, Math.min(maxY, rawY));
+    setCoverOffset({ x: constrainedX, y: constrainedY });
+    setCoverDragStart({
+      x: e.touches[0].clientX - constrainedX,
+      y: e.touches[0].clientY - constrainedY,
+    });
+  };
+
+  const handleRecropCurrentCover = () => {
+    if (!profile?.coverImageUrl) return;
+    const sourceImage = profile.coverImagePublicId || profile.coverImageUrl;
+
+    const img = new Image();
+    img.src = sourceImage;
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      setCoverPreviewAspect(img.width / img.height);
+      setCoverPreviewSrc(sourceImage);
+      setOriginalCoverFile(null);
+      setCoverZoom(1);
+      setCoverOffset({ x: 0, y: 0 });
+    };
+  };
+
+  const handleCoverCropConfirm = () => {
+    if (!coverPreviewSrc) return;
+
+    setUploadingCover(true);
+    toast.loading("Đang cắt và tải ảnh bìa lên...", {
+      id: "cover-upload",
+    });
+
+    const img = new Image();
+    img.src = coverPreviewSrc;
+    img.crossOrigin = "anonymous";
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = 1200;
+      canvas.height = 480;
+      const ctx = canvas.getContext("2d");
+
+      if (ctx) {
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, 1200, 480);
+
+        const imgAspect = img.width / img.height;
+        let baseWidth = 720;
+        let baseHeight = 288;
+
+        if (imgAspect > 2.5) {
+          baseWidth = 288 * imgAspect;
+          baseHeight = 288;
+        } else {
+          baseWidth = 720;
+          baseHeight = 720 / imgAspect;
+        }
+
+        const scaleFactor = 1200 / 720;
+        const sw = baseWidth * scaleFactor * coverZoom;
+        const sh = baseHeight * scaleFactor * coverZoom;
+
+        const sx = 600 - sw / 2 + coverOffset.x * scaleFactor;
+        const sy = 240 - sh / 2 + coverOffset.y * scaleFactor;
+
+        ctx.drawImage(img, sx, sy, sw, sh);
+
+        canvas.toBlob(async (blob) => {
+          if (blob) {
+            try {
+              let originalUrl = profile?.coverImagePublicId || null;
+
+              if (originalCoverFile) {
+                const origRes = await uploadMedia(originalCoverFile);
+                if (origRes.ok && origRes.data) {
+                  originalUrl = origRes.data;
+                } else {
+                  toast.error(
+                    "Tải ảnh gốc lên thất bại. Đang thử lưu ảnh đã cắt...",
+                    { id: "cover-upload" },
+                  );
+                }
+              }
+
+              const croppedFile = new File([blob], "cover.png", {
+                type: "image/png",
+              });
+              const uploadRes = await uploadMedia(croppedFile);
+              if (uploadRes.ok && uploadRes.data) {
+                const updateRes = await updateProfile({
+                  coverImageUrl: uploadRes.data,
+                  coverImagePublicId: originalUrl || uploadRes.data,
+                });
+                if (updateRes.ok) {
+                  toast.success("Thay đổi ảnh bìa thành công!", {
+                    id: "cover-upload",
+                  });
+                  setCoverPreviewSrc(null);
+                  setOriginalCoverFile(null);
+                  loadData();
+                } else {
+                  toast.error(updateRes.message || "Cập nhật hồ sơ thất bại.", {
+                    id: "cover-upload",
+                  });
+                }
+              } else {
+                toast.error(uploadRes.message || "Tải lên ảnh thất bại.", {
+                  id: "cover-upload",
+                });
+              }
+            } catch {
+              toast.error("Lỗi khi tải ảnh lên.", { id: "cover-upload" });
+            }
+          }
+          setUploadingCover(false);
+        }, "image/png");
+      }
+    };
   };
 
   // Avatar select triggers adjust modal
@@ -699,9 +1032,20 @@ export default function ProfilePage() {
 
   const handleMouseMove = (e: React.MouseEvent) => {
     if (!isDragging) return;
-    setOffset({
-      x: e.clientX - dragStart.x,
-      y: e.clientY - dragStart.y,
+    const rawX = e.clientX - dragStart.x;
+    const rawY = e.clientY - dragStart.y;
+    const w = baseWidth * zoom;
+    const h = baseHeight * zoom;
+    const maxX = w / 2 - 190;
+    const minX = 190 - w / 2;
+    const maxY = h / 2 - 190;
+    const minY = 190 - h / 2;
+    const constrainedX = Math.max(minX, Math.min(maxX, rawX));
+    const constrainedY = Math.max(minY, Math.min(maxY, rawY));
+    setOffset({ x: constrainedX, y: constrainedY });
+    setDragStart({
+      x: e.clientX - constrainedX,
+      y: e.clientY - constrainedY,
     });
   };
 
@@ -721,9 +1065,20 @@ export default function ProfilePage() {
 
   const handleTouchMove = (e: React.TouchEvent) => {
     if (!isDragging || e.touches.length !== 1) return;
-    setOffset({
-      x: e.touches[0].clientX - dragStart.x,
-      y: e.touches[0].clientY - dragStart.y,
+    const rawX = e.touches[0].clientX - dragStart.x;
+    const rawY = e.touches[0].clientY - dragStart.y;
+    const w = baseWidth * zoom;
+    const h = baseHeight * zoom;
+    const maxX = w / 2 - 190;
+    const minX = 190 - w / 2;
+    const maxY = h / 2 - 190;
+    const minY = 190 - h / 2;
+    const constrainedX = Math.max(minX, Math.min(maxX, rawX));
+    const constrainedY = Math.max(minY, Math.min(maxY, rawY));
+    setOffset({ x: constrainedX, y: constrainedY });
+    setDragStart({
+      x: e.touches[0].clientX - constrainedX,
+      y: e.touches[0].clientY - constrainedY,
     });
   };
 
@@ -788,15 +1143,6 @@ export default function ProfilePage() {
     };
   };
 
-  const handleWheel = (e: React.WheelEvent) => {
-    e.preventDefault();
-    const factor = e.deltaY < 0 ? 1.05 : 0.95;
-    setZoom((prev) => {
-      const next = prev * factor;
-      return Math.max(1, Math.min(4, next));
-    });
-  };
-
   const handleAvatarCropConfirm = () => {
     if (!avatarPreviewSrc) return;
 
@@ -825,17 +1171,17 @@ export default function ProfilePage() {
 
         // Calculate exact scale matches
         const imgAspect = img.width / img.height;
-        let baseWidth = 300;
-        let baseHeight = 300;
+        let baseWidth = 380;
+        let baseHeight = 380;
         if (imgAspect > 1) {
-          baseWidth = 300 * imgAspect;
-          baseHeight = 300;
+          baseWidth = 380 * imgAspect;
+          baseHeight = 380;
         } else {
-          baseWidth = 300;
-          baseHeight = 300 / imgAspect;
+          baseWidth = 380;
+          baseHeight = 380 / imgAspect;
         }
 
-        const scaleFactor = 400 / 300;
+        const scaleFactor = 400 / 380;
         const sw = baseWidth * scaleFactor * zoom;
         const sh = baseHeight * scaleFactor * zoom;
 
@@ -940,9 +1286,6 @@ export default function ProfilePage() {
     (myProfile && profile && profile.username === myProfile.username);
   const coverUrl = profile.coverImageUrl;
 
-  const baseWidth = previewAspect > 1 ? 300 * previewAspect : 300;
-  const baseHeight = previewAspect > 1 ? 300 : 300 / previewAspect;
-
   return (
     <div className="bg-[#f3f4f6] dark:bg-[#121212] min-h-screen font-sans text-slate-800 dark:text-[#e4e6eb] transition-colors duration-300">
       <AppHeader />
@@ -972,9 +1315,10 @@ export default function ProfilePage() {
                   <input
                     type="file"
                     ref={coverInputRef}
-                    onChange={handleCoverUpload}
+                    onChange={handleCoverSelect}
                     accept="image/*"
                     className="hidden"
+                    title="Chọn ảnh bìa"
                   />
                   <div className="absolute right-4 bottom-4 flex items-center gap-2 z-20">
                     {coverUrl && (
@@ -985,6 +1329,16 @@ export default function ProfilePage() {
                         title="Xóa ảnh bìa"
                       >
                         <Trash2 className="w-5 h-5" />
+                      </button>
+                    )}
+                    {coverUrl && (
+                      <button
+                        onClick={handleRecropCurrentCover}
+                        disabled={uploadingCover}
+                        className="p-3 bg-black/60 hover:bg-black/80 rounded-full text-white flex items-center justify-center shadow-md cursor-pointer transition-all active:scale-95 duration-200"
+                        title="Cắt lại ảnh bìa"
+                      >
+                        <Crop className="w-5 h-5" />
                       </button>
                     )}
                     <button
@@ -1037,6 +1391,7 @@ export default function ProfilePage() {
                         onChange={handleAvatarSelect}
                         accept="image/*"
                         className="hidden"
+                        title="Chọn ảnh đại diện"
                       />
                       <div className="absolute inset-0 bg-black/60 opacity-0 group-hover/avatar:opacity-100 transition-all duration-300 flex flex-col items-center justify-center text-white z-20">
                         <span className="text-[11px] font-bold uppercase tracking-wider mb-2 text-slate-300">
@@ -1294,6 +1649,7 @@ export default function ProfilePage() {
               </h3>
               <button
                 onClick={() => setShowEditModal(false)}
+                title="Đóng"
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-gray-400 dark:text-neutral-500 transition-colors"
               >
                 <X className="w-5 h-5" />
@@ -1302,12 +1658,18 @@ export default function ProfilePage() {
 
             <div className="p-6 flex flex-col gap-5">
               <div>
-                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
-                  Tên hiển thị
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider">
+                    Tên hiển thị
+                  </label>
+                  <span className="text-[10px] font-bold text-gray-400 dark:text-neutral-500">
+                    {editDisplayName.length}/27
+                  </span>
+                </div>
                 <input
                   type="text"
                   value={editDisplayName}
+                  maxLength={27}
                   onChange={(e) => setEditDisplayName(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 outline-none text-sm transition-all dark:text-white"
                   placeholder="Nhập tên hiển thị mới của bạn"
@@ -1315,12 +1677,18 @@ export default function ProfilePage() {
               </div>
 
               <div>
-                <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider mb-2">
-                  Mô tả bản thân (Bio)
-                </label>
+                <div className="flex justify-between items-center mb-2">
+                  <label className="block text-xs font-extrabold text-gray-500 dark:text-neutral-400 uppercase tracking-wider">
+                    Mô tả bản thân (Bio)
+                  </label>
+                  <span className="text-[10px] font-bold text-gray-400 dark:text-neutral-500">
+                    {editBio.length}/300
+                  </span>
+                </div>
                 <textarea
                   value={editBio}
                   rows={4}
+                  maxLength={300}
                   onChange={(e) => setEditBio(e.target.value)}
                   className="w-full bg-slate-50 dark:bg-neutral-950 border border-slate-200 dark:border-neutral-800 focus:border-blue-500 focus:ring-1 focus:ring-blue-500 rounded-xl py-3 px-4 outline-none text-sm transition-all dark:text-white resize-none leading-relaxed"
                   placeholder="Hãy chia sẻ đôi nét về bản thân của bạn với mọi người..."
@@ -1400,15 +1768,17 @@ export default function ProfilePage() {
               </h3>
               <button
                 onClick={() => setAvatarPreviewSrc(null)}
+                title="Đóng"
                 className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-gray-400 dark:text-neutral-500 transition-colors"
               >
                 <X className="w-5 h-5" />
               </button>
             </div>
 
-            <div className="p-8 flex flex-col items-center">
+            <div className="p-6 flex flex-col items-center">
               <div
-                className="w-[300px] h-[300px] bg-slate-900 relative overflow-hidden rounded-lg cursor-move select-none touch-none shadow-inner"
+                ref={cropperContainerRef}
+                className="w-[380px] h-[380px] bg-slate-900 relative overflow-hidden rounded-lg cursor-move select-none touch-none shadow-inner"
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseUp={handleMouseUp}
@@ -1416,48 +1786,37 @@ export default function ProfilePage() {
                 onTouchStart={handleTouchStart}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleMouseUp}
-                onWheel={handleWheel}
               >
                 <img
                   ref={cropperImgRef}
                   src={avatarPreviewSrc}
                   alt="Cropper Preview"
                   className="max-w-none absolute pointer-events-none select-none"
-                  style={{
-                    transform: `translate(${offset.x}px, ${offset.y}px) scale(${zoom})`,
-                    transformOrigin: "center center",
-                    left: "50%",
-                    top: "50%",
-                    width: `${baseWidth}px`,
-                    height: `${baseHeight}px`,
-                    marginLeft: `${-baseWidth / 2}px`,
-                    marginTop: `${-baseHeight / 2}px`,
-                  }}
                 />
 
                 <svg
                   className="absolute inset-0 pointer-events-none w-full h-full"
-                  viewBox="0 0 300 300"
+                  viewBox="0 0 380 380"
                 >
                   <defs>
                     <mask id="circle-mask">
-                      <rect x="0" y="0" width="300" height="300" fill="white" />
-                      <circle cx="150" cy="150" r="145" fill="black" />
+                      <rect x="0" y="0" width="380" height="380" fill="white" />
+                      <circle cx="190" cy="190" r="190" fill="black" />
                     </mask>
                   </defs>
                   <rect
                     x="0"
                     y="0"
-                    width="300"
-                    height="300"
+                    width="380"
+                    height="380"
                     fill="black"
                     opacity="0.65"
                     mask="url(#circle-mask)"
                   />
                   <circle
-                    cx="150"
-                    cy="150"
-                    r="145"
+                    cx="190"
+                    cy="190"
+                    r="190"
                     stroke="#3b82f6"
                     strokeWidth="3"
                     strokeDasharray="5,5"
@@ -1505,6 +1864,100 @@ export default function ProfilePage() {
           </div>
         </div>
       )}
+
+      {/* PREMIUM RECT COVER ADJUSTMENT & CROP MODAL */}
+      {coverPreviewSrc && (
+        <div className="fixed inset-0 bg-black/85 backdrop-blur-md z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-neutral-900 w-full max-w-3xl rounded-2xl overflow-hidden shadow-2xl border border-slate-200 dark:border-neutral-800 animate-in fade-in zoom-in-95 duration-200">
+            <div className="flex justify-between items-center px-6 py-4 border-b border-slate-100 dark:border-neutral-800">
+              <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                Căn chỉnh ảnh bìa
+              </h3>
+              <button
+                onClick={() => setCoverPreviewSrc(null)}
+                title="Đóng"
+                className="p-1.5 rounded-full hover:bg-slate-100 dark:hover:bg-neutral-800 text-gray-400 dark:text-neutral-500 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="p-6 flex flex-col items-center">
+              <div
+                ref={cropperCoverContainerRef}
+                className="w-[720px] h-[288px] bg-slate-900 relative overflow-hidden rounded-lg cursor-move select-none touch-none shadow-inner"
+                onMouseDown={handleCoverMouseDown}
+                onMouseMove={handleCoverMouseMove}
+                onMouseUp={handleCoverMouseUp}
+                onMouseLeave={handleCoverMouseUp}
+                onTouchStart={handleCoverTouchStart}
+                onTouchMove={handleCoverTouchMove}
+                onTouchEnd={handleCoverMouseUp}
+              >
+                <img
+                  ref={cropperCoverImgRef}
+                  src={coverPreviewSrc}
+                  alt="Cropper Preview"
+                  className="max-w-none absolute pointer-events-none select-none"
+                />
+
+                <svg
+                  className="absolute inset-0 pointer-events-none w-full h-full"
+                  viewBox="0 0 720 288"
+                >
+                  <rect
+                    x="0"
+                    y="0"
+                    width="720"
+                    height="288"
+                    stroke="#3b82f6"
+                    strokeWidth="3"
+                    strokeDasharray="5,5"
+                    fill="none"
+                  />
+                </svg>
+              </div>
+
+              <div className="w-full mt-6 flex items-center justify-center gap-2.5 text-xs font-semibold text-slate-500 dark:text-neutral-400 bg-slate-50 dark:bg-neutral-950 py-3.5 px-4 rounded-xl border border-slate-200/50 dark:border-neutral-850">
+                <MousePointerClick className="w-4 h-4 text-blue-500 animate-bounce shrink-0" />
+                <span>
+                  Lăn chuột hoặc dùng pad (2 ngón) để thu nhỏ / phóng to
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-500 dark:text-neutral-400 mt-4 text-center leading-relaxed">
+                * Nhấp giữ kéo chuột/ngón tay để di chuyển góc ảnh phù hợp với
+                khung hình chữ nhật nét.
+              </p>
+            </div>
+
+            <div className="flex justify-end items-center gap-3 px-6 py-4 bg-slate-50 dark:bg-neutral-950 border-t border-slate-100 dark:border-neutral-800">
+              <button
+                onClick={() => setCoverPreviewSrc(null)}
+                className="px-5 py-2.5 rounded-xl border border-slate-200 dark:border-neutral-800 text-sm font-semibold hover:bg-slate-100 dark:hover:bg-neutral-900 transition-colors"
+                disabled={uploadingCover}
+              >
+                Hủy bỏ
+              </button>
+              <button
+                onClick={handleCoverCropConfirm}
+                disabled={uploadingCover}
+                className="px-6 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 disabled:bg-blue-400 text-white text-sm font-semibold transition-colors shadow-lg shadow-blue-500/20 active:scale-95 flex items-center gap-2"
+              >
+                {uploadingCover ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" />
+                    Đang lưu...
+                  </>
+                ) : (
+                  "Xác nhận & Tải lên"
+                )}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* LIGHTBOX FOR FULL VIEWING AVATAR / COVER */}
       {viewingImageUrl && (
         <div
@@ -1517,6 +1970,7 @@ export default function ProfilePage() {
           >
             <button
               onClick={() => setViewingImageUrl(null)}
+              title="Đóng"
               className="absolute right-4 top-4 p-2 rounded-full bg-black/60 hover:bg-black/80 text-white transition-colors z-10 cursor-pointer"
             >
               <X className="w-5 h-5" />

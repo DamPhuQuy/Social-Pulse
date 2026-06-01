@@ -148,6 +148,8 @@ public class FeedItemResponseAssembler {
                 .rankingProvider(item.getRankingProvider() != null ? item.getRankingProvider().name() : null)
                 .featureSchemaVersion(item.getFeatureSchemaVersion())
                 .rankedAt(item.getRankedAt())
+                .affinityScore(item.getAffinityScore())
+                .interactionCount30d(item.getInteractionCount30d())
                 .privacy(post.getPrivacy())
                 .createdAt(post.getCreatedAt())
                 .updatedAt(post.getUpdatedAt())

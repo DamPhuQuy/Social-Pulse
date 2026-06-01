@@ -5,8 +5,7 @@ import org.springframework.transaction.annotation.Transactional;
 import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
 import com.socialpulse.app.common.exception.AppException;
-import com.socialpulse.app.common.exception.status.CommentCode;
-import com.socialpulse.app.common.exception.status.PostCode;
+
 import com.socialpulse.app.common.exception.status.ReportCode;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
@@ -15,7 +14,7 @@ import com.socialpulse.app.report.application.dto.request.ReviewReportRequest;
 import com.socialpulse.app.report.application.dto.response.ReportResponse;
 import com.socialpulse.app.report.application.usecase.ReviewReportUseCase;
 import com.socialpulse.app.report.domain.enums.ReportStatus;
-import com.socialpulse.app.report.domain.enums.ReportTargetType;
+
 import com.socialpulse.app.report.domain.model.Report;
 import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.user.domain.model.User;

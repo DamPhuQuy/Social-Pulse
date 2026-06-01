@@ -56,13 +56,23 @@ public class FeedRankingService implements RankFeedUseCase {
         List<CandidatePost> candidates = selectCandidates.selectCandidates(userId);
         if (candidates.isEmpty()) return List.of();
 
-        ScoreResolution resolution = resolveScores(userId, candidates);
+        List<RankingFeatures> features = extractFeatures.extractFeatures(userId, candidates);
+        Map<Long, RankingFeatures> featureMap = features.stream()
+                .collect(Collectors.toMap(RankingFeatures::getPostId, f -> f, (a, b) -> a));
+
+        ScoreResolution resolution = resolveScores(userId, candidates, features);
         Map<Long, CandidatePost> candidateMap = candidates.stream()
                 .collect(Collectors.toMap(c -> c.getPost().getId(), c -> c));
 
         List<FeedItem> ranked = resolution.scores().stream()
                 .map(score -> {
                     CandidatePost candidate = candidateMap.get(score.getPostId());
+                    RankingFeatures feat = featureMap.get(score.getPostId());
+                    Double affinity = (feat != null && feat.getInteractionFeatures() != null)
+                            ? feat.getInteractionFeatures().getAffinityScore() : 0.0;
+                    Long count30d = (feat != null && feat.getInteractionFeatures() != null)
+                            ? feat.getInteractionFeatures().getInteractionCount30d() : 0L;
+
                     double boosted = scoreBoost.boost(score.getScore() != null ? score.getScore() : 0.0, userId, candidate);
                     return FeedItem.builder()
                             .postId(score.getPostId())
@@ -72,6 +82,8 @@ public class FeedRankingService implements RankFeedUseCase {
                             .rankingProvider(resolution.provider())
                             .featureSchemaVersion(featureSchemaVersion)
                             .rankedAt(LocalDateTime.now())
+                            .affinityScore(affinity)
+                            .interactionCount30d(count30d)
                             .build();
                 })
                 .sorted(Comparator.comparing(FeedItem::getAiScore).reversed())
@@ -94,13 +106,23 @@ public class FeedRankingService implements RankFeedUseCase {
         List<CandidatePost> candidates = selectCandidates.selectCandidatesByTopic(topicSlug);
         if (candidates.isEmpty()) return List.of();
 
-        ScoreResolution resolution = resolveScores(userId, candidates);
+        List<RankingFeatures> features = extractFeatures.extractFeatures(userId, candidates);
+        Map<Long, RankingFeatures> featureMap = features.stream()
+                .collect(Collectors.toMap(RankingFeatures::getPostId, f -> f, (a, b) -> a));
+
+        ScoreResolution resolution = resolveScores(userId, candidates, features);
         Map<Long, CandidatePost> candidateMap = candidates.stream()
                 .collect(Collectors.toMap(c -> c.getPost().getId(), c -> c));
 
         List<FeedItem> ranked = resolution.scores().stream()
                 .map(score -> {
                     CandidatePost candidate = candidateMap.get(score.getPostId());
+                    RankingFeatures feat = featureMap.get(score.getPostId());
+                    Double affinity = (feat != null && feat.getInteractionFeatures() != null)
+                            ? feat.getInteractionFeatures().getAffinityScore() : 0.0;
+                    Long count30d = (feat != null && feat.getInteractionFeatures() != null)
+                            ? feat.getInteractionFeatures().getInteractionCount30d() : 0L;
+
                     double boosted = scoreBoost.boost(score.getScore() != null ? score.getScore() : 0.0, userId, candidate);
                     return FeedItem.builder()
                             .postId(score.getPostId())
@@ -110,6 +132,8 @@ public class FeedRankingService implements RankFeedUseCase {
                             .rankingProvider(resolution.provider())
                             .featureSchemaVersion(featureSchemaVersion)
                             .rankedAt(LocalDateTime.now())
+                            .affinityScore(affinity)
+                            .interactionCount30d(count30d)
                             .build();
                 })
                 .sorted(Comparator.comparing(FeedItem::getAiScore).reversed())
@@ -120,8 +144,7 @@ public class FeedRankingService implements RankFeedUseCase {
         return ranked.subList(start, Math.min(start + size, ranked.size()));
     }
 
-    private ScoreResolution resolveScores(Long userId, List<CandidatePost> candidates) {
-        List<RankingFeatures> features = extractFeatures.extractFeatures(userId, candidates);
+    private ScoreResolution resolveScores(Long userId, List<CandidatePost> candidates, List<RankingFeatures> features) {
         if (!features.isEmpty()) {
             List<RankingResponse> predicted = predictRanking.predictScores(
                     RankingRequest.builder().featureSchemaVersion(featureSchemaVersion).features(features).build());
