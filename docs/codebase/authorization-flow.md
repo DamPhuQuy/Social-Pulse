@@ -469,6 +469,41 @@ WHERE r.name = 'ADMIN' AND p.name IN (
 - Xóa bất kỳ post/comment nào
 - Quản lý và moderate users
 
+### Permission Matrix
+
+| Permission | GUEST | USER | ADMIN |
+|---|---|---|---|
+| `bookmark:create` | N | Y | Y |
+| `bookmark:delete` | N | Y | Y |
+| `bookmark:read` | N | Y | Y |
+| `comment:create` | N | Y | Y |
+| `comment:delete` | N | Y | Y |
+| `comment:manage` | N | N | Y |
+| `comment:react` | N | Y | Y |
+| `comment:read` | N | Y | Y |
+| `comment:update` | N | Y | Y |
+| `discovery:read` | N | Y | Y |
+| `feed:read` | N | Y | Y |
+| `follow:create` | N | Y | Y |
+| `follow:delete` | N | Y | Y |
+| `follow:read` | N | Y | Y |
+| `notification:read` | N | Y | Y |
+| `notification:update` | N | Y | Y |
+| `post:create` | N | Y | Y |
+| `post:delete` | N | Y | Y |
+| `post:manage` | N | N | Y |
+| `post:react` | N | Y | Y |
+| `post:read` | Y | Y | Y |
+| `post:update` | N | Y | Y |
+| `report:create` | N | Y | Y |
+| `report:manage` | N | N | Y |
+| `user:create` | N | Y | Y |
+| `user:delete` | N | Y | Y |
+| `user:manage` | N | N | Y |
+| `user:moderate` | N | N | Y |
+| `user:read` | N | Y | Y |
+| `user:update` | N | Y | Y |
+
 ## Assign Role cho User Mới
 
 **File**: `user/application/service/UserRoleService.java`
