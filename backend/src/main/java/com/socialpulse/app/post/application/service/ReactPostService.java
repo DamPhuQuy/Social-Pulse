@@ -4,6 +4,8 @@ import java.util.Map;
 import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.transaction.support.TransactionSynchronization;
+import org.springframework.transaction.support.TransactionSynchronizationManager;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
@@ -147,10 +149,23 @@ public class ReactPostService implements ReactPostUseCase {
     }
 
     private void broadcastPostStats(Post post) {
-        sseEmitterRegistry.broadcast("post_stats", Map.of(
-            "postId", post.getId(),
-            "upvoteCount", post.getUpvoteCount(),
-            "downvoteCount", post.getDownvoteCount()
-        ));
+        if (TransactionSynchronizationManager.isSynchronizationActive()) {
+            TransactionSynchronizationManager.registerSynchronization(new TransactionSynchronization() {
+                @Override
+                public void afterCommit() {
+                    sseEmitterRegistry.broadcast("post_stats", Map.of(
+                        "postId", post.getId(),
+                        "upvoteCount", post.getUpvoteCount(),
+                        "downvoteCount", post.getDownvoteCount()
+                    ));
+                }
+            });
+        } else {
+            sseEmitterRegistry.broadcast("post_stats", Map.of(
+                "postId", post.getId(),
+                "upvoteCount", post.getUpvoteCount(),
+                "downvoteCount", post.getDownvoteCount()
+            ));
+        }
     }
 }

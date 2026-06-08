@@ -55,25 +55,25 @@ public class SyncSchedule {
             } catch(Exception e) {
                 log.error("Failed to parse share count delta for key: " + key, e);
             }
+        }
 
-            if (updates.isEmpty()) return;
+        if (updates.isEmpty()) return;
 
-            try {
-                postRepository.updateShareCount(updates);
+        try {
+            postRepository.updateShareCount(updates);
 
-                updates.keySet().forEach(id -> {
-                    String redisKey = "post:" + id + ":shareCount:delta";
-                    redisTemplate.opsForSet().remove(SHARE_KEYS_SET, redisKey);
-                });
-            } catch (Exception e) {
-                log.error("Failed to update share count for key: " + key, e);
+            updates.keySet().forEach(id -> {
+                String redisKey = "post:" + id + ":shareCount:delta";
+                redisTemplate.opsForSet().remove(SHARE_KEYS_SET, redisKey);
+            });
+        } catch (Exception e) {
+            log.error("Failed to update share count for updates: " + updates, e);
 
-                // rollback
-                updates.forEach((id, delta) -> {
-                    String redisKey = "post:" + id + ":shareCount:delta";
-                    redisTemplate.opsForValue().increment(redisKey, delta);
-                });
-            }
+            // rollback
+            updates.forEach((id, delta) -> {
+                String redisKey = "post:" + id + ":shareCount:delta";
+                redisTemplate.opsForValue().increment(redisKey, delta);
+            });
         }
     }
 }
