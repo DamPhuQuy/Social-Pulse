@@ -151,6 +151,20 @@ Hệ thống Social-Pulse áp dụng kiến trúc tách biệt luồng Đọc/Gh
 * **Giao dịch Đọc (Read Path)**:
   Đối với nghiệp vụ hiển thị bảng tin (Feed) yêu cầu hiệu năng đọc cực cao và kết hợp nhiều bảng, hệ thống bypass hoàn toàn JPA Hibernate để loại bỏ overhead quản lý trạng thái entity (Cache L1/L2 tracking).
   - Lớp [FeedRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedRepositoryAdapter.java) sử dụng trực tiếp Spring `JdbcTemplate` thực thi SQL thô (Native Query) với lệnh `LIMIT/OFFSET` và liên kết JOIN tường minh.
+* **Các kỹ thuật truy vấn tối ưu áp dụng trong Database**:
+  Để đảm bảo khả năng chịu tải và giảm thiểu tối đa độ trễ (latency), hệ thống triển khai 3 kỹ thuật truy vấn chuyên sâu sau:
+  
+  1. **Cập nhật lô hiệu năng cao với `JdbcTemplate` (Bulk Batch Updates)**:
+     - *Vấn đề*: Log lượt hiển thị bảng tin (Impressions) có tần suất ghi cực lớn (nhiều bài viết trên một lượt tải trang). Ghi từng dòng riêng lẻ bằng JPA sẽ tạo ra $N$ kết nối mạng và Overhead giao dịch, gây nghẽn PostgreSQL.
+     - *Giải pháp*: Lớp [FeedImpressionRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedImpressionRepositoryAdapter.java) triển khai phương thức `saveAll` sử dụng `jdbcTemplate.batchUpdate()` và `BatchPreparedStatementSetter`. Cơ chế này gom tất cả các bản ghi vào một gói tin mạng duy nhất để ghi xuống PostgreSQL. Khi cấu hình JDBC URL với `rewriteBatchedInserts=true`, driver sẽ chuyển đổi batch insert thành câu lệnh multi-value (`INSERT INTO ... VALUES (?,?,...), (?,?,...)`), giúp tốc độ ghi tăng gấp 10-20 lần.
+     
+  2. **Gom nhóm truy vấn & Tính toán trên DB (Batch & Aggregate JPQL)**:
+     - *Vấn đề*: Lỗi truy vấn N+1 khi hiển thị Feed kèm theo thông tin tổng số bài đăng hoặc độ nổi tiếng trung bình của từng tác giả.
+     - *Giải pháp*: [JpaPostRepository.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/persistence/repository/JpaPostRepository.java) sử dụng các truy vấn JPQL custom như `countByUserIds` và `averagePopularityByUserIds` sử dụng mệnh đề `IN :userIds` kết hợp với `GROUP BY`. Việc tính toán các hàm tổng hợp như `COUNT` hoặc `AVG(COALESCE(p.upvoteCount, 0) + ...)` được thực thi trực tiếp trên PostgreSQL tận dụng các index sẵn có, thay vì tải hàng ngàn thực thể thô lên RAM (Java Heap) để tính toán thủ công.
+     
+  3. **Chỉ mục nâng cao (Advanced Indexing Strategy)**:
+     - *Chỉ mục một phần (Partial Index)*: [V1__init.sql](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/db/migration/V1__init.sql) định nghĩa index `idx_msg_unread` trên `messages(conversation_id, status, sender_id) WHERE status != 'READ'`. Do tin nhắn chưa đọc chỉ chiếm một phần rất nhỏ ($<5\%$) trong bảng messages, việc loại trừ các tin nhắn đã đọc giúp kích thước index cực kỳ nhỏ, nằm gọn trong RAM (Buffer Pool), đẩy nhanh tốc độ quét và giảm overhead cập nhật index khi tin nhắn mới được đọc.
+     - *Chỉ mục tổ hợp phục vụ phân trang (Composite Index)*: Index `idx_feed_impressions_viewer_created` trên `(viewer_id, created_at DESC)` và `idx_user_interactions_viewer_created` trên `(viewer_id, created_at DESC)`. Giúp PostgreSQL thực thi đồng thời bộ lọc (filter theo user) và sắp xếp (sort theo thời gian giảm dần) trong một lần quét chỉ mục duy nhất mà không cần thực hiện thao tác sắp xếp ghi đĩa tạm (Filesort/External Sort).
 * **Lý do lựa chọn**:
   - Giao dịch Ghi cần tính nhất quán mạnh mẽ (ACID), tính toàn vẹn dữ liệu và các quan hệ thực thể chặt chẽ nên JPA/Hibernate là sự lựa chọn tối ưu.
   - Giao dịch Đọc (đặc biệt là Feed) đòi hỏi tốc độ phản hồi tính bằng mili-giây. Việc nạp dữ liệu qua JDBC thô giúp đạt hiệu năng tối đa, kiểm soát được kế hoạch thực thi (Query Execution Plan) của PostgreSQL và tránh lỗi N+1 Select.
