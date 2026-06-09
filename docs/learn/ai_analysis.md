@@ -597,17 +597,193 @@ Tệp Jupyter Notebook [visualize_metrics.ipynb](file:///home/damphuquy/Document
 
 ---
 
-## Giai đoạn 13 - Nghiên cứu & Thiết kế Thay thế
+## Giai đoạn 13 - Kiến trúc Tích hợp Hệ thống (Feed Domain & AI Pipeline)
 
 > [!NOTE]
-> **File liên quan:** [FeedRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FeedRankingService.java) | **Mô tả:** Logic tích hợp và dự phòng (fallback).
+> **Các file và thư mục liên quan chính:**
+> * **Java Feed Domain:** [FeedRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FeedRankingService.java) | [CandidateSelectionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/candidate/CandidateSelectionService.java) | [FeatureExtractionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/FeatureExtractionService.java) | [AiPipelineRankingClient.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/infrastructure/config/AiPipelineRankingClient.java)
+> * **Python AI Pipeline:** [controller.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/api/controller.py) | [ranking_service.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/inference/ranking_service.py) | [vectorizer.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/inference/vectorizer.py) | [schema.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/shared/schema.py)
 
-### 13.1 Xếp hạng Pointwise so với Pairwise/Listwise
+### 13.1 Kiến trúc Tổng quan & Sơ đồ Tuần tự (Sequence Diagram)
+
+Hệ thống Xếp hạng Bài đăng của Social Pulse là sự kết hợp chặt chẽ giữa **Tầng Nghiệp vụ Java (Feed Domain)** viết theo kiến trúc Clean/Hexagonal Architecture và **Dịch vụ Suy luận Python (FastAPI + LightGBM)**. 
+
+Tầng Java đóng vai trò là bộ điều phối chính (Orchestrator): chịu trách nhiệm thu thập ứng viên từ các nguồn khác nhau, trích xuất đặc trưng thô từ PostgreSQL, gọi API dự đoán của Python, áp dụng các nghiệp vụ bổ sung (tăng điểm/boost, kiểm tra lỗi/validation, dự phòng/fallback), ghi nhớ (cache) kết quả xếp hạng vào Redis, và phân trang trả về cho người dùng.
+
+Dưới đây là sơ đồ tuần tự thể hiện chi tiết luồng dữ liệu đầu-cuối (End-to-End Execution Flow):
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Client as Người dùng (Client)
+    participant Ctrl as FeedController
+    participant Svc as FeedRankingService
+    participant Select as CandidateSelectionService
+    participant Extract as FeatureExtractionService
+    participant Redis as Redis Cache
+    participant HTTP as AiPipelineRankingClient
+    participant FastAPI as FastAPI (api/controller.py)
+    participant Infer as Inference (ranking_service.py)
+    participant Vec as FeatureVectorizer
+    participant LGB as LightGBM Booster
+
+    Client ->> Ctrl: GET /api/v1/feed (userId)
+    Ctrl ->> Svc: getRankedFeed(userId)
+    
+    %% Bước 1: Kiểm tra Cache
+    Svc ->> Redis: getCachedFeed(userId)
+    alt Cache Hit (Có dữ liệu trong Redis)
+        Redis -->> Svc: Trả về danh sách FeedItem đã xếp hạng
+        Svc -->> Client: Trả về Feed cho người dùng
+    else Cache Miss (Chưa có dữ liệu)
+        Redis -->> Svc: null/Empty
+        
+        %% Bước 2: Thu thập ứng viên
+        Svc ->> Select: selectCandidates(userId)
+        Select ->> Redis: Đọc lịch sử đã xem (user:seen:userId)
+        Select ->> PostgreSQL: Lọc chặn (blocking) & Lấy bài đăng (Recent, Following, Popular, Random)
+        PostgreSQL -->> Select: Trả về danh sách CandidatePost (~200 - 500 bài)
+        Select -->> Svc: Trả về CandidatePost
+        
+        %% Bước 3: Gom đặc trưng thô
+        Svc ->> Extract: extractFeatures(userId, candidates)
+        Extract ->> Redis: Đọc thông tin tác giả (author:features:authorId)
+        Extract ->> PostgreSQL: Đọc lượt tương tác lịch sử & đặc trưng bài đăng thô
+        PostgreSQL -->> Extract: Trả về dữ liệu thô
+        Extract -->> Svc: Trả về List<RankingFeatures>
+        
+        %% Bước 4: Gọi API Suy luận AI
+        Svc ->> HTTP: predictScores(RankingRequest)
+        HTTP ->> FastAPI: POST /api/ranking/predict (JSON request)
+        
+        alt API AI Hoạt động bình thường
+            FastAPI ->> Infer: predict_scores(schema, domain_features)
+            Infer ->> Vec: to_ordered_vector(feature)
+            Note over Vec: Tiền xử lý: Capping P99 & Log1p biến đổi
+            Vec -->> Infer: Vector đặc trưng dạng float[]
+            Infer ->> LGB: booster.predict(matrix)
+            LGB -->> Infer: Trả về điểm số dự đoán (np.array)
+            Infer -->> FastAPI: Trả về List<RankingResponse>
+            FastAPI -->> HTTP: HTTP 200 OK (JSON response)
+            HTTP -->> Svc: Trả về List<RankingResponse>
+            
+            %% Bước 5: Hợp nhất & Sắp xếp
+            Note over Svc: Xác thực schema v2 & Trùng khớp postId
+            Svc ->> ScoreBoostService: boost(score, userId, candidate)
+            ScoreBoostService -->> Svc: Trả về điểm số sau khi boost nghiệp vụ
+        else API AI Gặp sự cố (Timeout, HTTP Error, Lỗi validation)
+            HTTP -->> Svc: Rỗng / Ném ngoại lệ (Exception)
+            Svc ->> FallbackRankingService: rank(candidates)
+            FallbackRankingService -->> Svc: Trả về điểm số heuristic (Rule-based)
+        end
+        
+        Note over Svc: Sắp xếp giảm dần theo điểm số cuối cùng
+        Svc ->> Redis: cacheFeed(userId, ranked_list)
+        Svc -->> Client: Trả về Feed đã xếp hạng tối ưu
+    end
+```
+
+---
+
+### 13.2 Quy trình Xử lý Đầu-Cuối tại Tầng Java (Feed Domain)
+
+#### 1. Giai đoạn Thu thập Ứng viên (Candidate Selection)
+Được đảm nhận bởi [CandidateSelectionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/candidate/CandidateSelectionService.java). Nhiệm vụ của nó là thu hẹp không gian tìm kiếm từ hàng triệu bài đăng trong hệ thống xuống còn khoảng 200 đến 500 bài viết ứng viên tiềm năng nhất qua 4 kênh (Sources):
+* **RECENT (Mới nhất)**: Lấy `RECENT_COUNT = 200` bài đăng mới nhất nhằm ưu tiên tính cập nhật (freshness).
+* **FOLLOWING (Theo dõi)**: Lấy `FOLLOWING_COUNT = 100` bài đăng từ những tác giả mà người dùng đang theo dõi trực tiếp.
+* **POPULAR (Phổ biến)**: Lấy `POPULAR_COUNT = 100` bài đăng hot nhất hệ thống.
+* **RANDOM (Ngẫu nhiên)**: Lấy `RANDOM_COUNT = 100` bài đăng ngẫu nhiên để tăng tính khám phá (explorability), tránh hiện tượng bong bóng bộ lọc (filter bubble).
+
+**Logic lọc nâng cao (Guardrails):**
+* **Chặn (Blocklist)**: Sử dụng [BlockRepository](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/block/domain/repository/FeedRepository.java) để lọc bỏ triệt để các bài đăng có liên quan đến mối quan hệ chặn chéo (blocker - blocked) giữa người đăng và người xem.
+* **Bài viết đã xem (Seen Filter)**: Lấy lịch sử xem bài đăng của người dùng từ Redis Set (`user:seen:<userId>`) để loại bỏ hoàn toàn các bài đăng người dùng đã đọc, tránh gây nhàm chán.
+* **Dự phòng cửa sổ thời gian (Lookback Window Fallback)**: Mặc định hệ thống quét dữ liệu trong cửa sổ `LOOKBACK_DAYS = 7`. Nếu số lượng ứng viên thu thập được ít hơn `MIN_CANDIDATES = 20` (ví dụ: đối với người dùng mới hoặc hệ thống ít hoạt động), service sẽ tự động nới rộng cửa sổ thời gian lên `EXTENDED_LOOKBACK_DAYS = 30` để đảm bảo trải nghiệm liền mạch.
+
+#### 2. Giai đoạn Gom cụm Đặc trưng (Feature Aggregation)
+Được quản lý bởi [FeatureExtractionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/FeatureExtractionService.java). Tầng Java chịu trách nhiệm truy vấn dữ liệu từ PostgreSQL và biến đổi thành đối tượng `RankingFeatures` gồm 3 nhóm thông tin chính:
+* **PostFeatures** ([PostFeatureExtractor.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/PostFeatureExtractor.java)):
+  * `contentLength`: Độ dài ký tự của bài đăng.
+  * `hasMultimedia`: Xác định bài đăng có đính kèm hình ảnh/video hay không.
+  * `isSharePost`: Đánh dấu bài đăng chia sẻ (re-share).
+  * `postAgeHours`: Khoảng thời gian từ lúc tạo bài đăng đến hiện tại (tính bằng giờ).
+* **AuthorFeatures** ([AuthorFeatureExtractor.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/AuthorFeatureExtractor.java)):
+  * `seniorityYears`: Thâm niên hoạt động của tác giả (từ lúc đăng ký tài khoản đến hiện tại, tính bằng năm).
+  * `postCount`: Tổng số bài viết tác giả đã đăng.
+  * `averagePopularity`: Chỉ số tương tác trung bình trên các bài đăng của tác giả.
+  > [!TIP]
+  > **Tối ưu hóa hiệu năng**: Nhóm đặc trưng của tác giả ít biến đổi theo thời gian thực nên được lưu trữ vào bộ nhớ đệm Redis với khóa `author:features:<authorId>` trong thời hạn 10 phút, giảm thiểu tải truy vấn nặng lên database SQL.
+* **InteractionFeatures** ([InteractionFeatureExtractor.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/InteractionFeatureExtractor.java)):
+  * `interactionCount7d` & `interactionCount30d`: Số lần người xem đã tương tác (like, share, bình luận) với tác giả này trong 7 ngày và 30 ngày gần nhất.
+  * `hoursSinceLastInteraction`: Số giờ kể từ lần tương tác cuối cùng của người xem với tác giả. Nếu không có tương tác nào trong lịch sử, giá trị này mặc định là `999.0` giờ.
+  * `affinityScore`: Điểm thân mật, tính bằng tỷ lệ số lượt tương tác của người xem với tác giả này chia cho tổng số tương tác của người xem với toàn bộ hệ thống trong 30 ngày qua:
+    $$\text{affinityScore} = \frac{\text{interactionCount30d}}{\text{viewerTotal}}$$
+
+#### 3. Giai đoạn Giao tiếp API & Ranh giới Dự phòng (Fallback Boundary)
+* **API Client**: [AiPipelineRankingClient.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/infrastructure/config/AiPipelineRankingClient.java) gửi JSON payload sang cổng `/api/ranking/predict` của FastAPI sử dụng Spring `RestClient`.
+* **Cơ chế Timeout nghiêm ngặt**: Client cấu hình thời gian kết nối tối đa `ConnectTimeout = 2` giây và thời gian đọc phản hồi tối đa `ReadTimeout = 5` giây. Thiết lập này ngăn chặn lỗi rò rỉ luồng xử lý (thread starvation) ở backend nếu dịch vụ AI gặp sự cố tắc nghẽn.
+* **Xác thực kết quả (Validation Gate)**: Kết quả trả về bắt buộc phải vượt qua bộ kiểm tra tính toàn vẹn:
+  1. Số lượng phần tử trả về từ API AI phải bằng chính xác số lượng ứng viên gửi đi.
+  2. Định danh bài viết (`postId`) trong phản hồi phải tồn tại trong danh sách ứng viên ban đầu.
+  3. Điểm số (`score`) phải hợp lệ và không null.
+  4. Phiên bản schema đặc trưng (`featureSchemaVersion`) phải trùng khớp với phiên bản hệ thống hiện hành (mặc định là `"v2"`).
+* **Chiến lược Dự phòng (Fallback Strategy)**: Nếu cuộc gọi API thất bại (lỗi kết nối, timeout) hoặc dữ liệu trả về không vượt qua validation gate, `FeedRankingService` sẽ ghi nhận cảnh báo và chuyển luồng xử lý sang [FallbackRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FallbackRankingService.java). Lớp dự phòng này áp dụng một công thức heuristic tĩnh kết hợp giữa độ ưu tiên của nguồn tin (ví dụ: FOLLOWING > POPULAR > RECENT > RANDOM) và thời gian xuất bản (Hao hụt thời gian/Time Decay) để sắp xếp bài viết, đảm bảo người dùng luôn nhận được feed tin tức thay vì gặp trang lỗi 500.
+
+#### 4. Sắp xếp, Tăng điểm Nghiệp vụ & Caching
+* **Tăng điểm Nghiệp vụ (Score Boosting)**: Điểm số trả về từ mô hình học máy (hoặc từ logic fallback) được đưa qua [ScoreBoostService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/ScoreBoostService.java). Tại đây, backend có thể can thiệp bằng các luật kinh doanh tĩnh (ví dụ: nhân thêm hệ số cho các chủ đề được người dùng đăng ký ưu tiên, bài viết có nội dung được tài trợ, hoặc các chiến dịch đặc biệt của nền tảng).
+* **Phân trang & Redis Caching**: Toàn bộ danh sách feed đã xếp hạng cuối cùng được lưu vào Redis Cache cho từng người dùng (`user:feed:<userId>`). Khi người dùng cuộn xem tin tức (phân trang tiếp theo qua hàm `getPaginatedFeed`), hệ thống chỉ cần đọc trực tiếp từ Redis thay vì tính toán lại các đặc trưng và gọi API AI, tối ưu hóa tối đa tốc độ phản hồi và tài nguyên hệ thống.
+
+---
+
+### 13.3 Ánh xạ Mô hình dữ liệu & Tiền xử lý phía Python (Data Mapping & Inference)
+
+#### 1. Ánh xạ Cấu trúc DTO (Data Transfer Object)
+Khi `AiPipelineRankingClient` gửi yêu cầu chấm điểm, Jackson ở Spring Boot sẽ chuyển đổi các object Java thành chuỗi JSON với chiến lược đặt tên **snake_case** (nhờ annotation `@JsonNaming(PropertyNamingStrategies.SnakeCaseStrategy.class)` trên các lớp DTO).
+
+Ở phía Python FastAPI, tệp [dto.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/api/dto.py) sử dụng Pydantic v2 để định nghĩa các mô hình dữ liệu đầu vào. Nhờ cơ chế `validation_alias=AliasChoices(...)`, Pydantic tự động nhận diện và chuyển đổi linh hoạt cả hai định dạng đặt tên **snake_case** (phổ biến trong Python) và **camelCase** (phổ biến trong Java/Javascript):
+
+```python
+# Ví dụ cấu trúc DTO trong Python (ai_pipeline/api/dto.py)
+class InteractionFeaturesDto(ApiDto):
+    interaction_count_7d: int | None = Field(
+        default=None,
+        validation_alias=AliasChoices("interaction_count_7d", "interaction_count7d", "interactionCount7d"),
+        serialization_alias="interaction_count_7d"
+    )
+```
+
+Điều này tạo ra một lớp bảo vệ vững chắc, ngăn ngừa lỗi phân tích cú pháp (parsing error) khi truyền tải dữ liệu đa ngôn ngữ giữa Java và Python.
+
+#### 2. Đồng nhất Tiền xử lý Đặc trưng (Vectorizer Pipeline)
+Trước khi đưa các đặc trưng đầu vào vào mô hình LightGBM để chấm điểm, lớp [FeatureVectorizer.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/inference/vectorizer.py) thực hiện các bước chuyển đổi toán học tương tự như quá trình huấn luyện offline để loại bỏ hiện tượng lệch pha tiền xử lý (training-serving skew):
+
+1. **Biến đổi Nhị phân (Binary Encoding)**:
+   Các biến boolean như `hasMultimedia` và `isSharePost` được chuyển đổi thành số thực tương ứng:
+   $$\text{has\_multimedia} = \begin{cases} 1.0 & \text{nếu True} \\ 0.0 & \text{nếu False hoặc null} \end{cases}$$
+
+2. **Xử lý Giá trị Mặc định cho Dữ liệu Thiếu (Missing Value Imputation)**:
+   Nếu đặc trưng `hoursSinceLastInteraction` có giá trị `999.0` (chỉ báo không có tương tác lịch sử từ phía Java), vectorizer sẽ giữ nguyên giá trị này làm giá trị mặc định tĩnh (`DEFAULT_LAST_INTERACTION_HOURS = 999.0`), đảm bảo cây quyết định phân nhánh chính xác như lúc huấn luyện.
+
+3. **Cắt ngưỡng Phân vị Ngoại lai (Capping Outliers)**:
+   Để loại bỏ tác động nhiễu từ các tài khoản spam hoặc bài đăng quá hot, các đặc trưng thuộc nhóm `CAP_FEATURES` (như độ dài nội dung, tuổi bài đăng, thâm niên tác giả...) sẽ được cắt bớt tại ngưỡng phân vị 99 ($P_{99}$) tĩnh được tải từ file metadata `model.json` (tính toán từ tập huấn luyện lịch sử):
+   $$x_{\text{capped}} = \min(x, P_{99})$$
+
+4. **Biến đổi Logarit Giảm Độ lệch (Log1p Transformation)**:
+   Các đặc trưng số đếm có độ lệch phân phối cao như `interaction_count_7d` và `interaction_count_30d` được đưa qua phép biến đổi phi tuyến logarit tự nhiên cộng 1:
+   $$x_{\text{transformed}} = \ln(1 + \max(x, 0.0))$$
+   Biến đổi này nén khoảng cách giữa các giá trị lớn, giúp mô hình LightGBM dự đoán ổn định hơn và tránh bị chi phối bởi các bài đăng có lượng tương tác khổng lồ.
+
+Sau khi thực hiện đầy đủ các bước tiền xử lý trên, vectorizer sắp xếp các đặc trưng theo đúng thứ tự mảng tĩnh `FEATURE_ORDER` được định nghĩa trong [schema.py](file:///home/damphuquy/Documents/Social-Pulse/ai_pipeline/shared/schema.py) để chuyển thành ma trận đầu vào cho thư viện LightGBM dự đoán điểm số pointwise.
+
+---
+
+### 13.4 Đánh đổi Kỹ thuật & Thiết kế Thay thế
+
+#### 13.4.1 Xếp hạng Pointwise so với Pairwise/Listwise
 * **Giải pháp hiện tại**: Dự đoán điểm số độc lập cho từng bài viết (Pointwise Regression).
 * **Giải pháp thay thế**: Huấn luyện theo cặp (Pairwise - LambdaRank) hoặc huấn luyện theo danh sách (Listwise - ListNet).
 * **Đánh đổi**: Pointwise đơn giản, dễ huấn luyện và có thể tận dụng trực tiếp các thuật toán hồi quy. Tuy nhiên, nó không tối ưu trực tiếp cho thứ tự hiển thị. Chuyển sang Pairwise/Listwise giúp mô hình học cách tối ưu hóa trực tiếp thứ tự xếp hạng (NDCG), cải thiện trải nghiệm đọc tin của người dùng nhưng làm tăng độ phức tạp khi chuẩn bị dữ liệu huấn luyện.
 
-### 13.2 Lưu trữ Đặc trưng: Tính toán Thời gian thực so với Feature Store
+#### 13.4.2 Lưu trữ Đặc trưng: Tính toán Thời gian thực so với Feature Store
 * **Giải pháp hiện tại**: Tầng client tự tính toán các đặc trưng tương tác lịch sử và gửi kèm trong request API dự đoán.
 * **Giải pháp thay thế**: Sử dụng một hệ thống lưu trữ đặc trưng tập trung (Feature Store - ví dụ: Feast).
 * **Đánh đổi**: Phương pháp hiện tại giúp API suy luận hoạt động hoàn toàn độc lập, không phụ thuộc vào database bên ngoài, đơn giản hóa kiến trúc deployment. Tuy nhiên, nó bắt buộc tầng client phải tự duy trì logic tính toán đặc trưng phức tạp, dễ gây hiện tượng lệch pha tính toán đặc trưng (training-serving skew). Sử dụng Feature Store giúp thống nhất logic tính toán và truy xuất đặc trưng với độ trễ cực thấp, nhưng làm tăng chi phí vận hành hệ thống hạ tầng.
