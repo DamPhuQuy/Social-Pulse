@@ -23,11 +23,11 @@ graph TB
 
     subgraph Boundary["Ranh giới Hệ thống Social-Pulse (Social-Pulse System Boundary)"]
         Frontend["📱 Frontend Web & Mobile App<br/>[Container: React / Next.js]<br/>Cung cấp giao diện người dùng thời gian thực, quản lý kết nối Client-side."]:::container
-        
+
         Backend["☕ API Application<br/>[Container: Spring Boot 4 / Java 21]<br/>Cung cấp REST APIs, xử lý nghiệp vụ chính (CQRS), luồng realtime (SSE/STOMP Websocket) và điều phối AI."]:::container
-        
+
         RedisDB["⚡ In-Memory Cache & Broker<br/>[Container: Redis 7]<br/>Lưu trữ feed cache, bộ đệm đếm delta (Hot Counters) và hàng đợi tin nhắn offline."]:::db
-        
+
         PostgresDB["🗄️ Primary Database<br/>[Container: PostgreSQL 16]<br/>Lưu trữ lâu bền cho dữ liệu giao dịch (bài viết, tương tác, quan hệ) và logs hiển thị."]:::db
     end
 
@@ -38,12 +38,12 @@ graph TB
     %% Connections
     User -->|Duyệt bài & Nhắn tin| Frontend
     Frontend -->|HTTP REST, WebSocket & SSE / HTTPS| Backend
-    
+
     Backend -->|1. Đọc/Ghi dữ liệu transactional / Spring Data JPA| PostgresDB
     Backend -->|2. Đọc nhanh candidates, log views / JdbcTemplate| PostgresDB
     Backend -->|3. Buffer delta counters, cache feeds & chat queue / RedisTemplate| RedisDB
     Backend -->|4. Dự đoán điểm số AI / HTTP JSON POST| AIServer
-    
+
     AIServer -.->|Đọc offline features & logs / SQL| PostgresDB
 ```
 
@@ -128,7 +128,7 @@ graph TD
 ```
 
 ### 1.2. Lý do lựa chọn phương pháp xử lý
-Các hệ thống mạng xã hội lớn luôn có sự thay đổi liên tục về công nghệ lưu trữ dữ liệu (Database) và cách thức tối ưu hóa cache để chịu tải. 
+Các hệ thống mạng xã hội lớn luôn có sự thay đổi liên tục về công nghệ lưu trữ dữ liệu (Database) và cách thức tối ưu hóa cache để chịu tải.
 * **Tách biệt tuyệt đối Domain (Ports & Adapters)** giúp doanh nghiệp bảo vệ logic nghiệp vụ cốt lõi không bị ảnh hưởng khi các quyết định hạ tầng (Infrastructure) thay đổi.
 * **Package-by-Feature** được chọn thay vì Package-by-Layer truyền thống bởi vì nó tăng tính bao đóng. Khi phát triển một tính năng mới (ví dụ như `bookmark`), lập trình viên chỉ cần thao tác trong một gói thư mục duy nhất mà không cần tìm kiếm file rải rác ở khắp các tầng ứng dụng.
 
@@ -148,7 +148,7 @@ Các hệ thống mạng xã hội lớn luôn có sự thay đổi liên tục 
 ### 2.1. Rich Domain Model vs Anemic Domain Model
 Dự án ảnh hưởng bởi triết lý thiết kế hướng miền (DDD) thông qua **Rich Domain Model**.
 * **Lý do lựa chọn**: Lớp [Post.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/domain/model/Post.java) tự bảo vệ trạng thái của chính nó. Các thay đổi thuộc tính bắt buộc phải đi qua các hàm hành vi: `changePrivacy(Privacy)`, `update(...)`. Logic đếm và tính toán điểm hot (`updateHotScore()`) được đóng gói ngay tại đối tượng để đảm bảo trạng thái của Post luôn nhất quán (Invariant Enforcement).
-* **Đánh đổi (Trade-offs)**: 
+* **Đánh đổi (Trade-offs)**:
   - *Thuận lợi:* Logic nghiệp vụ tập trung tại một nơi duy nhất (chính Domain Model), loại bỏ hoàn toàn hiện tượng phình to vô hạn của các Service và rò rỉ đóng gói nghiệp vụ.
   - *Bất lợi:* Không thể sử dụng trực tiếp các tính năng lưu trữ tự động của ORM (như tự động lưu quan hệ cascade của Hibernate). Dữ liệu bắt buộc phải đi qua MapStruct mapper để chuyển đổi thành `PostEntity` trước khi lưu vào PostgreSQL, tạo ra chi phí tính toán chuyển dịch bộ nhớ (mapping overhead).
 
@@ -224,15 +224,15 @@ Hệ thống Social-Pulse áp dụng kiến trúc tách biệt luồng Đọc/Gh
   - Lớp [FeedRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedRepositoryAdapter.java) sử dụng trực tiếp Spring `JdbcTemplate` thực thi SQL thô (Native Query) với lệnh `LIMIT/OFFSET` và liên kết JOIN tường minh.
 * **Các kỹ thuật truy vấn tối ưu áp dụng trong Database**:
   Để đảm bảo khả năng chịu tải và giảm thiểu tối đa độ trễ (latency), hệ thống triển khai 3 kỹ thuật truy vấn chuyên sâu sau:
-  
+
   1. **Cập nhật lô hiệu năng cao với `JdbcTemplate` (Bulk Batch Updates)**:
      - *Vấn đề*: Log lượt hiển thị bảng tin (Impressions) có tần suất ghi cực lớn (nhiều bài viết trên một lượt tải trang). Ghi từng dòng riêng lẻ bằng JPA sẽ tạo ra $N$ kết nối mạng và Overhead giao dịch, gây nghẽn PostgreSQL.
      - *Giải pháp*: Lớp [FeedImpressionRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedImpressionRepositoryAdapter.java) triển khai phương thức `saveAll` sử dụng `jdbcTemplate.batchUpdate()` và `BatchPreparedStatementSetter`. Cơ chế này gom tất cả các bản ghi vào một gói tin mạng duy nhất để ghi xuống PostgreSQL. Khi cấu hình JDBC URL với `rewriteBatchedInserts=true`, driver sẽ chuyển đổi batch insert thành câu lệnh multi-value (`INSERT INTO ... VALUES (?,?,...), (?,?,...)`), giúp tốc độ ghi tăng gấp 10-20 lần.
-     
+
   2. **Gom nhóm truy vấn & Tính toán trên DB (Batch & Aggregate JPQL)**:
      - *Vấn đề*: Lỗi truy vấn N+1 khi hiển thị Feed kèm theo thông tin tổng số bài đăng hoặc độ nổi tiếng trung bình của từng tác giả.
      - *Giải pháp*: [JpaPostRepository.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/persistence/repository/JpaPostRepository.java) sử dụng các truy vấn JPQL custom như `countByUserIds` và `averagePopularityByUserIds` sử dụng mệnh đề `IN :userIds` kết hợp với `GROUP BY`. Việc tính toán các hàm tổng hợp như `COUNT` hoặc `AVG(COALESCE(p.upvoteCount, 0) + ...)` được thực thi trực tiếp trên PostgreSQL tận dụng các index sẵn có, thay vì tải hàng ngàn thực thể thô lên RAM (Java Heap) để tính toán thủ công.
-     
+
   3. **Chỉ mục nâng cao (Advanced Indexing Strategy)**:
      - *Chỉ mục một phần (Partial Index)*: [V1__init.sql](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/db/migration/V1__init.sql) định nghĩa index `idx_msg_unread` trên `messages(conversation_id, status, sender_id) WHERE status != 'READ'`. Do tin nhắn chưa đọc chỉ chiếm một phần rất nhỏ ($<5\%$) trong bảng messages, việc loại trừ các tin nhắn đã đọc giúp kích thước index cực kỳ nhỏ, nằm gọn trong RAM (Buffer Pool), đẩy nhanh tốc độ quét và giảm overhead cập nhật index khi tin nhắn mới được đọc.
      - *Chỉ mục tổ hợp phục vụ phân trang (Composite Index)*: Index `idx_feed_impressions_viewer_created` trên `(viewer_id, created_at DESC)` và `idx_user_interactions_viewer_created` trên `(viewer_id, created_at DESC)`. Giúp PostgreSQL thực thi đồng thời bộ lọc (filter theo user) và sắp xếp (sort theo thời gian giảm dần) trong một lần quét chỉ mục duy nhất mà không cần thực hiện thao tác sắp xếp ghi đĩa tạm (Filesort/External Sort).
@@ -302,7 +302,7 @@ sequenceDiagram
 1. **Lớp lọc JWT Custom**: Lớp [JwtAuthenticationFilter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/jwt/JwtAuthenticationFilter.java) kế thừa từ `OncePerRequestFilter`. Trong mỗi HTTP request:
    ```java
    @Override
-   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain) 
+   protected void doFilterInternal(HttpServletRequest request, HttpServletResponse response, FilterChain filterChain)
            throws ServletException, IOException {
        final String jwt = resolveToken(request);
        if (jwt == null || jwt.isBlank()) {
@@ -376,6 +376,133 @@ sequenceDiagram
 #### Đánh giá Trade-offs
 * **Thuận lợi**: Có khả năng đăng xuất từ xa/thu hồi thật sự; tự động phát hiện và phản ứng khi token bị đánh cắp; giảm thiệt hại khi DB rò rỉ nhờ băm token.
 * **Bất lợi**: Mỗi lần refresh đều phát sinh ghi DB (mất tính thuần stateless ở tầng refresh); Reuse Detection có thể "đăng xuất toàn bộ thiết bị" của người dùng hợp lệ trong tình huống đua (race) hiếm gặp khi client refresh song song — đây là sự đánh đổi nghiêng về an toàn.
+
+### 3.5.5. Cấu hình Spring Security & CORS (SecurityConfig & CORS Architecture)
+
+Toàn bộ cấu trúc bảo mật vòng ngoài của Social-Pulse được định cấu hình tập trung tại lớp [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java). Đây là trung tâm điều phối tất cả các yêu cầu HTTP đi vào hệ thống, quản lý cơ chế xác thực phi trạng thái (Stateless), phân quyền phương thức và kiểm soát chia sẻ tài nguyên nguồn gốc chéo (CORS).
+
+#### A. Phân biệt Authentication (Xác thực) và Authorization (Ủy quyền) trong Spring Security
+Đây là hai cột mốc quan trọng nhất cấu thành nên hệ thống bảo mật:
+* **Authentication (Xác thực - "Bạn là ai?")**: 
+  - Là quá trình chứng minh danh tính của thực thể gửi yêu cầu.
+  - Trong Social-Pulse, xác thực được thực thi qua việc kiểm tra tính hợp lệ của chữ ký JWT gửi kèm trong header `Authorization: Bearer <token>` ở mỗi request.
+* **Authorization (Ủy quyền/Phân quyền - "Bạn được phép làm gì?")**:
+  - **Đây chính là phần phức tạp nhất trong Spring Security**. Sau khi xác định được danh tính (qua bước Authentication), hệ thống cần quyết định xem người dùng hiện tại có được phép truy cập tài nguyên được yêu cầu hay không.
+  - Quá trình này bao gồm việc đối chiếu các hạt quyền của người dùng (Authorities/Permissions) với các quy tắc bảo mật của Endpoint (HTTP rules) hoặc các điều kiện ràng buộc mức phương thức (Method Security) qua AOP proxies.
+
+#### B. Filter Chain trong Thực tế & Vị trí của Custom Filter
+Spring Security thực chất là một chuỗi các Filter (`SecurityFilterChain`) hoạt động dựa trên cơ chế chặn bắt request (Servlet Filters). 
+
+```mermaid
+graph TD
+    Req["🔒 HTTP Request"] --> CorsFilter["1. CorsFilter"]
+    CorsFilter --> SessionFilter["2. SessionManagementFilter"]
+    SessionFilter --> JWTFilter["3. JwtAuthenticationFilter <br/>(Custom Filter được chèn vào trước UsernamePasswordAuthenticationFilter)"]
+    JWTFilter --> AnonymousFilter["4. AnonymousAuthenticationFilter"]
+    AnonymousFilter --> ExceptionFilter["5. ExceptionTranslationFilter"]
+    ExceptionFilter --> AuthFilter["6. AuthorizationFilter <br/>(Filter phân quyền chính ở cuối chain)"]
+    AuthFilter --> Controller["7. Target Controller"]
+```
+
+> [!NOTE]
+> *Sơ đồ được đơn giản hóa nhằm giải thích luồng xử lý chính của các bộ lọc cốt lõi trong hệ thống.*
+> Cụ thể, qua cấu hình `.addFilterBefore(jwtAuthenticationFilter, UsernamePasswordAuthenticationFilter.class)`, chúng ta chèn bộ lọc JWT custom này chạy ngay trước bộ lọc xác thực username/password mặc định. Điều này đảm bảo rằng token luôn được trích xuất, xác thực và đưa vào Context bảo mật trước khi bất kỳ bộ lọc xác thực hay phân quyền mặc định nào khác của Spring Security được kích hoạt.
+
+#### C. Vai trò của các Thành phần Bảo mật cốt lõi và Cơ chế hoạt động
+
+1. **`ExceptionTranslationFilter` (Bộ dịch lỗi bảo mật - Cực kỳ quan trọng)**:
+   - **Nhiệm vụ**: Nằm ở vị trí gần cuối chuỗi Filter Chain (ngay trước `AuthorizationFilter`). Nhiệm vụ chính của nó là bắt các ngoại lệ bảo mật (`AuthenticationException` và `AccessDeniedException`) được ném ra từ tầng AuthorizationFilter phía sau hoặc từ các tầng sâu hơn như Controller/Service (Method Security).
+   - **Xử lý luồng**:
+     - Nếu bắt được `AuthenticationException` (Người dùng chưa đăng nhập hoặc token sai): Nó sẽ kích hoạt `AuthenticationEntryPoint` để gửi phản hồi HTTP 401 Unauthorized về cho client.
+     - Nếu bắt được `AccessDeniedException` (Người dùng đã đăng nhập nhưng không đủ quyền): Nó kiểm tra xem người dùng hiện tại là thật hay là vô danh (Anonymous). Nếu là vô danh, nó khởi động quy trình xác thực. Nếu là tài khoản thật nhưng thiếu quyền, nó gọi `AccessDeniedHandler` để trả về lỗi HTTP 403 Forbidden.
+2. **`AuthenticationManager` (Bộ điều phối xác thực - Thực sự làm gì?)**:
+   - **Nhiệm vụ**: Là entry-point API chính chịu trách nhiệm thực thi quy trình xác thực thông tin đăng nhập trong Spring Security. Nó định nghĩa phương thức duy nhất: `authenticate(Authentication authentication)`.
+   - **Cách hoạt động**: `AuthenticationManager` (thường triển khai qua `ProviderManager`) không tự mình so khớp mật khẩu. Thay vào đó, nó chứa danh sách các `AuthenticationProvider` để ủy quyền:
+     - Trong Social-Pulse, khi người dùng gửi thông tin đăng nhập (`/api/v1/auth/login`), `AuthenticationManager` sẽ gọi `DaoAuthenticationProvider`.
+     - Provider này sử dụng `CustomUserDetailsService` để load tài khoản từ database và dùng `BCryptPasswordEncoder` để so khớp mật khẩu đã băm. Nếu đúng, nó trả về một `UsernamePasswordAuthenticationToken` đã được xác thực (Authenticated).
+     - Đối với các API thông thường khác, hệ thống dùng JWT Stateless nên việc xác thực được làm thủ công bằng cách trích xuất token trong `JwtAuthenticationFilter` rồi gán trực tiếp vào Security Context, bypass qua `AuthenticationManager` để tránh tốn tài nguyên.
+3. **`AnonymousAuthentication` (Xác thực vô danh)**:
+   - **Nhiệm vụ**: Nếu một HTTP request đi vào hệ thống không mang theo token JWT (chưa đăng nhập), `AnonymousAuthenticationFilter` (nằm sau `JwtAuthenticationFilter`) sẽ tự động tạo ra một `AnonymousAuthenticationToken` chứa principal tên là `"anonymousUser"` và quyền `"ROLE_ANONYMOUS"` nạp vào Security Context.
+   - **Điểm cần lưu ý đặc biệt**: `SecurityContextHolder.getContext().getAuthentication()` **có thể bị null** ở một số thời điểm (ví dụ: trước khi `AnonymousAuthenticationFilter` chạy trong chuỗi filter chain, hoặc khi chạy ở ngoài luồng lọc Security Filter Chain, trong các tác vụ bất đồng bộ `@Async` không cấu hình kế thừa context, hoặc trong các unit test chưa mock SecurityContext). Sau khi request đi qua `AnonymousAuthenticationFilter`, `Authentication` thường sẽ không còn null và sẽ chứa `AnonymousAuthenticationToken` nếu người dùng chưa đăng nhập.
+4. **`SecurityContextHolder` & Cấu trúc lưu trữ (Storage Strategy)**:
+   - **Nhiệm vụ**: Lưu trữ thông tin định danh của người dùng hiện hành (`SecurityContext`).
+   - **Storage Strategy (Chiến lược lưu trữ)**:
+     - Mặc định hệ thống dùng chiến lược **`MODE_THREADLOCAL`**. Thông tin xác thực được liên kết chặt chẽ với Thread hiện tại xử lý HTTP request (Tomcat thread-per-request model). Khi request kết thúc, ThreadLocal sẽ được dọn sạch để Thread quay về pool.
+     - *Giải pháp thay thế*: `MODE_INHERITABLETHREADLOCAL` (cho phép các Thread con sinh ra bởi Thread cha thừa hưởng bảo mật - cần cẩn thận với thread pool tái sử dụng tránh rò rỉ context giữa các request khác nhau) và `MODE_GLOBAL` (tất cả các thread chung một context - chỉ dùng cho Swing/JavaFX Desktop App).
+5. **Method Security (Bảo mật mức phương thức hoạt động thế nào?)**:
+   - **Nhiệm vụ**: Kiểm tra quyền truy cập trực tiếp trên các hàm của Controller hoặc Service thông qua annotation (như `@PreAuthorize` hay custom annotation `@RequiresPermission`).
+   - **Cơ chế hoạt động bên dưới (Under the hood)**:
+     - Spring Security sử dụng **Spring AOP (Aspect-Oriented Programming)** để bọc các Spring Bean (Controller/Service) có cấu hình bảo mật bằng một lớp proxy động (**Dynamic Proxy** - JDK dynamic proxy hoặc CGLIB).
+     - Khi một client gọi method, luồng đi qua Proxy. Proxy này sẽ chặn cuộc gọi (Method Interception) và chuyển giao cho `MethodSecurityInterceptor` hoặc `AuthorizationManagerBeforeMethodInterceptor`.
+     - Interceptor sẽ lấy đối tượng `Authentication` từ `SecurityContextHolder` của Thread hiện tại, biên dịch biểu thức SpEL (Spring Expression Language) ví dụ `hasAuthority('post:create')`.
+     - Nếu biểu thức trả về `true`, phương thức gốc được thực thi. Nếu `false`, nó ném ra `AccessDeniedException`, ngoại lệ này nổi lên chuỗi Filter và bị tóm gọn bởi `ExceptionTranslationFilter` để trả về lỗi 403.
+
+#### D. Bảo mật JWT (JWT Security Best Practices)
+Kiến trúc Stateless JWT đem lại hiệu năng cao nhưng mang những điểm yếu chí mạng về bảo mật cần giải quyết:
+- **Ngăn ngừa rò rỉ thông tin**: Payload của JWT chỉ được mã hóa Base64 (không phải mã hóa bí mật). Do đó, tuyệt đối không đưa thông tin nhạy cảm (như mật khẩu, số dư tài khoản) vào JWT. Chỉ đưa các ID định danh phi nhạy cảm (như email, userId) vào payload.
+- **Tính toàn vẹn (Signature Validation)**: Mỗi token bắt buộc phải được ký bằng thuật toán mã hóa mạnh để tránh giả mạo nội dung.
+- **Đánh giá Trade-offs thuật toán ký JWT**:
+
+| Thuật toán | Cơ chế hoạt động | Ưu điểm | Nhược điểm | Sự phù hợp với dự án |
+|---|---|---|---|---|
+| **HS256**<br/>(Symmetric) | Dùng 1 khóa đối xứng (Secret Key) để ký và kiểm tra chữ ký. | Tốc độ nhanh hơn, cấu hình và triển khai đơn giản. | Dùng chung khóa bí mật (Shared secret), nếu lộ cả hệ thống bị compromised. | **Được chọn cho Social-Pulse**: Do hệ thống hiện tại là Monolith (Single backend), key chỉ lưu ở một nơi duy nhất nên rủi ro lộ khóa thấp, việc chọn HS256 giúp tối ưu hiệu năng tối đa. |
+| **RS256**<br/>(Asymmetric) | Dùng Private Key để ký (chỉ Auth Server giữ) và Public Key để kiểm tra (phát hành rộng rãi). | Thích hợp cho kiến trúc phân tán/microservices; các resource server không cần biết private key để verify token. | Chậm hơn HS256 do chi phí thuật toán cao; quản lý cặp khóa phức tạp hơn. | Dự án sẽ chuyển sang RS256 nếu trong tương lai mở rộng thành hệ thống microservices độc lập. |
+
+- **Chống Replay Attack**: Đi kèm với thời hạn hết hạn ngắn cho Access Token và thiết lập cơ chế **Refresh Token Rotation & Reuse Detection** ở mức Database (như đã phân tích ở mục 3.5.4) để ngăn chặn kẻ tấn công đánh cắp và sử dụng lại token dài hạn.
+
+#### E. Mô hình Bảo mật & Phân quyền của Social-Pulse (Social-Pulse Security Model)
+Để làm rõ thiết kế thực tế của hệ thống, Social-Pulse triển khai mô hình bảo mật kết hợp giữa **Xác thực Stateless**, **Ủy quyền dựa trên hạt quyền (Permission-Based Access Control)** và **Kiểm tra nghiệp vụ sở hữu động (Dynamic Ownership Authorization)**:
+
+```mermaid
+graph TD
+    Client["🔒 Request + JWT"] --> Filter["1. JwtAuthenticationFilter <br/>(Xác thực Token)"]
+    Filter --> Flatten["2. Phẳng hóa Roles -> Permissions <br/>(Nạp SimpleGrantedAuthority)"]
+    Flatten --> Context["3. SecurityContextHolder <br/>(Lưu ThreadLocal)"]
+    Context --> ControllerProxy["4. Spring AOP Controller Proxy <br/>(Kiểm tra Static Permission qua @RequiresPermission)"]
+    ControllerProxy --> Service["5. Domain Service Interactor <br/>(Kiểm tra Dynamic Ownership / Business Logic)"]
+    Service --> Output["6. Trả kết quả nghiệp vụ an toàn"]
+```
+
+1. **Phẳng hóa Vai trò thành Quyền hạn (Flattening Permissions)**:
+   - Thay vì kiểm tra xem người dùng thuộc nhóm `ROLE_USER` hay `ROLE_ADMIN`, hệ thống thực hiện phân quyền dạng hạt mịn.
+   - Các vai trò (`USER`, `ADMIN`, `GUEST`) là các nhóm quyền tĩnh trong code tại [RolePermissions.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/RolePermissions.java) và được đồng bộ lưu xuống database.
+   - Khi xác thực thành công, [CustomUserDetails.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/user/CustomUserDetails.java#L28-L35) trích xuất toàn bộ permissions của các roles mà người dùng có, chuyển đổi tất cả chúng thành các `SimpleGrantedAuthority` (như `post:create`, `admin:access`) nạp vào Security Context. Không sử dụng tiền tố `ROLE_`.
+2. **Kiểm tra Quyền Tĩnh (Static Authorization) ở Controller**:
+   - Ở mức kiểm duyệt đường vào API, hệ thống sử dụng các annotation khai báo tại [RequiresPermission.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/RequiresPermission.java) (ví dụ `@RequiresPermission.PostCreate`, `@RequiresPermission.UserManage`).
+   - Spring AOP Dynamic Proxy kiểm tra xem tập hợp `GrantedAuthority` của user có chứa chuỗi quyền tương ứng (`post:create`, `user:manage`) hay không. Nếu không, ngoại lệ `AccessDeniedException` sẽ chặn đứng request ngay tại Controller và chuyển dịch thành lỗi HTTP 403 Forbidden.
+3. **Kiểm tra Quyền Sở hữu Động (Dynamic Domain Authorization) ở Service**:
+   - Một điểm yếu của việc kiểm tra quyền tĩnh bằng Annotation là hệ thống không thể biết được "bài viết này có thuộc sở hữu của người dùng hiện tại không" hay "bài viết này đã bị xóa chưa".
+   - Do đó, Social-Pulse kết hợp kiểm tra phân quyền tĩnh ở Controller và kiểm tra nghiệp vụ sở hữu động tại Service. Ví dụ thực tế từ phương thức `editPost` của [EditPostService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/service/EditPostService.java#L41-L47):
+     ```java
+     boolean isAuthor = post.getUserId().equals(currentUser.getId());
+     boolean hasManagePermission = currentUser.getAuthorities().stream()
+             .anyMatch(auth -> auth.getAuthority().equals("post:manage"));
+
+     if (!isAuthor && !hasManagePermission) {
+         throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
+     }
+     ```
+     - *Cơ chế hoạt động*: Để được chỉnh sửa bài viết, tĩnh ở Controller yêu cầu user phải có quyền `post:update` hoặc `post:manage`. Tuy nhiên ở Service, hệ thống kiểm duyệt thêm: **Chỉ cho phép sửa nếu người dùng chính là tác giả của bài viết (`isAuthor`) HOẶC có quyền quản trị hệ thống (`post:manage`)**. Nếu không, hệ thống ném ra `AppException(PostCode.POST_NOT_ACCESSIBLE)`. Đây là sự kết hợp chặt chẽ đảm bảo tính an toàn tối đa cho dữ liệu.
+
+#### E. Cơ chế CORS (Cross-Origin Resource Sharing)
+Do ứng dụng khách (Frontend React) chạy trên cổng khác (như `http://localhost:5173`) so với backend Spring Boot (chạy trên cổng `8080`), các trình duyệt web hiện đại sẽ kích hoạt cơ chế bảo mật cùng nguồn gốc (Same-Origin Policy). Để cho phép Frontend tương tác với Backend một cách an toàn, cấu hình CORS tại `SecurityConfig.corsConfigurationSource()` đã triển khai các quy tắc:
+
+- **Whitelisted Origins**: Hệ thống giới hạn nghiêm ngặt các nguồn gốc được phép gửi yêu cầu gồm: `localhost` và các cổng phát triển cục bộ (`http://localhost:5173`). Trình duyệt sẽ từ chối kết nối nếu request được gửi từ các trang web độc hại khác.
+- **Credentials Support (`setAllowCredentials(true)`)**: Cho phép Frontend gửi đi cookie, thông tin xác thực hoặc header Authorization trong các yêu cầu chéo nguồn gốc.
+- **Exposed Headers (`Authorization`)**: Mặc định, trình duyệt ẩn các header đặc biệt khỏi mã script JS của Frontend. Việc phơi bày `Authorization` giúp Frontend đọc được JWT token mới từ Header phản hồi của API để lưu trữ.
+- **Preflight Cache (`setMaxAge(3600L)`)**: Trình duyệt trước khi gửi các yêu cầu sửa đổi (như POST, PUT, DELETE) sẽ gửi một request thăm dò gọi là **CORS Preflight (OPTIONS request)**. Việc thiết lập cache tối đa 1 giờ giúp trình duyệt không cần gửi OPTIONS liên tục cho mỗi API request, cải thiện đáng kể trải nghiệm người dùng và giảm tải băng thông mạng.
+
+#### F. Đánh giá Trade-offs (Đánh đổi)
+
+* **Vô hiệu hóa CSRF (Cross-Site Request Forgery)**:
+  - *Lý do*: Social-Pulse sử dụng xác thực phi trạng thái JWT (không lưu session ID trong cookie mặc định của trình duyệt). Vì JWT được gửi thủ công qua Header `Authorization: Bearer <token>` bằng Javascript của Frontend, trình duyệt sẽ không tự động đính kèm token này khi người dùng nhấn vào các link độc hại từ trang web khác. Do đó, nguy cơ bị tấn công CSRF tự động được triệt tiêu, cho phép tắt CSRF config để đơn giản hóa giao dịch API.
+  - *Trade-off*: Nếu trong tương lai hệ thống chuyển sang lưu trữ Access Token trong một Cookie chuẩn (để tránh rủi ro XSS lấy cắp token từ localStorage), cơ chế CSRF sẽ xuất hiện trở lại và bắt buộc phải bật lại CSRF protection trên Spring Security.
+* **Xác thực Stateless (Không Session) kết hợp Opaque Refresh Token**:
+  - *Lý do*: Đảm bảo tính mở rộng quy mô lớn (Scalability) của Backend. Tuy nhiên, để thu hồi quyền truy cập khi người dùng đổi mật khẩu hoặc đăng xuất, hệ thống phải trả giá bằng việc ghi lại trạng thái của **Refresh Token** xuống Database PostgreSQL (xem tệp [RefreshTokenService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/RefreshTokenService.java)).
+  - *Trade-off*: Đây là mô hình lai (Hybrid approach). Chúng ta có Access Token hoàn toàn Stateless (nhanh, không chạm DB) nhưng có Refresh Token Stateful (chậm, chạm DB khi xoay vòng). Đây là sự đánh đổi cân bằng tuyệt vời giữa hiệu năng và bảo mật.
+* **Environment-based Filter Rules (Lọc theo môi trường)**:
+  - *Lý do*: Bảo mật thông tin thiết kế hệ thống. Swagger UI (`/swagger-ui/**`) và OpenAPI Docs (`/v3/api-docs/**`) chứa toàn bộ tài liệu về cấu trúc API của backend.
+  - *Trade-off*: Hệ thống dùng Spring `Environment` để chỉ kích hoạt các endpoint này ở môi trường phát triển (`dev` profile). Điều này bảo vệ production không bị quét dò đường dẫn API, nhưng đòi hỏi đội ngũ vận hành phải cấu hình profile chuẩn xác lúc chạy docker.
 
 ---
 
@@ -1078,12 +1205,12 @@ Dưới đây là sơ đồ kiến trúc triển khai vật lý và phân lớp 
 ```mermaid
 graph TD
     Client[Client: Web / Mobile App] -->|HTTPS / WSS| LB[Load Balancer]
-    
+
     subgraph backend_cluster [Backend Server Cluster]
         LB --> Node1[Spring Boot App - Node 1]
         LB --> Node2[Spring Boot App - Node 2]
     end
-    
+
     subgraph node_internal [Internal Architecture - Hexagonal Layering]
         Node1 --> WebAdapter[Web / WebSocket Adapters]
         WebAdapter --> PortsIn[Input Ports: Use Cases]
@@ -1092,16 +1219,16 @@ graph TD
         ApplicationCore --> PortsOut[Output Ports: Repositories]
         PortsOut --> PersistenceAdapter[Persistence Adapters]
     end
-    
+
     subgraph cache_cluster [Redis Distributed Cache & Session Store]
         Node1 -->|Read/Write Session & Cache| Redis[(Redis Cluster)]
         Node2 -->|Read/Write Session & Cache| Redis
     end
-    
+
     subgraph db_cluster [PostgreSQL Database]
         PersistenceAdapter -->|JPA Write / JDBC Read| PG[(PostgreSQL Database)]
     end
-    
+
     subgraph ai_cluster [AI Inference Engine]
         Node1 -->|HTTP RestClient| AIPipeline[Python FastAPI AI Pipeline]
         Node2 -->|HTTP RestClient| AIPipeline
@@ -1132,7 +1259,7 @@ sequenceDiagram
     WS->>WS: Giải mã và xác thực chữ ký JWT token
     WS->>WS: Gán Principal (CustomUserDetails) vào Session Header
     WS-->>Alice: Trả về CONNECTED ACK
-    
+
     Note over Alice, Bob: 2. Alice gửi tin nhắn chat
     Alice->>LB: Send message (đích: /app/chat.send)
     LB->>Controller: Định tuyến frame tin nhắn
@@ -1146,7 +1273,7 @@ sequenceDiagram
     Service->>Event: Phát sự kiện MessagePersistedEvent
     Service-->>Controller: Trả về MessageResponse
     deactivate Service
-    
+
     Note over Event: 3. Phân phát tin nhắn chạy sau khi Transaction Commit (AFTER_COMMIT)
     activate Event
     Event->>Redis: Kiểm tra Bob online (ws:sessions:bob)
