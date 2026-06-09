@@ -91,6 +91,54 @@ Dự án hạn chế lạm dụng việc khai báo `@Service` hay `@Component` q
 - Sử dụng cấu hình tiêm phụ thuộc thông qua Java Config độc lập như [PostConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/config/PostConfig.java).
 - **Lý do & Trade-off**: Việc khai báo Bean thủ công giúp kiểm soát vòng đời ứng dụng chặt chẽ, dễ dàng mock dependencies khi viết Unit test độc lập. Đánh đổi lại, thời gian cấu hình hệ thống ban đầu sẽ lâu hơn so với việc để Spring Boot tự động dò quét component `@Autowired`.
 
+### 2.4. Tech Stack & Cấu hình build (pom.xml)
+Bức tranh công nghệ giúp định vị nhanh năng lực hệ thống (xem [pom.xml](file:///home/damphuquy/Documents/Social-Pulse/backend/pom.xml)):
+
+| Hạng mục | Lựa chọn | Vai trò |
+|---|---|---|
+| Nền tảng | **Spring Boot 4.0.6 / Java 21** | Web MVC, DI, vòng đời ứng dụng. Java 21 cho phép dùng record, pattern matching, `Math.clamp`... |
+| Lưu trữ | **PostgreSQL + Spring Data JPA**, **Flyway** | RDBMS giao dịch + quản lý phiên bản schema |
+| Cache / Realtime store | **Redis (Spring Data Redis)** | Cache, đếm delta, hàng đợi offline, registry phiên WS |
+| Bảo mật | **Spring Security + JJWT 0.12.6** | Filter chain, mã hóa, JWT HS256 |
+| Realtime | **spring-boot-starter-websocket (STOMP)** | Chat 2 chiều |
+| Mapping | **MapStruct 1.6.3 + Lombok** | Sinh mã mapper lúc biên dịch |
+| Media | **Cloudinary 2.3.2** | Lưu trữ ảnh/video ngoài |
+| Tài liệu API | **springdoc-openapi 3.0.2** | Swagger UI / OpenAPI |
+| Kiểm thử | **JUnit + Mockito + jqwik 1.9.2 + H2** | Unit, slice, property-based test |
+
+* **Điểm đáng chú ý về build**: `maven-compiler-plugin` cấu hình `annotationProcessorPaths` theo đúng thứ tự **Lombok → lombok-mapstruct-binding → mapstruct-processor**. Thứ tự này bắt buộc để MapStruct "nhìn thấy" được getter/setter mà Lombok sinh ra. Đây là một cạm bẫy cấu hình kinh điển khi kết hợp hai annotation processor.
+
+### 2.5. Quản lý phiên bản Schema với Flyway (Database Migration)
+Toàn bộ schema được quản lý bằng các migration đánh số tuần tự trong [db/migration](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/db/migration) (`V1__init.sql`, `V2__seed.sql`, ... `V26__feed_impressions.sql`).
+
+* **Khái niệm cốt lõi**: Mỗi file migration là **bất biến (immutable)** và **forward-only**. Khi ứng dụng khởi động, Flyway so sánh bảng `flyway_schema_history` với các file trên classpath và chỉ áp dụng những migration mới (theo thứ tự version). Schema do đó luôn **tái lập được (reproducible)** trên mọi môi trường.
+* **Tổ chức trong dự án**: Tách bạch migration cấu trúc (`V1__init`) với migration seed dữ liệu (`V2__seed`, `V3/V4__seed_feed_data`), giúp dễ đọc và dễ tách dữ liệu mẫu khỏi schema lõi.
+* **Trade-off**: An toàn và có lịch sử rõ ràng, phối hợp tốt với `PermissionSyncService` (chạy sau khi schema sẵn sàng). Đánh đổi: **không được sửa migration đã chạy** — mọi thay đổi phải là một file version mới, đôi khi sinh ra nhiều file vá nhỏ.
+
+### 2.6. Hợp đồng API: Response Envelope & Phân trang
+* **Envelope thống nhất**: Mọi phản hồi REST được bọc trong [ApiResponse&lt;T&gt;](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/dto/response/ApiResponse.java) gồm `{ code, message, data }`, giúp client xử lý đồng nhất cả luồng thành công lẫn lỗi (kết hợp với `GlobalExceptionHandler` ở mục 3.9).
+* **Hai chiến lược phân trang cùng tồn tại** — một bài học quan trọng về việc chọn đúng công cụ:
+  - **Offset-based** qua [PageResponse&lt;T&gt;](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/dto/response/PageResponse.java) (`items, page, size, totalElements, totalPages, hasNext`) dùng cho danh sách thông thường. *Ưu*: nhảy trang tùy ý, biết tổng số trang. *Nhược*: `OFFSET` lớn chậm dần, dễ lệch/trùng bản ghi khi dữ liệu chèn vào giữa lúc duyệt.
+  - **Cursor-based (keyset)** trong [GetMessageHistoryService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/chat/application/service/GetMessageHistoryService.java) cho lịch sử chat: dùng `Instant` của tin nhắn làm con trỏ, truy vấn `size + 1` bản ghi để biết `hasMore`, lấy timestamp tin cũ nhất làm `nextCursor`. *Ưu*: hiệu năng ổn định, không lệch khi có tin mới. *Nhược*: chỉ duyệt tuần tự, không nhảy trang được. Kích thước trang được kẹp an toàn (`Math.clamp(size, 1, 50)`, mặc định 20).
+
+### 2.7. Cấu hình theo Môi trường (Spring Profiles)
+Hệ thống tách cấu hình theo profile: [application-dev.yaml](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/application-dev.yaml) và [application-prod.yaml](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/application-prod.yaml).
+* **Hành vi thay đổi theo runtime**: Code có thể đọc `Environment.getActiveProfiles()` để đổi hành vi. Ví dụ rõ nhất ở [OtpService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/otp/OtpService.java): ở profile `dev`/`local`, mã OTP `123456` được bypass và OTP được log ra để tiện kiểm thử.
+* **Trade-off & cảnh báo bảo mật**: Rất tiện cho phát triển, nhưng phải tuyệt đối đảm bảo profile production **không** kích hoạt các lối tắt này — đây là loại lỗi cấu hình dễ gây lỗ hổng nghiêm trọng nếu bị bật nhầm.
+
+### 2.8. Băm mật khẩu & dữ liệu nhạy cảm (BCrypt)
+* [AppPasswordEncoder.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/encoder/AppPasswordEncoder.java) bọc `BCryptPasswordEncoder` của Spring Security. Điểm thú vị: nó được tái sử dụng để **băm cả mã OTP** chứ không chỉ mật khẩu (`OtpService` gọi `passwordEncoder.encode`/`matches`).
+* **Khái niệm**: BCrypt là hàm băm **có salt ngẫu nhiên nhúng sẵn** và **work-factor** (chi phí tính toán) điều chỉnh được, khiến tấn công brute-force/rainbow-table tốn kém. Cùng một đầu vào sẽ cho hash khác nhau (do salt), nên phải so sánh bằng `matches()` chứ không so chuỗi.
+* **Trade-off**: Chậm có chủ đích (đó là tính năng bảo mật, không phải nhược điểm) — cần cân nhắc work-factor để cân bằng giữa an toàn và độ trễ đăng nhập.
+
+### 2.9. Ánh xạ hai tầng với MapStruct (Two-layer Mapping)
+Hệ quả trực tiếp của kiến trúc Hexagonal là dữ liệu phải đi qua **hai ranh giới ánh xạ**, mỗi ranh giới có một loại mapper riêng:
+1. **Persistence Mapper** (`*PersistenceMapper`): chuyển đổi **Domain Model ↔ JPA Entity** (vd: `PostPersistenceMapper`), nằm ở tầng `infrastructure`.
+2. **Application/DTO Mapper** (`*Mapper` trong `application/dto/mapper`): chuyển đổi **Domain Model ↔ DTO request/response** (vd: `PostMapper`, `CommentMapper`).
+
+* **Lý do chọn MapStruct**: Sinh mã ánh xạ **lúc biên dịch (compile-time)** thay vì dùng reflection lúc chạy → nhanh, an toàn kiểu, và lỗi thiếu trường được phát hiện ngay khi build.
+* **Trade-off**: Đánh đổi đúng như mục 2.1 đã nêu — chi phí boilerplate và "mapping overhead", nhưng đổi lại sự cô lập tuyệt đối giữa domain thuần và chi tiết hạ tầng/giao tiếp.
+
 ---
 
 ## 3. Kỹ thuật Nâng cao & Tối ưu (Advanced Techniques)
@@ -207,7 +255,42 @@ sequenceDiagram
 
 ### 3.5.3. Đánh giá Trade-offs
 * **Thuận lợi**: Máy chủ backend không tiêu thụ RAM để lưu trữ trạng thái người dùng (Session). Client hoàn toàn tự quản lý token (trong localStorage/cookies).
-* **Bất lợi**: Việc thu hồi (revoke) một token JWT đang còn hạn một cách tức thời là cực kỳ khó khăn do bản chất phân tán của JWT. Để giải quyết triệt để, hệ thống sẽ cần phải xây dựng một giải pháp danh sách đen (Blacklist) lưu trữ trên Redis, điều này gián tiếp làm tăng độ phức tạp và chi phí truy cập cache cho mỗi request.
+* **Bất lợi**: Việc thu hồi (revoke) tức thời một **Access Token** đang còn hạn là cực kỳ khó khăn do bản chất phi trạng thái của JWT (server không tra cứu DB cho mỗi request). Dự án giảm thiểu rủi ro này bằng cách giữ **Access Token có vòng đời ngắn** (xem `JwtProperties.expirationMs`) và đặt toàn bộ khả năng thu hồi vào **Refresh Token có trạng thái** (stateful) — được trình bày ở mục 3.5.4 ngay dưới đây. Đây là sự đánh đổi kinh điển: chấp nhận một "cửa sổ rủi ro" ngắn bằng tuổi thọ Access Token để đổi lấy hiệu năng xác thực không-chạm-DB.
+
+### 3.5.4. Refresh Token Rotation & Reuse Detection (Cơ chế xoay vòng & phát hiện đánh cắp)
+
+Đây là phần bù đắp cho điểm yếu "không revoke được" của JWT thuần. Thay vì dùng Access Token dài hạn, hệ thống phát hành cặp **Access Token (ngắn hạn, stateless)** + **Refresh Token (dài hạn, stateful)** và áp dụng kỹ thuật **Rotation** (xoay vòng) kèm **Reuse Detection** (phát hiện tái sử dụng) trong [RefreshTokenService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/RefreshTokenService.java).
+
+#### Triển khai kỹ thuật chi tiết
+
+1. **Refresh Token là chuỗi ngẫu nhiên (opaque), KHÔNG phải JWT, và lưu dưới dạng băm**:
+   - Token được sinh bằng `SecureRandom` 64 byte (mã hóa Base64 URL-safe), sau đó **chỉ lưu bản băm SHA-256** xuống DB (giống cách lưu mật khẩu). Bản thô chỉ tồn tại phía client.
+     ```java
+     private String generateToken() {
+         byte[] randomBytes = new byte[REFRESH_TOKEN_NUM_BYTES]; // 64 bytes
+         secureRandom.nextBytes(randomBytes);
+         return Base64.getUrlEncoder().withoutPadding().encodeToString(randomBytes);
+     }
+     // Khi lưu / tra cứu: hashToken(raw) = SHA-256 hex
+     ```
+   - **Lý do**: Nếu DB bị lộ, kẻ tấn công vẫn không có token thật để dùng (one-way hash). Đây là điểm khác biệt quan trọng so với việc tin tưởng chữ ký của một Refresh Token dạng JWT.
+2. **Rotation — mỗi lần refresh sinh token mới, vô hiệu token cũ**:
+   - `rotateTokens()` tra cứu bản ghi theo hash, nếu hợp lệ thì cấp một Refresh Token mới và đánh dấu token cũ là đã thu hồi, liên kết bằng trường `replacedByToken`.
+3. **Reuse Detection — phát hiện token bị đánh cắp**:
+   - Nếu một Refresh Token **đã bị revoke** mà vẫn được dùng lại, hệ thống coi đây là dấu hiệu token đã bị đánh cắp và phát lại (replay). Phản ứng là **thu hồi toàn bộ token đang hoạt động của user đó** rồi ném lỗi:
+     ```java
+     if (tokenRecord.isRevoked()) {
+         refreshTokenRevocationUseCase.revokeAllActiveTokensForUser(tokenRecord.getUserId(), now);
+         throw new AppException(AuthCode.REFRESH_TOKEN_REUSE_DETECTED);
+     }
+     ```
+   - Thao tác thu hồi hàng loạt trong [RefreshTokenRevocationService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/RefreshTokenRevocationService.java) chạy với `@Transactional(propagation = Propagation.REQUIRES_NEW)` để đảm bảo hành động bảo mật được commit độc lập, không bị cuốn theo rollback của giao dịch gọi nó.
+
+> Ghi chú kỹ thuật: `JwtService` có sẵn cả hàm `generateRefreshToken()` sinh Refresh Token kiểu JWT (payload gọn `type=refresh`), nhưng **cơ chế đang được thực thi để xoay vòng là loại opaque token + băm SHA-256 ở trên** — vì nó cho phép revoke có trạng thái, điều mà JWT thuần không làm được.
+
+#### Đánh giá Trade-offs
+* **Thuận lợi**: Có khả năng đăng xuất từ xa/thu hồi thật sự; tự động phát hiện và phản ứng khi token bị đánh cắp; giảm thiệt hại khi DB rò rỉ nhờ băm token.
+* **Bất lợi**: Mỗi lần refresh đều phát sinh ghi DB (mất tính thuần stateless ở tầng refresh); Reuse Detection có thể "đăng xuất toàn bộ thiết bị" của người dùng hợp lệ trong tình huống đua (race) hiếm gặp khi client refresh song song — đây là sự đánh đổi nghiêng về an toàn.
 
 ---
 
@@ -250,6 +333,15 @@ Social-Pulse không áp dụng kiểm tra quyền trực tiếp dựa trên Vai 
 ### 3.6.3. Đánh giá Trade-offs
 * **Thuận lợi**: Code controller cực kỳ sạch và type-safe. Bản đồ quyền được đặt tại Code làm "Single Source of Truth", dễ dàng theo dõi lịch sử thay đổi quyền thông qua Git.
 * **Bất lợi**: Việc gán quyền được quy định trong mã nguồn. Nếu muốn thay đổi phân quyền động (chẳng hạn như admin muốn tạo một role mới và gán các quyền tùy biến ngay trên giao diện Web mà không cần build lại server), hệ thống tĩnh này sẽ không đáp ứng được mà phải chuyển sang lưu bảng ánh xạ động trong DB, tăng tải truy vấn SQL phân quyền cho mỗi request.
+
+### 3.6.4. Đồng bộ quyền tĩnh xuống DB lúc khởi động (PermissionSyncService)
+
+Một sắc thái quan trọng dễ bị bỏ sót: tuy bản đồ quyền là **tĩnh trong code**, nhưng quyền vẫn **tồn tại dưới dạng bản ghi trong DB** để có thể tham chiếu khóa ngoại (role ↔ permission). Lớp [PermissionSyncService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/PermissionSyncService.java) đóng vai trò cầu nối, đồng bộ enum `AppPermission` xuống DB mỗi lần khởi động.
+
+* **Triển khai**: Lớp này implement `ApplicationRunner` (chạy một lần sau khi context sẵn sàng, **sau khi Flyway tạo schema**). Logic gồm hai bước idempotent:
+  1. `syncPermissions()`: với mỗi giá trị enum, dùng `computeIfAbsent` để chỉ chèn permission còn thiếu (upsert an toàn khi chạy lại nhiều lần).
+  2. `syncRolePermissions()`: với mỗi role, **thêm các quyền mới khai báo** và **gỡ bỏ các quyền đã bị xóa khỏi enum** (`removeIf`), đảm bảo trạng thái DB luôn khớp tuyệt đối với `RolePermissions.BY_ROLE` — biến code thành "Single Source of Truth".
+* **Lý do & Trade-off**: Giúp lập trình viên chỉ cần sửa enum, không cần viết migration SQL thủ công cho quyền. Đánh đổi: việc thay đổi quyền vẫn yêu cầu **redeploy** (không động được lúc runtime), và logic đồng bộ chạy lúc boot làm tăng nhẹ thời gian khởi động.
 
 ---
 
@@ -382,7 +474,182 @@ Mạng xã hội Social-Pulse phải duy trì tính sẵn sàng cao, không th�
 
 ---
 
-## 4. Điểm sáng & Đề xuất cải thiện (Đã nghiệm thu)
+## 3.12. Hệ thống Gợi ý Feed 2 tầng (Two-Stage Recommender Pipeline)
+
+Đây là thành phần kỹ thuật **phức tạp và đáng học nhất** của hệ thống. Module `feed` không đơn thuần là "truy vấn bài viết bằng JdbcTemplate" (như mục 3.1 mô tả ở góc độ CQRS) mà là một **pipeline gợi ý cấp production** mô phỏng kiến trúc của các mạng xã hội lớn: tách thành tầng **Retrieval (lấy ứng viên)** và tầng **Ranking (xếp hạng)**, do [GetFeedService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/GetFeedService.java) điều phối.
+
+```mermaid
+graph LR
+    A[Candidate Generation<br/>đa nguồn] --> B[Feature Extraction<br/>post/author/interaction]
+    B --> C{Ranking}
+    C -->|AI service OK| D[AiPipelineRankingClient]
+    C -->|AI lỗi/timeout| E[FallbackRankingService<br/>Hot + Recency]
+    D --> F[ScoreBoost + Cache]
+    E --> F
+    F --> G[Feed trả về client]
+    G --> H[Mark Seen Redis Set]
+    G --> I[Feed Impression log<br/>JDBC batch insert]
+```
+
+### 3.12.1. Tầng 1 — Sinh ứng viên (Candidate Generation)
+[CandidateSelectionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/candidate/CandidateSelectionService.java) gom ứng viên từ **nhiều nguồn** để cân bằng giữa độ liên quan và khám phá:
+* **Đa nguồn (multi-source retrieval)**: `RECENT` (200 bài mới), `FOLLOWING` (100 bài từ người đang theo dõi), `POPULAR` (100 bài hot), `RANDOM` (100 bài ngẫu nhiên để khám phá). Mỗi ứng viên được gắn nhãn `Source` để phục vụ phân tích về sau.
+* **Khử trùng & lọc**: dùng `Set<Long> seenIds` để loại bài trùng giữa các nguồn; loại bài đã xem bằng cách nạp lịch sử từ Redis Set `user:seen:{userId}`; và **lọc quan hệ chặn hai chiều** (cả người mình chặn lẫn người chặn mình) qua `BlockRepository`.
+* **Cơ chế mở rộng cửa sổ thời gian**: nếu trong 7 ngày (`LOOKBACK_DAYS`) thu được ít hơn `MIN_CANDIDATES = 20` ứng viên, hệ thống tự nới ra 30 ngày (`EXTENDED_LOOKBACK_DAYS`). Đây là một dạng **graceful degradation** cho người dùng mới hoặc mạng lưới thưa.
+
+### 3.12.2. Tầng trung gian — Trích xuất đặc trưng (Feature Extraction)
+[FeatureExtractionService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/extraction/FeatureExtractionService.java) biến mỗi ứng viên thô thành một vector đặc trưng `RankingFeatures` (gồm `postFeatures`, `authorFeatures`, `interactionFeatures`), thông qua các extractor chuyên biệt (`PostFeatureExtractor`, `AuthorFeatureExtractor`, `InteractionFeatureExtractor`).
+* **Chống N+1 bằng truy vấn gộp (batch)**: Thay vì truy vấn DB cho từng ứng viên, service nạp trước toàn bộ dữ liệu cần thiết theo lô — `userRepository.findByIds(authorIds)`, `postRepository.countByUserIds(...)`, `averagePopularityByUserIds(...)`, và một map tổng hợp tương tác `findAggregatesByViewerAndAuthors(...)` — rồi tra cứu trong bộ nhớ. Đây là kỹ thuật quan trọng để giữ độ trễ thấp khi xử lý hàng trăm ứng viên.
+* **Feature Schema Versioning**: đặc trưng mang `featureSchemaVersion` để model AI và backend thống nhất "ngôn ngữ"; khi schema lệch, tầng ranking sẽ rớt về fallback (xem 3.11). Đây là cách phòng chống **training-serving skew**.
+
+### 3.12.3. Tầng 2 — Xếp hạng (Ranking) với suy giảm có kiểm soát
+* **Gọi model qua HTTP có giới hạn thời gian**: [AiPipelineRankingClient.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/infrastructure/config/AiPipelineRankingClient.java) dùng `RestClient` với **connect timeout 2s, read timeout 5s**. Mọi ngoại lệ đều được nuốt (catch) và trả về danh sách rỗng — biến lỗi hạ tầng AI thành tín hiệu để [FeedRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FeedRankingService.java) chuyển sang `FallbackRankingService` (Hot Score + Recency). `ScoreBoostService` tinh chỉnh điểm cuối.
+* **Trade-off**: Timeout ngắn bảo vệ trải nghiệm người dùng (feed không bao giờ "treo" vì AI chậm), nhưng đánh đổi là có thể bỏ lỡ kết quả AI khi dịch vụ chỉ chậm tạm thời.
+
+### 3.12.4. Hậu xử lý — Cache, Seen-set và Impression Logging
+* **Cache feed**: [FeedCacheService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/cache/FeedCacheService.java) lưu feed đã xếp hạng dưới dạng JSON vào Redis (`user:feed:{id}`, TTL 10 phút) và **chủ động invalidate khi tải trang đầu (page 0)** để làm mới.
+* **Đánh dấu đã xem**: `markSeen()` đẩy `postId` vào Redis Set `user:seen:{id}` (TTL 7 ngày) để vòng sinh ứng viên kế tiếp không lặp lại bài cũ.
+* **Ghi nhận hiển thị (Impression)**: [FeedImpressionRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedImpressionRepositoryAdapter.java) dùng **JDBC `batchUpdate`** ghi lại từng lượt hiển thị (rank, page, `ai_score`, `candidate_source`, `ranking_provider`, `feature_schema_version`, `feed_context`) vào bảng `feed_impressions` (migration `V26`). Đây chính là **nguồn dữ liệu nhãn để huấn luyện lại model** và để đối soát tỉ lệ AI vs FALLBACK trong vận hành.
+* **Trade-off tổng thể**: Pipeline này mạnh và có khả năng cải tiến bằng dữ liệu, nhưng phức tạp — nhiều tầng, phụ thuộc Redis + dịch vụ AI + DB, đòi hỏi giám sát kỹ. Phần `findRandomPosts` hiện vẫn dùng `ORDER BY RANDOM()` (xem đề xuất cải tiến ở cuối tài liệu).
+
+---
+
+## 3.13. Kiến trúc hướng sự kiện trong tiến trình (Spring Application Events)
+
+Ngoài cơ chế `TransactionSynchronizationManager` thủ công (mục 3.2), hệ thống còn dùng một pattern tách rời **thanh lịch và khai báo (declarative)** hơn cho luồng chat: **Domain Events** qua `ApplicationEventPublisher`.
+
+### 3.13.1. Luồng triển khai
+1. **Phát sự kiện sau khi ghi**: [SendMessageService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/chat/application/service/SendMessageService.java) sau khi lưu tin nhắn sẽ phát một sự kiện miền:
+   ```java
+   applicationEventPublisher.publishEvent(new MessagePersistedEvent(savedMessage, recipientId));
+   ```
+2. **Lắng nghe sau khi commit**: [NotifyMessageService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/chat/application/service/NotifyMessageService.java) xử lý việc giao tin real-time bằng `@TransactionalEventListener(phase = AFTER_COMMIT)`:
+   ```java
+   @TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)
+   public void onMessagePersisted(MessagePersistedEvent event) {
+       if (sessionManager.isUserOnline(recipientId)) {
+           messagingTemplate.convertAndSend("/topic/chat." + conversationId, payload);
+           messageRepository.updateStatus(message.getId(), MessageStatus.DELIVERED);
+       } else {
+           incrementUnreadCount(conversationId, recipientId); // Redis: chat:unread:{conv}:{recipient}
+       }
+   }
+   ```
+
+### 3.13.2. So sánh hai cách tiếp cận (bài học thiết kế)
+| Tiêu chí | `TransactionSynchronizationManager` (mục 3.2) | `@TransactionalEventListener` (mục này) |
+|---|---|---|
+| Cách viết | Lập trình thủ công, lớp nặc danh ngay trong service | Khai báo, tách hẳn listener thành lớp riêng |
+| Độ rối của service gốc | Cao (logic phụ trộn vào logic chính) | Thấp (service chỉ "phát" rồi quên) |
+| Khả năng tách rời | Thấp | Cao — nhiều listener có thể cùng nghe một sự kiện |
+| Khi nào nên dùng | Cần điều khiển chi tiết từng pha giao dịch tại chỗ | Tách bạch tác dụng phụ (notify, cache, real-time) khỏi nghiệp vụ lõi |
+
+* **Điểm chung quan trọng**: cả hai đều đảm bảo tác vụ ngoại biên (gửi STOMP, ghi Redis) **chỉ chạy sau khi giao dịch DB commit thành công** (`AFTER_COMMIT`), tránh phát thông tin "ảo" khi rollback — đây là mô hình nhất quán cuối cùng (eventual consistency) có kiểm soát.
+* **Trade-off của event**: dễ mở rộng nhưng luồng điều khiển trở nên "ngầm" (implicit), khó lần theo khi debug nếu không nắm rõ ai đang lắng nghe sự kiện nào.
+
+> Lưu ý: lớp [WebSocketEventListener.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketEventListener.java) cũng dùng `@EventListener` để bắt sự kiện hạ tầng của Spring (`SessionConnect`/`SessionDisconnect`) phục vụ quản lý phiên ở mục 3.16.
+
+---
+
+## 3.14. Luồng OTP & Xác minh Email (One-Time Password)
+
+[OtpService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/otp/OtpService.java) hiện thực một quy trình OTP hoàn chỉnh, an toàn cho đăng ký và đặt lại mật khẩu.
+
+* **Sinh & lưu trữ an toàn**: mã 6 chữ số sinh bằng `SecureRandom`, **được băm (BCrypt) trước khi lưu** vào Redis với TTL 300 giây — bản thô chỉ tồn tại trong email gửi đi.
+* **Chống dò quét (brute-force)**: giới hạn `OTP_MAX_ATTEMPTS = 5`; mỗi lần nhập sai tăng `attemptCount`, vượt ngưỡng thì khóa với mã lỗi `OTP_TOO_MANY_ATTEMPTS`. OTP hết hạn hoặc xác minh xong đều bị xóa khỏi store.
+* **Gửi email bất đồng bộ**: nội dung HTML được gửi qua `EmailPort` (cổng trừu tượng, hiện thực bởi `EmailAdapter` dùng Spring Mail), chạy ẩn nhờ `@EnableAsync` để không chặn luồng phản hồi đăng ký.
+* **Trade-off**: Lưu OTP trên Redis cho tốc độ và tự hết hạn (TTL), nhưng nếu Redis mất dữ liệu (không bật bền vững) thì OTP đang chờ sẽ mất — chấp nhận được vì người dùng chỉ cần yêu cầu gửi lại.
+
+---
+
+## 3.15. Bản đồ sử dụng Redis (Redis Usage Map)
+
+Redis trong dự án không chỉ là cache; nó là một **kho trạng thái đa năng (multi-purpose state store)**. [RedisConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/config/RedisConfig.java) khai báo `StringRedisTemplate` cùng một `ObjectMapper` (có `JavaTimeModule`, không ghi ngày dạng timestamp) để tuần tự hóa nhất quán.
+
+| Key pattern | Cấu trúc | Mục đích | TTL |
+|---|---|---|---|
+| `post:*` delta counters | String (atomic incr) | Write-back đếm view/share/comment (mục 3.3) | đến chu kỳ sync |
+| `user:seen:{userId}` | Set | Khử trùng bài đã xem trong feed | 7 ngày |
+| `user:feed:{userId}` | String (JSON) | Cache feed đã xếp hạng | 10 phút |
+| `chat:unread:{conv}:{recipient}` | String (incr) | Đếm tin chưa đọc khi offline | đến khi đọc |
+| `chat:pending-status:{userId}` | List | Hàng đợi cập nhật trạng thái offline | đến khi giao |
+| OTP store theo email | String (đã băm) | Mã OTP tạm thời | 300 giây |
+| `ws:sessions:{userId}` / `ws:session:{sessionId}` | Set / String | Registry phiên WebSocket (mục 3.16) | theo vòng đời phiên |
+
+* **Bài học**: chọn đúng **cấu trúc dữ liệu Redis** theo ngữ nghĩa — Set cho khử trùng/đếm phiên, String+incr cho bộ đếm nguyên tử, List cho hàng đợi FIFO, String+TTL cho dữ liệu tự hết hạn.
+* **Trade-off**: Redis tăng tốc và giảm tải DB mạnh, nhưng đưa thêm một điểm phụ thuộc trạng thái; cần cân nhắc bền vững (AOF/RDB) cho dữ liệu không thể tái tạo (như OTP, hàng đợi offline).
+
+---
+
+## 3.16. Quản lý & Giới hạn phiên WebSocket (Session Management)
+
+Bổ sung cho mục 3.7 (vốn tập trung vào xác thực và bảo mật kênh), [WebSocketSessionManager.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketSessionManager.java) quản lý vòng đời phiên trên Redis.
+
+* **Lưu phiên trên Redis (hỗ trợ scale ngang)**: dùng hai key — `ws:sessions:{userId}` (Set các sessionId) và `ws:session:{sessionId}` (ánh xạ ngược về userId). Vì trạng thái nằm ở Redis chứ không phải bộ nhớ cục bộ của một node, hệ thống có nền tảng để chạy **nhiều node backend** (dù vẫn cần broker ngoài để chuyển tin giữa node — xem trade-off mục 3.7).
+* **Giới hạn phiên & trình diện (presence)**: chặn quá `MAX_SESSIONS_PER_USER = 5` (ném `MaxWebSocketSessionsException`), cung cấp `isUserOnline()` — chính hàm mà `NotifyMessageService` (mục 3.13) dùng để quyết định giao tin real-time hay đẩy vào hàng đợi offline.
+* **Vòng đời**: [WebSocketEventListener.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketEventListener.java) đăng ký/gỡ phiên khi nhận sự kiện connect/disconnect của Spring.
+* **Trade-off**: giới hạn phiên chống lạm dụng tài nguyên nhưng cần thông báo lỗi rõ ràng cho client khi vượt ngưỡng; lưu trên Redis thêm một round-trip mạng cho mỗi lần kiểm tra trạng thái online.
+
+---
+
+## 3.17. Lưu trữ Media ngoài với Cloudinary
+
+[CloudinaryService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/cloudinary/service/CloudinaryService.java) tách việc lưu trữ tệp nhị phân (ảnh/video) ra khỏi RDBMS.
+* **Kiểm soát đầu vào**: chặn tệp rỗng, giới hạn **50MB**, và **whitelist content-type** (`image/jpeg|png|gif|webp|avif`, `video/mp4|quicktime|webm`). Upload với `resource_type = "auto"`, chỉ trả về `secure_url` (HTTPS); lỗi được quy về `AppException(SystemCode.UPLOAD_FAILED)` để không lộ chi tiết hạ tầng.
+* **Khái niệm**: DB quan hệ không phù hợp để chứa blob lớn (phình bảng, chậm backup). Mô hình chuẩn là lưu **đối tượng nhị phân ở object storage chuyên dụng** và chỉ giữ **URL** trong DB.
+* **Trade-off**: giảm tải DB và tận dụng CDN/biến đổi ảnh của Cloudinary, đổi lại phụ thuộc nhà cung cấp bên thứ ba và cần xử lý khi dịch vụ này gặp sự cố.
+
+---
+
+## 3.18. Tìm kiếm & Phân tích nội dung (Search & Content Analysis)
+
+* **Trích xuất nội dung bằng regex**: [ContentAnalysisService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ContentAnalysisService.java) tách hashtag (`#\w+`), mention (`@\w+`), URL và keyword từ nội dung bài viết — dữ liệu đầu vào cho tìm kiếm, trending và một phần đặc trưng feed.
+* **Tìm kiếm & lịch sử**: module `discovery` cung cấp `SearchPostsService`, `SearchUsersService`, lưu/lấy `SearchHistory`, và `GetPostsByHashtag/Mention`.
+* **Trending hashtag — và một trade-off đáng lưu ý**: [GetTrendingHashtagsService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/discovery/application/service/GetTrendingHashtagsService.java) hiện **tính trending bằng cách quét bài viết gần đây từ DB rồi gom nhóm trong bộ nhớ** mỗi lần gọi (không dùng cấu trúc đếm sẵn). Cách này đơn giản, luôn chính xác theo thời điểm, nhưng **không mở rộng tốt** khi lượng bài lớn. Hướng cải tiến điển hình: dùng **Redis Sorted Set (ZSET)** cập nhật điểm tăng dần khi đăng bài, hoặc bảng tổng hợp định kỳ.
+
+---
+
+## 3.19. Bình luận phân cấp (Comment Threading — Adjacency List)
+
+[CommentEntity.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/comment/infrastructure/persistence/entity/CommentEntity.java) mô hình hóa cây bình luận bằng **danh sách kề (adjacency list)** — kỹ thuật lưu cấu trúc cây trong bảng quan hệ.
+* **Tự tham chiếu**: `@ManyToOne parentComment` (khóa ngoại `parent_id`, null nếu là bình luận gốc) + `@OneToMany(mappedBy="parentComment") replies`. Có **index `idx_comment_parent`** để tăng tốc nạp các phản hồi theo cha.
+* **Soft delete & trạng thái**: dùng cờ `deleted`/`edited` thay vì xóa cứng — giữ được cấu trúc nhánh (xóa cha không làm mất con) và lịch sử chỉnh sửa. Đếm `upvoteCount`/`downVoteCount` ngay trên entity.
+* **Trade-off**: adjacency list đơn giản và ghi rẻ, nhưng đọc cây sâu cần truy vấn lặp/đệ quy nhiều cấp (rủi ro N+1). Với phản hồi nhiều cấp ở quy mô lớn, các mô hình thay thế là **path enumeration** hoặc **closure table**. Dự án giảm thiểu bằng cách tải phản hồi theo cấp (`GetCommentRepliesService`) thay vì nạp toàn bộ cây một lần.
+
+---
+
+## 3.20. Thông báo bất đồng bộ (Notification)
+
+Module `notification` tách việc tạo thông báo ra khỏi luồng nghiệp vụ chính.
+* **Lệnh tạo tập trung**: [NotificationCommandService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/notification/application/service/NotificationCommandService.java) là điểm vào để các nghiệp vụ khác (follow, react, comment...) phát sinh thông báo, kèm `NotificationType`/`NotificationResourceType`.
+* **Truy vấn phía đọc**: `GetNotificationsService`, `GetUnreadNotificationCountService`, đánh dấu đã đọc theo từng cái hoặc tất cả (`MarkAllNotificationsReadService`).
+* **Trade-off**: tách thông báo giúp nghiệp vụ chính nhẹ và dễ mở rộng kênh (in-app, email, push) về sau; đổi lại là thêm một miền dữ liệu cần đồng bộ và dọn dẹp (thông báo cũ).
+
+---
+
+## 4. Chiến lược Kiểm thử (Testing Strategy)
+
+Tài liệu trước đây khẳng định kiến trúc giúp "unit test dễ dàng" nhưng chưa mô tả cách kiểm thử thực tế. Dự án có **25 lớp test** (`src/test`) áp dụng nhiều tầng kiểm thử.
+
+### 4.1. Unit test với Mockito
+Nhờ Dependency Inversion (mục 2.2), các service tầng `application` được test cô lập bằng cách **mock toàn bộ port** (repository, use case khác) — không cần khởi chạy Spring Container. Ví dụ: `CreateReportServiceTest`, `FollowUserServiceTest`, `DeleteCommentServiceTest`, `AuthenticationServiceTest`. Đây là loại test nhanh, chạy thường xuyên.
+
+### 4.2. Property-Based Testing với jqwik (kỹ thuật nâng cao)
+Dự án dùng **jqwik 1.9.2** — một framework **kiểm thử dựa trên thuộc tính (property-based)**. Khác với test ví dụ (example-based) chỉ kiểm vài input cố định, jqwik **tự sinh hàng loạt input ngẫu nhiên** và kiểm tra một *thuộc tính bất biến* luôn đúng; khi tìm thấy phản ví dụ, nó **thu nhỏ (shrink)** về input nhỏ nhất gây lỗi.
+* **Ứng dụng phù hợp**: kiểm các invariant của logic thuần như trích đặc trưng feed (`FeatureExtractionServiceTest`, `PostFeatureExtractorTest`, `FeedRankingServiceTest`), ánh xạ (`PostMapperTest`), hay bản đồ quyền (`RolePermissionsTest`).
+* **Trade-off**: phát hiện được các ca biên mà con người khó nghĩ ra, nhưng yêu cầu diễn đạt bài toán dưới dạng "thuộc tính" (khó hơn viết ví dụ) và thời gian chạy lâu hơn do sinh nhiều mẫu.
+
+### 4.3. Slice test & test hạ tầng
+`pom.xml` khai báo các starter test chuyên biệt, cho phép kiểm thử từng "lát cắt":
+* **Persistence**: `spring-boot-starter-data-jpa-test` + **H2** + `flyway-test` — kiểm repository/migration trên DB in-memory, chạy thật migration Flyway.
+* **Security**: `spring-boot-starter-security-test` — kiểm phân quyền `@RequiresPermission`.
+* **Web**: `spring-boot-starter-webmvc-test` — kiểm controller ở tầng MVC.
+* **Realtime**: `spring-boot-starter-websocket-test` cùng `WebSocketAuthInterceptorTest`, `WebSocketSessionManagerTest`, `WebSocketEventListenerTest`, `ReconnectionServiceTest` — kiểm bảo mật và quản lý phiên WebSocket.
+* **Trade-off**: H2 nhanh và tiện cho CI nhưng phương ngữ SQL khác PostgreSQL (rủi ro với native query của feed) — cần bổ sung test tích hợp trên Postgres thật cho các truy vấn thô quan trọng.
+
+---
+
+## 5. Điểm sáng & Đề xuất cải thiện (Đã nghiệm thu)
 
 ### 🌟 Điểm sáng thiết kế lớn của hệ thống
 1. **Kiến trúc phân lớp Hexagonal chuẩn mực**: Giữ tầng domain nghiệp vụ sạch hoàn toàn.
