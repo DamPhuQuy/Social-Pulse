@@ -686,3 +686,434 @@ Dự án dùng **jqwik 1.9.2** — một framework **kiểm thử dựa trên th
    - *Khuyến nghị cải tiến:* Thay thế bằng giải pháp lấy mẫu ngẫu nhiên nhẹ nhàng hơn sử dụng từ khóa `TABLESAMPLE SYSTEM (1)` của PostgreSQL để chỉ quét ngẫu nhiên khoảng 1% dữ liệu trước khi chọn lọc, hoặc thực hiện tính toán danh sách IDs ngẫu nhiên trước trên tầng Java rồi truy vấn bằng toán tử `WHERE id IN (...)`.
 2. **Mở rộng cơ sở dữ liệu (Database Read Replica)**:
    - Khi hệ thống đạt quy mô truy cập lớn hơn, có thể nâng cấp mô hình CQRS hiện tại bằng cách phân tách hẳn database PostgreSQL: luồng ghi (JPA) trỏ trực tiếp vào DB Master chính, còn luồng đọc (JdbcTemplate/Feed) trỏ vào các DB Replicas (Read-Only) để chia sẻ tải đọc.
+
+---
+
+## 6. Góc nhìn Technical Interviewer & Senior Developer (Phân tích chi tiết 24 chủ đề cốt lõi)
+
+Dưới đây là bảng phân tích chuyên sâu toàn bộ codebase dưới góc nhìn của một Senior Java Backend Developer và Technical Interviewer. Mỗi công nghệ/kỹ thuật được mổ xẻ qua 10 khía cạnh bắt buộc.
+
+### 6.1. Java Core (Java 21)
+1. **Khái niệm**: Phiên bản LTS hiện đại của Java mang lại nhiều tính năng tối ưu hóa hiệu năng và cú pháp sạch sẽ (Records, Pattern Matching, Sequenced Collections, Virtual Threads).
+2. **Nguyên lý hoạt động**: JVM quản lý bộ nhớ thông qua cơ chế phân vùng Heap (chứa đối tượng) và Stack (chứa primitive và địa chỉ tham chiếu của thread). Bộ dọn rác (Garbage Collector như G1 hay ZGC) chạy ngầm dọn dẹp các đối tượng mất tham chiếu.
+3. **Cách triển khai**: Sử dụng Java 21 Record làm DTO bất biến, `SecureRandom` cho mã hóa mã hóa an toàn sinh Refresh Token/OTP, `MessageDigest` băm SHA-256 một chiều, các Stream API xử lý dữ liệu phức tạp.
+4. **Class liên quan**: [RefreshTokenService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/RefreshTokenService.java), [OtpService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/otp/OtpService.java), [PostTopicCatalog.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/service/PostTopicCatalog.java).
+5. **Luồng thực thi**: Khi sinh token, `generateToken()` gọi `SecureRandom` để điền 64 byte ngẫu nhiên -> Base64 URL-safe encode -> `hashToken()` băm qua `MessageDigest.getInstance("SHA-256")` -> Lưu DB.
+6. **Ưu/Nhược & Trade-offs**: Record giúp giảm mã boilerplate (`equals`, `hashCode`, `toString` tự sinh), nhưng là bất biến (immutable) nên không thể thay đổi giá trị thuộc tính trực tiếp.
+7. **Thay thế**: Dùng class POJO truyền thống kết hợp Lombok `@Data` (có thể bị thay đổi trạng thái ngoài ý muốn).
+8. **Đánh giá**: Sử dụng đúng đắn Record cho DTOs và băm bảo mật tốt dữ liệu nhạy cảm trước khi lưu DB.
+9. **Vấn đề tiềm ẩn**: Chưa tận dụng Virtual Threads (Java 21) cho các luồng xử lý WebSocket hoặc SSE, Tomcat vẫn đang dùng Thread-per-request Platform Threads truyền thống dễ cạn kiệt khi chịu tải WebSocket cao.
+10. **Câu hỏi phỏng vấn**: Phân biệt Java Record và POJO thông thường? Tại sao nên chọn `SecureRandom` thay vì `Random` cho các tác vụ bảo mật?
+
+### 6.2. OOP & SOLID
+1. **Khái niệm**: OOP là phương pháp lập trình dựa trên các đối tượng đóng gói dữ liệu và hành vi. SOLID là 5 nguyên lý thiết kế giúp hệ thống linh hoạt, dễ mở rộng và bảo trì.
+2. **Nguyên lý hoạt động**: Tính đa hình (Polymorphism) hoạt động dựa trên Dynamic Dispatch (late binding) lúc runtime. Tiêm phụ thuộc (DIP) đảo ngược chiều phụ thuộc thông qua các lớp trừu tượng (Interface).
+3. **Cách triển khai**: Đóng gói logic tại Rich Domain Model [Post.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/domain/model/Post.java); Nguyên lý SRP chia nhỏ service thành các use case độc lập; Nguyên lý DIP thiết kế tầng Application chỉ phụ thuộc vào Repository Interface của Domain.
+4. **Class liên quan**: [Post.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/domain/model/Post.java), [PostRepository.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/domain/repository/PostRepository.java).
+5. **Luồng thực thi**: Web Controller gọi `CreatePostUseCase` (Interface) -> `CreatePostService` (Implementer) -> Gọi `PostRepository` (Interface) -> `PostRepositoryAdapter` (Persistence Adapter implementer) kết nối database.
+6. **Ưu/Nhược & Trade-offs**: Tính bao đóng cực cao, code nghiệp vụ sạch bóng framework. Nhược điểm: Tạo ra quá nhiều interface trung gian và lớp ánh xạ (boilerplate overhead).
+7. **Thay thế**: Mô hình Anemic Domain Model truyền thống (Service trực tiếp chứa mọi logic nghiệp vụ, gọi thẳng JPA Repositories).
+8. **Đánh giá**: Áp dụng cực tốt, cấu trúc thư mục Package-by-feature kết hợp Hexagonal là chuẩn mực kiến trúc bền vững.
+9. **Vấn đề tiềm ẩn**: Tránh lạm dụng đa hình khi không cần thiết, một số UseCase quá đơn giản chỉ CRUD vẫn phải đi qua 4 lớp gây tốn thời gian code.
+10. **Câu hỏi phỏng vấn**: Rich Domain Model khác gì Anemic Domain Model? Hãy giải thích nguyên lý Dependency Inversion (DIP) và cách nó được áp dụng trong Hexagonal Architecture?
+
+### 6.3. Spring Boot
+1. **Khái niệm**: Framework mã nguồn mở hỗ trợ phát triển ứng dụng Java Enterprise nhanh chóng dựa trên cơ chế cấu hình sẵn (Convention over Configuration).
+2. **Nguyên lý hoạt động**: Cơ chế `@EnableAutoConfiguration` quét classpath, tự động cấu hình các Bean dựa trên các điều kiện `@ConditionalOnClass` hoặc `@ConditionalOnMissingBean`. Quản lý vòng đời Bean (IoC Container) qua 3 giai đoạn: Instantiation -> Populate Properties -> Initialization (BeanPostProcessor).
+3. **Cách triển khai**: Khởi tạo bằng `@SpringBootApplication` trong [Application.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/Application.java), cấu hình thủ công các Bean thông qua `@Configuration` classes trong các gói `infrastructure/config`.
+4. **Class liên quan**: [Application.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/Application.java), [PostConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/config/PostConfig.java).
+5. **Luồng thực thi**: Khởi chạy `SpringApplication.run()` -> Quét package -> Chạy Flyway migrations -> Khởi tạo ApplicationContext -> Khởi tạo và liên kết các Bean -> Khởi động nhúng Tomcat Server.
+6. **Ưu/Nhược & Trade-offs**: Khởi động dự án cực nhanh, quản lý dependency dễ dàng. Nhược điểm: Magic auto-config đôi khi khó debug lỗi thiếu/trùng Bean lúc khởi động; thời gian khởi động (startup time) lâu.
+7. **Thay thế**: Micronaut, Quarkus (biên dịch Ahead-of-Time giúp boot siêu nhanh), Jakarta EE thuần.
+8. **Đánh giá**: Sử dụng đúng đắn việc khai báo Bean tường minh cho Hexagonal, giúp Domain độc lập hoàn toàn với Spring annotations.
+9. **Vấn đề tiềm ẩn**: Cấu hình quét component `@SpringBootApplication` mặc định quét từ package root, nếu không cẩn thận có thể vô tình load các class không mong muốn ở các module phụ.
+10. **Câu hỏi phỏng vấn**: `@Component`, `@Service`, `@Repository` khác nhau như thế nào? Cơ chế hoạt động của Auto-Configuration trong Spring Boot?
+
+### 6.4. Spring Security
+1. **Khái niệm**: Framework bảo mật mạnh mẽ cung cấp xác thực (Authentication), phân quyền (Authorization) và chống tấn công lỗ hổng bảo mật cho ứng dụng Java Web.
+2. **Nguyên lý hoạt động**: Hoạt động dựa trên một chuỗi các bộ lọc (`SecurityFilterChain`). Request đi qua các filter kiểm tra thông tin, nếu hợp lệ sẽ lưu đối tượng `Authentication` vào `SecurityContextHolder` (mặc định lưu trong ThreadLocal).
+3. **Cách triển khai**: Cấu hình stateless filter chain trong [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java), thêm `JwtAuthenticationFilter` chạy trước `UsernamePasswordAuthenticationFilter`.
+4. **Class liên quan**: [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java), [JwtAuthenticationFilter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/jwt/JwtAuthenticationFilter.java).
+5. **Luồng thực thi**: Client gửi Request -> `SecurityFilterChain` đánh chặn -> `JwtAuthenticationFilter` giải mã JWT -> load `UserDetails` -> Set `SecurityContext` -> Cho phép đi qua -> AOP kiểm tra `@PreAuthorize` trên method.
+6. **Ưu/Nhược & Trade-offs**: Rất bảo mật, tích hợp sâu vào kiến trúc servlet của Spring. Nhược điểm: Phức tạp, cấu hình sai bộ lọc dễ dẫn đến lỗ hổng nghiêm trọng hoặc chặn nhầm API hợp lệ.
+7. **Thay thế**: Apache Shiro, tự viết custom Security Filter thô.
+8. **Đánh giá**: Cấu hình stateless JWT kết hợp method security rất chuẩn chỉ và sạch sẽ.
+9. **Vấn đề tiềm ẩn**: Chưa cấu hình Custom `AuthenticationEntryPoint` và `AccessDeniedHandler` để xử lý trả về JSON chuẩn khi bị 401 hoặc 403, Spring Security mặc định ném lỗi thô ra ngoài.
+10. **Câu hỏi phỏng vấn**: SecurityContextHolder lưu dữ liệu ở đâu? Làm sao để chuyển tiếp SecurityContext khi xử lý đa luồng bất đồng bộ?
+
+### 6.5. JWT Authentication
+1. **Khái niệm**: Cơ chế xác thực phi trạng thái (Stateless) truyền tải thông tin định danh mã hóa và ký số bảo mật dưới dạng chuỗi JSON mã hóa base64.
+2. **Nguyên lý hoạt động**: Token gồm 3 phần: Header (thuật toán), Payload (claims dữ liệu) và Signature (chữ ký số). Server dùng khóa bí mật (Secret Key) để ký HMAC-SHA256 hoặc mã hóa bất đối xứng, đảm bảo payload không bị thay đổi.
+3. **Cách triển khai**: Sử dụng JJWT để sinh Access Token có thời hạn ngắn (chứa ID, email, permissions) và Refresh Token dài hạn, giải mã và xác thực token trong request filter.
+4. **Class liên quan**: [JwtService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/JwtService.java), [JwtAuthenticationFilter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/jwt/JwtAuthenticationFilter.java).
+5. **Luồng thực thi**: Đăng nhập thành công -> `generateToken()` sinh Access Token -> Trả về Client -> Client lưu và đính kèm vào header `Authorization: Bearer <token>` -> `JwtAuthenticationFilter` giải mã và trích xuất email.
+6. **Ưu/Nhược & Trade-offs**: Không tốn RAM server để lưu session trạng thái, dễ scale ngang. Nhược điểm: Khó thu hồi (revoke) token tức thời trước khi nó hết hạn; kích thước header tăng lên nếu nhồi nhét quá nhiều permissions.
+7. **Thay thế**: Stateful Session Authentication, Reference Token (Opaque token).
+8. **Đánh giá**: Triển khai đúng chuẩn bảo mật cao nhờ kết hợp xoay vòng Refresh Token Rotation (RTR).
+9. **Vấn đề tiềm ẩn**: Thuật toán ký đối xứng HS256 yêu cầu các service khác (nếu có) cũng phải biết Secret Key để giải mã. Nếu chuyển đổi sang kiến trúc Microservices, nên chuyển sang thuật toán bất đối xứng RS256 (Private/Public Key).
+10. **Câu hỏi phỏng vấn**: Làm thế nào để giải quyết vấn đề thu hồi (revocation) Access Token trong cơ chế JWT Stateless Authentication?
+
+### 6.6. Session Authentication
+1. **Khái niệm**: Cơ chế xác thực có trạng thái (Stateful), trong đó server lưu trữ thông tin phiên đăng nhập của người dùng và gán một Session ID ngẫu nhiên cho client qua Cookie.
+2. **Nguyên lý hoạt động**: Khi đăng nhập, server lưu đối tượng Session (RAM/DB/Redis), gửi `JSESSIONID` cookie về trình duyệt. Trình duyệt tự động đính kèm cookie này ở mỗi request tiếp theo để server đối chiếu trạng thái.
+3. **Cách triển khai**: Bị vô hiệu hóa trong dự án (`SessionCreationPolicy.STATELESS` trong SecurityConfig).
+4. **Class liên quan**: [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java) (dòng 45).
+5. **Luồng thực thi**: Đăng nhập -> Tạo session trên Tomcat/Redis -> Gửi Cookie -> Client request gửi Cookie -> Kiểm tra session trong bộ nhớ -> Xác thực thành công.
+6. **Ưu/Nhược & Trade-offs**: Ưu điểm là thu hồi phiên đăng nhập lập tức cực kỳ dễ dàng (chỉ cần xóa session ở server). Nhược điểm: Khó scale ngang (yêu cầu cấu hình session replication hoặc lưu Redis Session Store), dễ bị tấn công CSRF thông qua cookie tự động gửi.
+7. **Thay thế**: Stateless JWT Token.
+8. **Đánh giá**: Phù hợp khi vô hiệu hóa session trong ứng dụng để phát triển API phục vụ cả Frontend Web và Mobile App, tối ưu hóa khả năng scale ngang.
+9. **Vấn đề tiềm ẩn**: Cần cấu hình CORS và bảo mật cookie kỹ lưỡng nếu có sử dụng cookie chứa JWT (mặc dù dự án đang đọc JWT từ HTTP Authorization Header).
+10. **Câu hỏi phỏng vấn**: Hãy phân biệt Cookie và Session? Tại sao stateless API lại ít chịu rủi ro tấn công CSRF hơn so với session-based cookie?
+
+### 6.7. OAuth2/OIDC
+1. **Khái niệm**: OAuth2 là framework ủy quyền (Authorization) bên thứ ba. OIDC (OpenID Connect) là lớp định danh (Identity) chạy trên nền OAuth2 để cung cấp xác thực người dùng (Single Sign-On).
+2. **Nguyên lý hoạt động**: Sử dụng luồng Authorization Code Grant để ứng dụng nhận mã code từ Identity Provider (như Google), sau đó đổi code lấy Access Token (truy cập tài nguyên) và ID Token (dạng JWT chứa thông tin user).
+3. **Cách triển khai**: Chưa được triển khai thực tế trong codebase.
+4. **Class liên quan**: N/A (Chỉ có các convention đặt tên theo tiêu chuẩn OAuth2).
+5. **Luồng thực thi**: N/A (Mô hình đăng nhập nội bộ thuần túy qua email/password).
+6. **Ưu/Nhược & Trade-offs**: OAuth2 giúp tích hợp dễ dàng tính năng "Đăng nhập bằng Google/Facebook", giảm tải quản lý mật khẩu và tăng bảo mật cho user. Nhược điểm: Cấu hình và tích hợp thư viện phức tạp, phụ thuộc vào bên thứ ba.
+7. **Thay thế**: Đăng nhập bằng tài khoản và mật khẩu nội bộ.
+8. **Đánh giá**: Dự án cần tích hợp thêm để nâng cấp trải nghiệm người dùng mạng xã hội.
+9. **Vấn đề tiềm ẩn**: N/A.
+10. **Câu hỏi phỏng vấn**: Phân biệt vai trò của Access Token, Refresh Token và ID Token trong đặc tả OAuth2 và OIDC?
+
+### 6.8. RBAC
+1. **Khái niệm**: Phân quyền dựa trên vai trò (Role-Based Access Control) giúp quản lý quyền truy cập tài nguyên của người dùng một cách khoa học.
+2. **Nguyên lý hoạt động**: Người dùng được gán một hoặc nhiều Vai trò (Roles). Mỗi Vai trò được gán tập hợp các Quyền cụ thể (Permissions/Authorities). Hệ thống kiểm tra quyền hạn của người dùng tại các ranh giới API.
+3. **Cách triển khai**: Enum `AppPermission` định nghĩa quyền hạt mịn tĩnh, gán vào Roles tĩnh qua `RolePermissions`, đồng bộ xuống database qua `PermissionSyncService` khi boot, và kiểm tra quyền bằng AOP annotation custom `@RequiresPermission`.
+4. **Class liên quan**: [AppPermission.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/AppPermission.java), [RequiresPermission.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/RequiresPermission.java), [PermissionSyncService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/permission/PermissionSyncService.java).
+5. **Luồng thực thi**: Khởi chạy -> `PermissionSyncService` kiểm tra DB và đồng bộ permissions tĩnh -> Đăng nhập -> Trích xuất quyền của User gán vào `GrantedAuthority` -> Kiểm tra `@RequiresPermission` trên controller API trước khi chạy method.
+6. **Ưu/Nhược & Trade-offs**: Cực kỳ linh hoạt, an toàn kiểm soát kiểu dữ liệu lúc compile, thay đổi cấu trúc quyền dễ dàng trong code. Nhược điểm: Phân quyền tĩnh nên việc thêm bớt quyền động lúc runtime bắt buộc phải sửa code và deploy lại.
+7. **Thay thế**: ABAC (Attribute-Based Access Control), Dynamic RBAC lưu hoàn toàn trong DB.
+8. **Đánh giá**: Thiết kế rất xuất sắc, sạch sẽ và an toàn hơn hẳn việc viết chuỗi String thô trong `@PreAuthorize`.
+9. **Vấn đề tiềm ẩn**: Nếu danh sách permission phình to lên hàng trăm quyền, chuỗi JWT Access Token sẽ bị phồng to, làm tăng băng thông HTTP. Cần xem xét nén token hoặc chuyển sang lưu trữ cache permissions ở Redis.
+10. **Câu hỏi phỏng vấn**: Phân biệt Role-Based và Permission-Based authorization? Tại sao nên ưu tiên kiểm tra Authority (Permission) thay vì Role?
+
+### 6.9. Redis
+1. **Khái niệm**: Hệ thống lưu trữ dữ liệu cấu trúc key-value in-memory hiệu năng cao, thường dùng làm cache, session store hoặc message broker.
+2. **Nguyên lý hoạt động**: Sử dụng mô hình I/O multiplexing kết hợp xử lý đơn luồng (Single-thread loop) giúp loại bỏ overhead chuyển ngữ cảnh luồng (context switching) và lock tranh chấp, thực thi hàng trăm nghìn lệnh/giây.
+3. **Cách triển khai**: Cấu hình `StringRedisTemplate`; sử dụng Redis Set để khử trùng bài viết đã xem (`user:seen`) và lưu registry WebSocket session; sử dụng Redis List làm hàng đợi tin nhắn offline; dùng String cho Feed Cache và OTP.
+4. **Class liên quan**: [RedisConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/config/RedisConfig.java), [WebSocketSessionManager.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketSessionManager.java), [SyncSchedule.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/schedule/SyncSchedule.java).
+5. **Luồng thực thi**: Tương tác đếm lượt share -> Increment key delta trong Redis -> Scheduler định kỳ gọi `getAndSet` nguyên tử lấy delta -> Đồng bộ xuống Postgres -> Xóa key.
+6. **Ưu/Nhược & Trade-offs**: Hiệu năng siêu tốc (độ trễ < 1ms), giảm tải DB cực lớn. Nhược điểm: Bộ nhớ RAM đắt đỏ; nguy cơ mất mát dữ liệu nếu mất điện đột ngột và cấu hình bền vững (AOF/RDB) không chặt chẽ.
+7. **Thay thế**: Memcached, Hazelcast.
+8. **Đánh giá**: Áp dụng đúng cấu trúc dữ liệu cho từng nghiệp vụ (Set, List, String), tối ưu hóa tải trọng hệ thống.
+9. **Vấn đề tiềm ẩn**: Race condition tại `WebSocketSessionManager.registerSession()` do hành động đọc đếm size và add session không được chạy nguyên tử (atomic). Cần viết Lua script chạy trên Redis để đảm bảo tính nguyên tử.
+10. **Câu hỏi phỏng vấn**: Redis đơn luồng tại sao lại xử lý được hàng trăm nghìn request/giây? Giải thích lỗi Cache Penentration, Cache Breakdown, Cache Avalanche và cách phòng tránh?
+
+### 6.10. CQRS
+1. **Khái niệm**: Tách biệt luồng xử lý cập nhật trạng thái hệ thống (Commands) và luồng truy vấn thông tin (Queries).
+2. **Nguyên lý hoạt động**: Giảm sự phức tạp của nghiệp vụ bằng cách không cố gắng bắt một Model duy nhất phải gánh vác cả vai trò đọc và ghi dữ liệu. Luồng đọc có thể đi qua các view phẳng hoặc JDBC thô để tối đa hiệu năng.
+3. **Cách triển khai**: Tách các Use Case nghiệp vụ thành Command và Query riêng biệt ở lớp ứng dụng. Ở persistence, ghi qua JPA Entity/Repository và đọc Feed qua `JdbcTemplate` truy vấn native SQL.
+4. **Class liên quan**: [CreatePostService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/service/CreatePostService.java), [FeedRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedRepositoryAdapter.java).
+5. **Luồng thực thi**: Ghi bài viết: Client -> Controller -> `CreatePostUseCase` -> Save `PostEntity` via JPA. Đọc feed: Client -> Controller -> `GetFeedUseCase` -> Query native SQL via `JdbcTemplate` -> Map to domain `Post`.
+6. **Ưu/Nhược & Trade-offs**: Hiệu năng đọc feed siêu tốc, nghiệp vụ ghi độc lập dễ bảo trì. Nhược điểm: Trùng lặp code khai báo câu lệnh SQL và mapping do không dùng ORM cho luồng đọc; mất tính trừu tượng hóa DB của Hibernate.
+7. **Thay thế**: Sử dụng duy nhất JPA Hibernate với các câu lệnh JPQL/Criteria.
+8. **Đánh giá**: Áp dụng CQRS mức độ cơ bản rất thông minh, giải quyết triệt để vấn đề tải đọc bảng tin mạng xã hội.
+9. **Vấn đề tiềm ẩn**: Chưa cấu hình đồng bộ sang Database Read-Replica chuyên dụng, hiện tại cả đọc và ghi vẫn chung một database PostgreSQL vật lý.
+10. **Câu hỏi phỏng vấn**: CQRS giải quyết vấn đề gì trong các hệ thống lớn? Làm sao để xử lý vấn đề nhất quán dữ liệu (Data Consistency) giữa Database ghi và CSDL đọc?
+
+### 6.11. WebSocket/STOMP
+1. **Khái niệm**: WebSocket là giao thức truyền thông hai chiều thời gian thực trên một kết nối TCP duy nhất. STOMP là giao thức phụ đơn giản chạy trên WebSocket cung cấp mô hình Publisher-Subscriber.
+2. **Nguyên lý hoạt động**: Khởi đầu bằng HTTP request upgrade lên WebSocket handshake. Sau đó kết nối giữ trạng thái stateful. STOMP sử dụng các frame định nghĩa địa chỉ đích (`/topic` để broadcast, `/queue` để gửi 1-1, `/app` gửi lên controller).
+3. **Cách triển khai**: Đăng ký endpoint `/ws` hỗ trợ SockJS; cấu hình `WebSocketAuthInterceptor` xác thực token trên frame `CONNECT`; kiểm tra quyền truy cập đích subscribe trong `WebSocketSecurityConfig`; điều phối tin nhắn qua `SimpMessagingTemplate`.
+4. **Class liên quan**: [WebSocketConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketConfig.java), [WebSocketAuthInterceptor.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketAuthInterceptor.java), [ChatWebSocketController.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/chat/adapter/web/ChatWebSocketController.java).
+5. **Luồng thực thi**: Client kết nối -> Xác thực JWT -> Đăng ký nhận tin `/topic/chat.{convId}` -> Client gửi tin `/app/chat.send` -> `ChatWebSocketController` xử lý -> Lưu DB -> Phát sự kiện `MessagePersistedEvent` -> Listener kiểm tra online -> gửi tin qua WebSocket hoặc lưu offline count.
+6. **Ưu/Nhược & Trade-offs**: Độ trễ truyền tin cực thấp (real-time). Nhược điểm: Duy trì kết nối stateful gây tốn tài nguyên RAM server, khó scale cụm cluster (cần Redis Pub/Sub hoặc RabbitMQ làm trung chuyển).
+7. **Thay thế**: HTTP Long Polling, Server-Sent Events (SSE), gRPC Bi-directional streaming.
+8. **Đánh giá**: Triển khai thiết kế bảo mật WebSocket rất chặt chẽ, tối ưu luồng gửi bất đồng bộ qua Domain Events.
+9. **Vấn đề tiềm ẩn**: Sử dụng Simple Broker trong bộ nhớ máy (In-memory broker) sẽ bị lỗi mất tin và không hỗ trợ scale cụm nhiều node backend chạy song song.
+10. **Câu hỏi phỏng vấn**: Hãy giải thích cơ chế hoạt động của WebSocket Handshake? Tại sao cần sử dụng thêm giao thức STOMP trên nền WebSocket?
+
+### 6.12. JPA/Hibernate
+1. **Khái niệm**: JPA là đặc tả lập trình cơ sở dữ liệu quan hệ hướng đối tượng trong Java. Hibernate là một ORM framework hiện thực đặc tả JPA.
+2. **Nguyên lý hoạt động**: Mọi thao tác thực hiện trong một phiên làm việc (Session/Persistence Context) đóng vai trò là cache cấp 1. Khi kết thúc transaction hoặc flush, Hibernate tự động đối chiếu thực thể (Dirty checking) để sinh ra SQL ghi xuống DB.
+3. **Cách triển khai**: Tạo các JPA Entities tương ứng với schema, thiết lập soft-delete bằng `@SQLDelete(sql = "UPDATE ... SET deleted_at = NOW() WHERE id = ?")`, cấu hình lazy load cho các quan hệ thực thể `@ManyToOne`.
+4. **Class liên quan**: [PostEntity.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/persistence/entity/PostEntity.java), [JpaPostRepository.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/persistence/repository/JpaPostRepository.java).
+5. **Luồng thực thi**: Gọi `postRepository.save(post)` -> MapStruct chuyển sang `PostEntity` -> JPA `save()` đưa vào quản lý -> Kết thúc giao dịch -> Hibernate tự động flush sinh SQL INSERT/UPDATE và commit xuống Postgres.
+6. **Ưu/Nhược & Trade-offs**: Giảm thiểu tối đa việc viết SQL thủ công, ngăn chặn lỗi cú pháp. Nhược điểm: Overhead lớn về quản lý trạng thái bộ nhớ; dễ gặp lỗi hiệu năng nghiêm trọng (N+1 query, LazyInitializationException) nếu cấu hình sai Eager/Lazy fetch.
+7. **Thay thế**: JDBC Template, MyBatis, jOOQ.
+8. **Đánh giá**: Tách biệt thực thể JPA và Domain Model rất sạch sẽ, đúng triết lý Hexagonal.
+9. **Vấn đề tiềm ẩn**: `@ElementCollection(fetch = FetchType.EAGER)` trên `topicSlugs` trong `PostEntity` sẽ ép Hibernate luôn luôn thực hiện JOIN bảng phụ `post_topics` mỗi khi nạp bài viết, gây chậm hiệu năng.
+10. **Câu hỏi phỏng vấn**: Phân biệt Cache cấp 1 (First-Level Cache) và Cache cấp 2 (Second-Level Cache) trong Hibernate? Cách giải quyết lỗi LazyInitializationException?
+
+### 6.13. Transaction
+1. **Khái niệm**: Cơ chế đảm bảo tính toàn vẹn của dữ liệu (ACID) cho một chuỗi các thao tác CSDL, đảm bảo tất cả cùng thành công hoặc cùng thất bại.
+2. **Nguyên lý hoạt động**: Spring sử dụng cơ chế Aspect-Oriented Programming (AOP) để tạo Proxy bao bọc Bean được khai báo `@Transactional`. Khi chạy, Proxy mở kết nối DB, thiết lập auto-commit = false, thực thi code và commit/rollback tùy thuộc vào Exception ném ra (mặc định chỉ rollback với `RuntimeException`).
+3. **Cách triển khai**: Sử dụng annotation `@Transactional` trên các service Use Case; sử dụng `TransactionSynchronizationManager` để đăng ký các callback (như phát SSE, ghi Redis) chạy chính xác `afterCommit()`.
+4. **Class liên quan**: [CreatePostService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/service/CreatePostService.java), [NotifyMessageService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/chat/application/service/NotifyMessageService.java).
+5. **Luồng thực thi**: Gọi method `@Transactional` -> Spring AOP Proxy đánh chặn -> Mở transaction -> Chạy nghiệp vụ DB -> Commit giao dịch thành công -> Gọi `afterCommit()` callback phát SSE -> Đóng kết nối.
+6. **Ưu/Nhược & Trade-offs**: Rất an toàn, viết code khai báo (declarative) cực kỳ ngắn gọn. Nhược điểm: Nếu luồng nghiệp vụ chứa các tác vụ I/O chậm (như gọi API ngoài) sẽ giữ khóa connection DB lâu, dễ gây cạn kiệt Connection Pool (HikariCP).
+7. **Thay thế**: Programmatic transaction management sử dụng `TransactionTemplate`.
+8. **Đánh giá**: Sử dụng transaction rất bài bản, kiểm soát side-effect bằng Transaction Synchronization rất thông minh.
+9. **Vấn đề tiềm ẩn**: `@TransactionalEventListener(phase = AFTER_COMMIT)` chạy sau khi transaction trước đã đóng hoàn toàn. Khi đó, nếu Listener thực hiện ghi/cập nhật DB (như `messageRepository.updateStatus()`) mà method không khai báo `@Transactional` riêng sẽ gây lỗi `TransactionRequiredException`.
+10. **Câu hỏi phỏng vấn**: Phân biệt propagation `REQUIRED` và `REQUIRES_NEW`? Tại sao tự gọi phương thức `@Transactional` trong cùng một Class lại không có tác dụng (Self-invocation problem)?
+
+### 6.14. Database Design
+1. **Khái niệm**: Thiết kế mô hình dữ liệu quan hệ (RDBMS) tối ưu hóa cấu trúc lưu trữ, tính toàn vẹn và hiệu năng truy vấn của ứng dụng.
+2. **Nguyên lý hoạt động**: Thiết lập cấu trúc bảng chuẩn hóa để loại bỏ dữ liệu dư thừa (3NF). Tạo các Index (chỉ mục B-Tree) trên các cột thường xuyên xuất hiện trong mệnh đề `WHERE`, `JOIN` hoặc `ORDER BY` để tăng tốc độ quét dữ liệu.
+3. **Cách triển khai**: Thiết kế hệ thống bảng quan hệ PostgreSQL (users, profiles, posts, comments, follows, conversations, messages, search_history, v.v.), chỉ định khóa ngoại cascade, ràng buộc check và lập chỉ mục index chi tiết qua Flyway.
+4. **Class liên quan**: [V1__init.sql](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/db/migration/V1__init.sql), [V26__feed_impressions.sql](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/resources/db/migration/V26__feed_impressions.sql).
+5. **Luồng thực thi**: PostgreSQL nhận truy vấn -> Parse cú pháp -> Optimize chọn Plan -> Quét Index (vd: `idx_post_created`) -> Nạp khối dữ liệu (pages) từ đĩa vào Memory (Shared Buffers) -> Trả về kết quả.
+6. **Ưu/Nhược & Trade-offs**: Toàn vẹn dữ liệu cực cao nhờ ràng buộc khóa cứng. Nhược điểm: Việc JOIN nhiều bảng lớn sẽ chậm dần theo thời gian; ghi dữ liệu chậm hơn do phải cập nhật chỉ mục index tương ứng.
+7. **Thay thế**: NoSQL Database (MongoDB, Cassandra).
+8. **Đánh giá**: Thiết kế database rất chuẩn chỉ, phân tích chỉ mục index kỹ lưỡng, tối ưu tốt các trường khóa ngoại.
+9. **Vấn đề tiềm ẩn**: Mối quan hệ tự tham chiếu cấu trúc cây bình luận (Adjacency List) của `comments` (`parent_id`) dễ gây chậm khi duyệt cây bình luận sâu nếu truy vấn lặp nhiều lần (N+1 query).
+10. **Câu hỏi phỏng vấn**: Làm sao để tối ưu chỉ mục Index khi truy vấn sử dụng đồng thời cả lọc `WHERE` và sắp xếp `ORDER BY` (Composite Index)? Phân biệt Clustered Index và Non-clustered Index?
+
+### 6.15. REST API Design
+1. **Khái niệm**: Phong cách kiến trúc thiết kế giao diện lập trình ứng dụng (API) dựa trên các giao thức chuẩn của Web (HTTP).
+2. **Nguyên lý hoạt động**: Sử dụng các tài nguyên (Resources) định danh bằng danh từ số nhiều, thao tác qua HTTP methods (`GET`, `POST`, `PUT`, `PATCH`, `DELETE`) và phản hồi trạng thái chuẩn bằng HTTP Status Codes.
+3. **Cách triển khai**: Endpoints phân cấp dưới `/api/v1/...`, trả về JSON bọc trong lớp thống nhất `ApiResponse<T>`, hỗ trợ phân trang Offset-based (`PageResponse`) và Keyset/Cursor-based (cho lịch sử chat).
+4. **Class liên quan**: [PostController.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/adapter/web/PostController.java), [ApiResponse.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/dto/response/ApiResponse.java).
+5. **Luồng thực thi**: Client gửi HTTP request -> Tomcat phân phối -> `DispatcherServlet` định vị map Controller -> Controller xử lý -> Jackson serialize DTO sang JSON -> Trả về client.
+6. **Ưu/Nhược & Trade-offs**: Đơn giản, dễ đọc, chuẩn hóa cao, tương thích tốt với mọi nền tảng client. Nhược điểm: Gặp vấn đề Over-fetching (nhận thừa dữ liệu không dùng) hoặc Under-fetching (nhận thiếu dữ liệu phải gọi thêm API phụ).
+7. **Thay thế**: GraphQL, gRPC.
+8. **Đánh giá**: API được thiết kế rất nhất quán, định dạng dữ liệu trả về sạch sẽ, phân trang Keysets cho chat rất thông minh.
+9. **Vấn đề tiềm ẩn**: Chưa hỗ trợ chuẩn hóa cơ chế API Versioning nâng cao (ví dụ cấu hình qua Header versioning hoặc Media type versioning) để chuẩn bị cho nâng cấp API lớn sau này.
+10. **Câu hỏi phỏng vấn**: Phân biệt phân trang Offset-based và Cursor-based? Ưu/nhược điểm và kịch bản áp dụng thực tế của từng loại?
+
+### 6.16. Validation
+1. **Khái niệm**: Ranh giới bảo vệ ứng dụng khỏi các dữ liệu đầu vào không hợp lệ hoặc độc hại.
+2. **Nguyên lý hoạt động**: Sử dụng bộ xử lý Bean Validation (JSR-380). Khi nhận request, Spring MVC gọi Hibernate Validator quét các trường của DTO dựa trên các Annotation, nếu có vi phạm sẽ ném `MethodArgumentNotValidException`.
+3. **Cách triển khai**: Khai báo các annotation ràng buộc dữ liệu (`@NotBlank`, `@Size`, `@NotNull`, `@Min`) trên các request DTOs; kích hoạt xác thực bằng `@Valid` trong REST Controllers.
+4. **Class liên quan**: [PostCreationRequest.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/dto/request/PostCreationRequest.java), [AuthController.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/adapter/web/AuthController.java).
+5. **Luồng thực thi**: HTTP Request -> DispatcherServlet nạp payload -> Jackson convert sang Java Object -> Validation Engine chạy kiểm tra -> Nếu có lỗi dừng ngay và ném Exception -> GlobalExceptionHandler bắt và chuyển đổi thành HTTP 400 JSON.
+6. **Ưu/Nhược & Trade-offs**: Code cực kỳ khai báo, tách biệt hoàn toàn kiểm tra định dạng khỏi code nghiệp vụ. Nhược điểm: Không thể validate các nghiệp vụ phức tạp phụ thuộc trạng thái database (như kiểm tra tài khoản đã tồn tại), vẫn phải viết kiểm tra thủ công trong Service.
+7. **Thay thế**: Viết các khối kiểm tra logic bằng `if-else` trong Controller.
+8. **Đánh giá**: Triển khai rất sạch sẽ, validation chặt chẽ đến từng phần tử trong danh sách (`List<@NotBlank @Size(max=80) String>`).
+9. **Vấn đề tiềm ẩn**: Chưa triển khai Custom Validation Annotations cho các trường lặp lại nhiều lần (như số điện thoại, mật khẩu mạnh) để tối ưu hóa việc tái sử dụng code validate.
+10. **Câu hỏi phỏng vấn**: `@Valid` và `@Validated` trong Spring Boot khác nhau như thế nào? Làm sao để viết một Custom Validator để kiểm tra logic nghiệp vụ phức tạp?
+
+### 6.17. Exception Handling
+1. **Khái niệm**: Cơ chế đánh chặn lỗi và quản lý luồng xử lý ngoại lệ tập trung để đảm bảo hệ thống không bị crash và không rò rỉ thông tin hạ tầng nhạy cảm ra ngoài.
+2. **Nguyên lý hoạt động**: Spring MVC sử dụng `HandlerExceptionResolver` để tìm kiếm các lớp được annotated `@RestControllerAdvice` chứa các phương thức `@ExceptionHandler` tương ứng với kiểu Exception ném ra để xử lý.
+3. **Cách triển khai**: Class `GlobalExceptionHandler` bắt tập trung lỗi nghiệp vụ (`AppException`), lỗi validate (`MethodArgumentNotValidException`), lỗi DB (`DataIntegrityViolationException`) và dịch thành Response có mã code bảo mật.
+4. **Class liên quan**: [GlobalExceptionHandler.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/exception/GlobalExceptionHandler.java), [AppException.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/exception/AppException.java).
+5. **Luồng thực thi**: Runtime ném `AppException` -> Ngắt luồng thực thi -> Spring MVC chuyển Exception sang `GlobalExceptionHandler` -> Map và lấy mã HTTP Status tương ứng -> Tạo `ErrorResponse` JSON -> Trả về Client.
+6. **Ưu/Nhược & Trade-offs**: Loại bỏ hoàn toàn khối try-catch rườm rà ở Controller, đảm bảo cấu trúc lỗi trả về đồng nhất. Nhược điểm: Phải duy trì danh sách mã lỗi lớn; nếu catch-all quá đà dễ làm mất dấu log lỗi gốc của hệ thống.
+7. **Thay thế**: Trả về các đối tượng chứa mã lỗi trong kiểu trả về nghiệp vụ (như `Result<T, Error>` của Functional Programming).
+8. **Đánh giá**: Triển khai xuất sắc, bảo vệ an toàn hệ thống (không lộ SQL stacktrace khi DB lỗi ràng buộc nhờ dịch lỗi `DataIntegrityViolationException` sang `USER_ALREADY_EXISTS` hoặc mã an toàn).
+9. **Vấn đề tiềm ẩn**: Thiếu log stacktrace cho một số ngoại lệ nghiệp vụ quan trọng nhưng lại log quá nhiều lỗi định dạng JSON của client gây tốn dung lượng ổ đĩa.
+10. **Câu hỏi phỏng vấn**: Hãy giải thích cơ chế hoạt động của `@RestControllerAdvice`? Tại sao nên hạn chế tối đa việc ném Checked Exception trong ứng dụng web?
+
+### 6.18. Logging
+1. **Khái niệm**: Ghi lại lịch sử hoạt động, trạng thái và lỗi của hệ thống phục vụ công tác vận hành, bảo trì và giám sát (observability).
+2. **Nguyên lý hoạt động**: Sử dụng SLF4J (Simple Logging Facade for Java) làm giao diện trừu tượng hóa, chuyển tiếp lệnh ghi đến Logback (Logging Engine). Logback định dạng chuỗi log và ghi ra Console hoặc ghi File tuần hoàn.
+3. **Cách triển khai**: Sử dụng annotation `@Slf4j` của Lombok để tạo logger; ghi log phân cấp rõ ràng (INFO cho hoạt động, WARN cho lỗi bắt được/hạ cấp, ERROR cho lỗi hệ thống nghiêm trọng).
+4. **Class liên quan**: [JwtAuthenticationFilter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/jwt/JwtAuthenticationFilter.java) (dòng 73), [SyncSchedule.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/schedule/SyncSchedule.java) (dòng 56).
+5. **Luồng thực thi**: Gọi `log.info(...)` -> SLF4J chuyển tiếp -> Logback định dạng (thêm timestamp, thread name, log level) -> Ghi ra stdout/file (được capture bởi Docker).
+6. **Ưu/Nhược & Trade-offs**: Giúp debug và giám sát luồng chạy trực quan. Nhược điểm: Ghi log block I/O (đồng bộ) có thể làm chậm hiệu năng ứng dụng; ghi log quá đà gây tốn dung lượng ổ đĩa.
+7. **Thay thế**: `System.out.println` (tuyệt đối không dùng vì block I/O đồng bộ làm nghẽn Tomcat threads).
+8. **Đánh giá**: Log được đặt ở các ranh giới quan trọng (JWT fails, Sync fails), phân tách level rõ ràng.
+9. **Vấn đề tiềm ẩn**: Chưa cấu hình Logback xuất định dạng JSON (Structured Logging) để tích hợp trực tiếp với các hệ thống phân tích log tập trung như ELK Stack (Elasticsearch, Logstash, Kibana) hoặc Loki.
+10. **Câu hỏi phỏng vấn**: Mức độ log (Log Levels) gồm những loại nào và khi nào nên dùng từng loại? Làm sao để ghi log bất đồng bộ (Async Logging) trong Spring Boot?
+
+### 6.19. Docker
+1. **Khái niệm**: Công nghệ container hóa giúp đóng gói ứng dụng Java, môi trường chạy (JRE) và các dependencies vào một Image độc lập, chạy nhất quán ở mọi môi trường.
+2. **Nguyên lý hoạt động**: Docker builder đọc Dockerfile, thực thi từng chỉ lệnh để tạo ra các lớp Layer bất biến lưu trữ trên đĩa. Khi chạy, Docker Engine khởi tạo container dùng chung nhân OS nhưng cách ly tài nguyên qua Namespaces và Control Groups (cgroups).
+3. **Cách triển khai**: Sử dụng Dockerfile multi-stage (eclipse-temurin:21-jre-alpine), phối hợp DB Postgres, Redis, Frontend và AI-Pipeline thông qua docker-compose.
+4. **Class liên quan**: [Dockerfile](file:///home/damphuquy/Documents/Social-Pulse/backend/Dockerfile), [docker-compose.yaml](file:///home/damphuquy/Documents/Social-Pulse/docker-compose.yaml).
+5. **Luồng thực thi**: `docker-compose up` -> Khởi chạy PostgreSQL & Redis -> Chạy healthcheck -> Khi tất cả healthy -> Khởi chạy Backend container -> Khởi chạy Frontend container.
+6. **Ưu/Nhược & Trade-offs**: Đảm bảo "chạy được trên máy tôi thì chạy được trên production". Nhược điểm: Phải quản lý thêm cấu hình hạ tầng ảo; thời gian build image làm chậm quá trình CI/CD.
+7. **Đánh giá**: Viết Dockerfile rất tối ưu nhờ cơ chế multi-stage và dùng JRE alpine siêu nhẹ, giúp giảm thiểu đáng kể dung lượng image và diện tích tấn công (attack surface).
+8. **Vấn đề tiềm ẩn**: Chưa cấu hình giới hạn tài nguyên cứng (CPU/RAM limit) cho container AI-pipeline và Redis, dẫn đến nguy cơ các container này chiếm dụng toàn bộ RAM vật lý của máy chủ gây sập Backend.
+9. **Câu hỏi phỏng vấn**: Hãy phân biệt Docker Image và Docker Container? Tại sao nên sử dụng JRE thay vì JDK trong Container chạy sản xuất?
+
+### 6.20. Design Patterns
+1. **Khái niệm**: Các giải pháp thiết kế phần mềm chuẩn hóa đã được kiểm chứng cho các vấn đề thiết kế kiến trúc thường gặp.
+2. **Nguyên lý hoạt động**: Áp dụng các nguyên lý lập trình hướng đối tượng để tăng tính tái sử dụng, cô lập nghiệp vụ và giảm sự phụ thuộc cứng nhắc giữa các class.
+3. **Cách triển khai**: Builder pattern (Lombok `@Builder`), Data Mapper pattern (MapStruct), Adapter pattern (Hexagonal persistence/web adapters), Proxy pattern (Spring AOP `@Transactional`), Observer pattern (Spring Application Events), Fallback pattern (`FallbackRankingService` try-catch).
+4. **Class liên quan**: [PostConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/infrastructure/config/PostConfig.java), [PostMapper.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/post/application/dto/mapper/PostMapper.java), [FallbackRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FallbackRankingService.java).
+5. **Luồng thực thi**: Phụ thuộc vào từng pattern tương ứng (ví dụ: Mapper chuyển đổi cấu trúc đối tượng, Proxy đánh chặn giao dịch).
+6. **Ưu/Nhược & Trade-offs**: Code cực kỳ sạch, có cấu trúc rõ ràng, dễ bảo trì và mở rộng. Nhược điểm: Tăng độ phức tạp của codebase cho lập trình viên mới do tạo nhiều class trung gian.
+7. **Thay thế**: Viết code tuần tự trực tiếp (Spaghetti code).
+8. **Đánh giá**: Áp dụng các mẫu thiết kế rất tự nhiên và hiệu quả trong Hexagonal Architecture.
+9. **Vấn đề tiềm ẩn**: Cần lưu ý việc lạm dụng Builder pattern có thể che giấu các Constructor quá nhiều tham số (telescoping constructor), vi phạm quy tắc thiết kế Clean Code.
+10. **Câu hỏi phỏng vấn**: Hãy giải thích cơ chế hoạt động của Observer Pattern thông qua Spring Application Events?
+
+### 6.21. Testing
+1. **Khái niệm**: Các kỹ thuật chạy thử mã nguồn một cách tự động để kiểm tra tính chính xác và phòng ngừa lỗi phát sinh khi thay đổi code.
+2. **Nguyên lý hoạt động**: JUnit khởi chạy test context; Mockito đánh chặn các interface dependencies để trả về dữ liệu giả định (mock), giúp cô lập hoàn toàn đơn vị cần kiểm thử (Unit).
+3. **Cách triển khai**: Unit test Mockito cho các usecase nghiệp vụ; Slice test sử dụng H2 DB in-memory (`@DataJpaTest`) và Flyway test; Slice test Web MVC (`@WebMvcTest`); test bảo mật WebSocket.
+4. **Class liên quan**: [NotifyMessageServiceTest.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/test/java/com/socialpulse/app/chat/application/service/NotifyMessageServiceTest.java), [WebSocketAuthInterceptorTest.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/test/java/com/socialpulse/app/common/websocket/WebSocketAuthInterceptorTest.java).
+5. **Luồng thực thi**: Chạy `mvn test` -> Maven Surefire Plugin quét -> JUnit chạy các class test -> Thiết lập mock -> Assert kết quả thực tế với kỳ vọng.
+6. **Ưu/Nhược & Trade-offs**: Đảm bảo an toàn tuyệt đối khi refactor code, phát hiện lỗi sớm. Nhược điểm: Tốn thời gian viết và bảo trì mã test; kiểm thử trên H2 database in-memory đôi khi không phát hiện được lỗi cú pháp SQL native của PostgreSQL thật.
+7. **Thay thế**: Kiểm thử thủ công bằng giao diện hoặc Postman.
+8. **Đánh giá**: Hệ thống test viết rất chi tiết, phủ kín các lớp bảo mật và WebSocket nhạy cảm. Tuy nhiên, khai báo `jqwik` nhưng chưa viết property-based test nào là dư thừa dependency.
+9. **Vấn đề tiềm ẩn**: Cần bổ sung Integration Test chạy với PostgreSQL thực tế sử dụng Testcontainers thay vì H2 DB, để đảm bảo native query của Feed chạy đúng ngữ pháp SQL Postgres.
+10. **Câu hỏi phỏng vấn**: Phân biệt Mock và Spy trong Mockito? Khi nào nên viết Integration Test thay vì Unit Test?
+
+### 6.22. Scalability
+1. **Khái niệm**: Khả năng hệ thống xử lý tải trọng tăng trưởng (lượt truy cập, dữ liệu) bằng cách nâng cấp tài nguyên phần cứng hoặc mở rộng số lượng node chạy song song.
+2. **Nguyên lý hoạt động**: Thiết kế stateless backend để dễ dàng scale ngang (Horizontal Scaling). Các dữ liệu chia sẻ giữa các instance (như cache, active WebSocket session registry, offline queues) phải được chuyển dịch ra CSDL in-memory phân tán tập trung (Redis).
+3. **Cách triển khai**: Stateless JWT authentication; đồng bộ registry kết nối WebSocket active của người dùng tập trung tại Redis.
+4. **Class liên quan**: [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java), [WebSocketSessionManager.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketSessionManager.java).
+5. **Luồng thực thi**: User kết nối Node 1 hoặc Node 2 -> Mọi truy vấn kiểm tra online của user đều được redirect tới Redis tập trung -> Đồng bộ trạng thái nhất quán trên toàn cụm.
+6. **Ưu/Nhược & Trade-offs**: Tầng ứng dụng (Tomcat) có khả năng scale ngang vô hạn. Nhược điểm: Tải trọng dồn xuống CSDL quan hệ PostgreSQL và Redis tăng cao; độ phức tạp hạ tầng lớn.
+7. **Thay thế**: Scale dọc (tăng cấu hình CPU/RAM cho máy chủ đơn).
+8. **Đánh giá**: Kiến trúc stateless và Redis Session Registry được thiết kế rất tốt, sẵn sàng cho hạ tầng Kubernetes cluster.
+9. **Vấn đề tiềm ẩn**: Chưa triển khai database sharding hoặc read/write replication, database PostgreSQL đơn lẻ sẽ là nút thắt cổ chai hiệu năng duy nhất (Single Point of Failure / Bottleneck) khi scale ngang backend.
+10. **Câu hỏi phỏng vấn**: Làm sao để xử lý phân phát tin nhắn chat real-time giữa các client kết nối ở các server node khác nhau trong hệ thống WebSocket cluster?
+
+### 6.23. Performance
+1. **Khái niệm**: Tối ưu hóa thời gian phản hồi (latency) và thông lượng (throughput) xử lý của hệ thống dưới tải trọng cao.
+2. **Nguyên lý hoạt động**: Giảm thiểu I/O đĩa cứng (database), tối ưu hóa thuật toán trong CPU, giảm thiểu số lượng block threads và overhead nạp đối tượng của bộ nhớ RAM.
+3. **Cách triển khai**: Cache Feed đã xếp hạng; sử dụng bộ đếm delta trong Redis để write-back DB định kỳ; dùng native queries JdbcTemplate bỏ qua Hibernate overhead; Executor Service chạy bất đồng bộ luồng phát SSE.
+4. **Class liên quan**: [SyncSchedule.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/schedule/SyncSchedule.java), [FeedRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedRepositoryAdapter.java), [GetTrendingHashtagsService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/discovery/application/service/GetTrendingHashtagsService.java).
+5. **Luồng thực thi**: Ghi tương tác nhanh lên Redis -> đồng bộ hàng loạt -> đọc API feed nạp cache -> phản hồi microsecond.
+6. **Ưu/Nhược & Trade-offs**: Sử dụng caching tăng mạnh tốc độ đọc nhưng phải chấp nhận rủi ro dữ liệu bị cũ (Stale cache) và tăng độ phức tạp trong logic invalidate cache.
+7. **Thay thế**: Đọc ghi trực tiếp DB cho mỗi thao tác.
+8. **Đánh giá**: Có nhiều giải pháp tối ưu rất hay (Write-back, JdbcTemplate Feed).
+9. **Vấn đề tiềm ẩn**: Có 2 điểm nghẽn hiệu năng nghiêm trọng:
+   1. Câu lệnh `ORDER BY RANDOM()` trong `FeedRepositoryAdapter.findRandomPosts` gây full-table scan.
+   2. Tính trending hashtag bằng cách nạp toàn bộ bài viết gần đây lên Java memory rồi chạy regex/grouping (`GetTrendingHashtagsService.getTrendingHashtags`). Cần tối ưu bằng cách tính đếm lưu trực tiếp dạng ZSET trong Redis hoặc viết SQL group-by index.
+10. **Câu hỏi phỏng vấn**: Kể tên các chiến lược tối ưu hóa hiệu năng truy vấn database? Giải thích cơ chế hoạt động của Connection Pool (HikariCP) và cách cấu hình kích thước pool tối ưu?
+
+### 6.24. Security
+1. **Khái niệm**: Bảo vệ hệ thống, dữ liệu và người dùng khỏi các mối đe dọa, xâm nhập trái phép và khai thác lỗ hổng.
+2. **Nguyên lý hoạt động**: Thực thi CORS whitelist, vô hiệu hóa CSRF cho API stateless, băm bảo mật thông tin nhạy cảm, ngăn ngừa SQL injection qua tham số hóa truy vấn, kiểm soát phiên đăng nhập nâng cao.
+3. **Cách triển khai**: CORS whitelist trong `SecurityConfig`; băm mật khẩu/OTP qua BCrypt; sử dụng SHA-256 băm Refresh Token; cơ chế Refresh Token Rotation ngăn ngừa token theft; validate input chặt chẽ.
+4. **Class liên quan**: [SecurityConfig.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/security/config/SecurityConfig.java), [RefreshTokenService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/auth/application/service/jwt/RefreshTokenService.java).
+5. **Luồng thực thi**: Đăng nhập -> Sinh Access Token ký bảo mật -> kiểm tra signature -> Xoay vòng Refresh Token -> phát hiện reuse -> lập tức khóa toàn bộ phiên hoạt động của user.
+6. **Ưu/Nhược & Trade-offs**: Tăng cường bảo mật tối đa nhưng làm giảm trải nghiệm đăng nhập nếu hệ thống nhạy cảm quá mức (đăng xuất hàng loạt khi có đua refresh token).
+7. **Thay thế**: Token không xoay vòng, không lưu hash (bảo mật yếu).
+8. **Đánh giá**: Độ bảo mật ở mức rất cao, áp dụng các kỹ thuật bảo mật token hiện đại nhất.
+9. **Vấn đề tiềm ẩn**: JWT Secret key lấy từ `.env` cần đảm bảo độ dài tối thiểu 256 bits (32 bytes) để tránh lỗi bảo mật yếu của JJWT. Cần cấu hình SSL/TLS (HTTPS) bắt buộc cho toàn bộ kết nối để chống tấn công Man-in-the-Middle (MitM) đánh cắp JWT.
+10. **Câu hỏi phỏng vấn**: Refresh Token Rotation hoạt động như thế nào để ngăn chặn tấn công Token Theft? Tại sao stateless API sử dụng JWT lại có thể disable bảo vệ CSRF mà không bị mất an toàn?
+
+---
+
+## 7. Tổng kết & Đánh giá mức độ hoàn thiện
+
+### 7.1. Sơ đồ kiến trúc tổng thể hệ thống (Mermaid)
+
+Dưới đây là sơ đồ kiến trúc triển khai vật lý và phân lớp logic của Social-Pulse:
+
+```mermaid
+graph TD
+    Client[Client: Web / Mobile App] -->|HTTPS / WSS| LB[Load Balancer]
+    
+    subgraph backend_cluster [Backend Server Cluster]
+        LB --> Node1[Spring Boot App - Node 1]
+        LB --> Node2[Spring Boot App - Node 2]
+    end
+    
+    subgraph node_internal [Internal Architecture - Hexagonal Layering]
+        Node1 --> WebAdapter[Web / WebSocket Adapters]
+        WebAdapter --> PortsIn[Input Ports: Use Cases]
+        PortsIn --> ApplicationCore[Application Services]
+        ApplicationCore --> DomainModel[Rich Domain Models]
+        ApplicationCore --> PortsOut[Output Ports: Repositories]
+        PortsOut --> PersistenceAdapter[Persistence Adapters]
+    end
+    
+    subgraph cache_cluster [Redis Distributed Cache & Session Store]
+        Node1 -->|Read/Write Session & Cache| Redis[(Redis Cluster)]
+        Node2 -->|Read/Write Session & Cache| Redis
+    end
+    
+    subgraph db_cluster [PostgreSQL Database]
+        PersistenceAdapter -->|JPA Write / JDBC Read| PG[(PostgreSQL Database)]
+    end
+    
+    subgraph ai_cluster [AI Inference Engine]
+        Node1 -->|HTTP RestClient| AIPipeline[Python FastAPI AI Pipeline]
+        Node2 -->|HTTP RestClient| AIPipeline
+    end
+```
+
+### 7.2. Sơ đồ luồng xử lý Request chi tiết (Mermaid)
+
+Luồng đi của một request gửi tin nhắn chat thời gian thực qua WebSocket/STOMP và đồng bộ hóa:
+
+```mermaid
+sequenceDiagram
+    autonumber
+    actor Alice as Client (Alice)
+    participant LB as Load Balancer
+    participant Filter as JwtAuthenticationFilter
+    participant WS as WebSocketAuthInterceptor
+    participant Controller as ChatWebSocketController
+    participant Service as SendMessageService
+    participant PG as PostgreSQL
+    participant Redis as Redis Store
+    participant Event as NotifyMessageService (Event Listener)
+    actor Bob as Client (Bob)
+
+    Note over Alice, Bob: 1. Thiết lập kết nối WebSocket (CONNECT frame)
+    Alice->>LB: Gửi WS CONNECT + JWT Token
+    LB->>WS: Chặn CONNECT frame
+    WS->>WS: Giải mã và xác thực chữ ký JWT token
+    WS->>WS: Gán Principal (CustomUserDetails) vào Session Header
+    WS-->>Alice: Trả về CONNECTED ACK
+    
+    Note over Alice, Bob: 2. Alice gửi tin nhắn chat
+    Alice->>LB: Send message (đích: /app/chat.send)
+    LB->>Controller: Định tuyến frame tin nhắn
+    Controller->>Controller: Trích xuất Alice principal từ STOMP session
+    Controller->>Service: sendMessage(conversationId, content, aliceDetails)
+    activate Service
+    Service->>Service: Xác thực định dạng content (rỗng, độ dài)
+    Service->>PG: Kiểm tra Alice có thuộc conversationId
+    Service->>PG: Lưu tin nhắn mới vào DB (status: SENT)
+    Service->>PG: Cập nhật lastMessageAt của conversation
+    Service->>Event: Phát sự kiện MessagePersistedEvent
+    Service-->>Controller: Trả về MessageResponse
+    deactivate Service
+    
+    Note over Event: 3. Phân phát tin nhắn chạy sau khi Transaction Commit (AFTER_COMMIT)
+    activate Event
+    Event->>Redis: Kiểm tra Bob online (ws:sessions:bob)
+    alt Bob đang Online
+        Redis-->>Event: Trả về danh sách sessionIds hoạt động
+        Event->>LB: Gửi tin nhắn qua destination /topic/chat.convId
+        LB->>Bob: Đẩy tin nhắn real-time qua socket của Bob
+        Event->>PG: Cập nhật status tin nhắn thành DELIVERED
+    else Bob đang Offline
+        Redis-->>Event: Trả về rỗng (offline)
+        Event->>Redis: Tăng số lượng tin chưa đọc (chat:unread:convId:bob)
+    end
+    deactivate Event
+```
+
+### 7.3. Đánh giá trình độ dự án (Junior / Mid / Senior)
+
+Codebase của dự án **Social-Pulse** được đánh giá ở trình độ **Senior** về mặt cấu trúc kiến trúc tổng thể, nhưng có một số chi tiết triển khai ở mức **Mid** cần được refactor:
+
+* **Tại sao cấu trúc ở mức Senior**:
+  1. **Hexagonal Architecture cực kỳ chuẩn mực**: Tách biệt hoàn toàn phần lõi Domain sạch framework với phần Infrastructure. Khai báo Bean thủ công bằng tay thay vì quét tự động thể hiện tư duy thiết kế kiến trúc rất sâu sắc.
+  2. **Tư duy hướng Event nhất quán**: Sử dụng `@TransactionalEventListener(phase = AFTER_COMMIT)` để xử lý side-effects (WebSocket, Redis) thể hiện sự hiểu biết sâu sắc về các vấn đề phân tán dữ liệu và transaction rollback.
+  3. **Cơ chế bảo mật Refresh Token Rotation**: Triển khai băm SHA-256 một chiều refresh token và tự động khóa toàn bộ phiên của user khi phát hiện token bị tái sử dụng là giải pháp bảo mật nâng cao cấp Enterprise.
+  4. **Hệ thống Feed 2 tầng chuyên nghiệp**: Thiết kế có Candidate Generation, Feature Extraction, fallback xếp hạng sang heuristic thuật toán khi AI sập là thiết kế rất bền bỉ.
+
+* **Những điểm yếu ở mức Mid cần khắc phục**:
+  1. **Lỗi Transaction trong Event Handler**: Lỗi thiếu `@Transactional` trong event handler `onMessagePersisted` dẫn đến câu lệnh update DB bị lỗi `TransactionRequiredException` khi chạy thật.
+  2. **Điểm nghẽn hiệu năng nghiêm trọng**: Tính trending hashtag bằng cách nạp hàng chục nghìn bài viết lên JVM memory rồi xử lý regex trong Java; sử dụng `ORDER BY RANDOM()` cho lấy bài viết ngẫu nhiên.
+  3. **Race Condition ở Redis**: Đọc size session WebSocket rồi mới add session một cách không nguyên tử.
+
+### 7.4. Các câu hỏi phỏng vấn cốt lõi khai thác từ dự án này
+
+Dưới đây là 10 câu hỏi phỏng vấn thực tế nhà tuyển dụng có thể hỏi bạn dựa trên codebase này:
+
+1. *Trong dự án của bạn, tại sao bạn lại chọn thiết kế **Hexagonal Architecture** thay vì kiến trúc **MVC 3 lớp** truyền thống? Lợi ích và đánh đổi thực tế là gì?*
+2. *Lớp `Post` trong domain không chứa annotation `@Entity` của JPA. Vậy làm thế nào để bạn lưu nó vào CSDL PostgreSQL? Hãy giải thích luồng hoạt động của MapStruct mappers trong quá trình này.*
+3. *Tại sao bạn lại sử dụng `@TransactionalEventListener(phase = TransactionPhase.AFTER_COMMIT)` thay vì `@EventListener` thông thường cho sự kiện gửi tin nhắn chat? Nếu không sử dụng cơ chế này, lỗi gì có thể xảy ra?*
+4. *Hãy giải thích cơ chế **Refresh Token Rotation (RTR)** được triển khai trong `RefreshTokenService`. Nếu kẻ tấn công ăn trộm được Refresh Token cũ và cố gắng gửi request thì hệ thống sẽ phản ứng như thế nào?*
+5. *Dự án của bạn triển khai cơ chế **Write-Back (Write-behind) Caching** cho lượt tương tác. Hãy giải thích cách `SyncSchedule` đồng bộ dữ liệu. Làm sao bạn đảm bảo không bị mất tương tác khi server bị tắt đột ngột?*
+6. *Hãy chỉ ra lỗi hiệu năng của việc sử dụng **`ORDER BY RANDOM()`** khi lấy bài viết ngẫu nhiên và đề xuất phương án tối ưu hóa.*
+7. *Trong `WebSocketSessionManager`, làm thế nào bạn giới hạn 5 phiên kết nối đồng thời của một user? Có lỗi tranh chấp luồng (Race Condition) nào xảy ra ở đây không nếu user kết nối song song nhiều thiết bị cùng lúc?*
+8. *Hệ thống feed của bạn có 2 tầng: **Retrieval** và **Ranking**. Hãy giải thích cách bạn lấy ứng viên từ nhiều nguồn và trích xuất đặc trưng (Feature Extraction) mà không bị lỗi **N+1 queries**.*
+9. *Làm thế nào hệ thống của bạn duy trì hoạt động bình thường khi dịch vụ AI gợi ý Feed bị sập hoặc bị quá tải timeout?*
+10. *Tại sao các câu lệnh cập nhật DB `@Modifying` trong `JpaMessageRepository` lại có thể bị ném lỗi `TransactionRequiredException` khi được gọi từ `NotifyMessageService` chạy sau commit?*
+
+### 7.5. Lộ trình học thêm để hiểu 100% codebase dự án
+
+Để làm chủ hoàn toàn và nâng cấp hệ thống này lên quy mô lớn hơn, bạn cần bổ sung kiến thức ở các mảng sau:
+
+1. **Spring AOP & Proxying**: Hiểu sâu cách Spring tạo JDK Dynamic Proxy vs CGLIB, cơ chế tự gọi nội bộ (self-invocation) làm mất tác dụng `@Transactional` và `@PreAuthorize`.
+2. **PostgreSQL Performance Tuning**: Học cách đọc kế hoạch thực thi câu lệnh SQL (`EXPLAIN ANALYZE`), tối ưu hóa composite index, partition bảng cho bảng `posts` và `messages` lớn.
+3. **Redis Lua Scripting & Redisson**: Học cách viết script Lua chạy trực tiếp trên Redis để thực thi atomic transaction, giải quyết race condition khi đăng ký session WebSocket.
+4. **Hạ tầng Cluster cho WebSocket**: Tìm hiểu cách tích hợp Spring WebSocket với một External Message Broker thực tế như RabbitMQ, sử dụng AMQP để trung chuyển tin nhắn giữa các backend node.
+5. **Thiết kế Hệ thống Gợi ý (Recommender Systems)**: Tìm hiểu về Matrix Factorization, Collaborative Filtering và cách các mô hình AI tính toán điểm số gợi ý bảng tin dựa trên vector đặc trưng.
+6. **Mẫu thiết kế Microservices**: Học cách chuyển đổi mô hình Monolith này sang kiến trúc Microservices sử dụng Spring Cloud (Gateway, Service Discovery, Config Server, Resilience4j).
