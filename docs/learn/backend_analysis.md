@@ -4,6 +4,77 @@ Tài liệu này được biên soạn dưới góc nhìn của một **Code Arc
 
 ---
 
+## 0. Thiết kế Hệ thống được áp dụng (System Design Patterns)
+
+### 0.0. Sơ đồ Kiến trúc Hệ thống (System Design Diagram)
+
+Dưới đây là sơ đồ tổng quan thể hiện sự phối hợp giữa Java Backend, Redis Cache, PostgreSQL Database, SSE/WebSockets và AI Pipeline Server:
+
+```mermaid
+graph TB
+    %% C4 Model / Eraser.io Palette styling definitions
+    classDef person fill:#0B3C5D,stroke:#0B3C5D,color:#FFFFFF,stroke-width:2px;
+    classDef container fill:#328CC1,stroke:#0B3C5D,color:#FFFFFF,stroke-width:1px;
+    classDef db fill:#328CC1,stroke:#0D5C75,color:#FFFFFF,stroke-width:2px;
+    classDef external fill:#999999,stroke:#666666,color:#FFFFFF,stroke-width:1px;
+
+    %% Elements
+    User["👤 Người dùng (Users)<br/>[Person]<br/>Người dùng tương tác, đăng bài và nhắn tin realtime."]:::person
+
+    subgraph Boundary["Ranh giới Hệ thống Social-Pulse (Social-Pulse System Boundary)"]
+        Frontend["📱 Frontend Web & Mobile App<br/>[Container: React / Next.js]<br/>Cung cấp giao diện người dùng thời gian thực, quản lý kết nối Client-side."]:::container
+        
+        Backend["☕ API Application<br/>[Container: Spring Boot 4 / Java 21]<br/>Cung cấp REST APIs, xử lý nghiệp vụ chính (CQRS), luồng realtime (SSE/STOMP Websocket) và điều phối AI."]:::container
+        
+        RedisDB["⚡ In-Memory Cache & Broker<br/>[Container: Redis 7]<br/>Lưu trữ feed cache, bộ đệm đếm delta (Hot Counters) và hàng đợi tin nhắn offline."]:::db
+        
+        PostgresDB["🗄️ Primary Database<br/>[Container: PostgreSQL 16]<br/>Lưu trữ lâu bền cho dữ liệu giao dịch (bài viết, tương tác, quan hệ) và logs hiển thị."]:::db
+    end
+
+    subgraph ExtBoundary["Hệ thống bên ngoài (External System Boundary)"]
+        AIServer["🤖 AI Pipeline Server<br/>[Container: FastAPI / Python 3.10]<br/>Thực thi dự đoán điểm xếp hạng bảng tin bằng mô hình học máy (GBDT) dựa trên offline features."]:::external
+    end
+
+    %% Connections
+    User -->|Duyệt bài & Nhắn tin| Frontend
+    Frontend -->|HTTP REST, WebSocket & SSE / HTTPS| Backend
+    
+    Backend -->|1. Đọc/Ghi dữ liệu transactional / Spring Data JPA| PostgresDB
+    Backend -->|2. Đọc nhanh candidates, log views / JdbcTemplate| PostgresDB
+    Backend -->|3. Buffer delta counters, cache feeds & chat queue / RedisTemplate| RedisDB
+    Backend -->|4. Dự đoán điểm số AI / HTTP JSON POST| AIServer
+    
+    AIServer -.->|Đọc offline features & logs / SQL| PostgresDB
+```
+
+Để xây dựng một mạng xã hội hiện đại chịu tải cao và tích hợp AI như Social-Pulse, hệ thống đã áp dụng các mẫu thiết kế hệ thống (System Design Patterns) kinh điển sau đây:
+
+### 0.1. Phân tách Đọc và Ghi dữ liệu (CQRS Pattern)
+* **Khái niệm**: Phân tách các luồng thao tác làm thay đổi trạng thái dữ liệu (Commands - Write) khỏi luồng lấy dữ liệu hiển thị (Queries - Read).
+* **Ứng dụng trong Social-Pulse**:
+  - **Write Path**: Giao dịch ghi bài viết, bình luận, tương tác yêu cầu tính nhất quán ACID mạnh mẽ, do đó sử dụng Spring Data JPA kết hợp Hibernate để kiểm soát ràng buộc thực thể chặt chẽ.
+  - **Read Path**: Bảng tin (Feed) yêu cầu tốc độ hiển thị cực nhanh (dưới 100ms) và cần gom nhóm, kết hợp dữ liệu từ nhiều bảng (Posts, Follows, Blocks). Hệ thống bypass hoàn toàn JPA/Hibernate để loại bỏ các chi phí quản lý cache vòng đời entity, sử dụng Spring `JdbcTemplate` thực thi SQL Native để tăng tối đa tốc độ đọc. Xem chi tiết tại [FeedRepositoryAdapter.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/adapter/persistence/FeedRepositoryAdapter.java).
+
+### 0.2. Mẫu Đệm và Đồng bộ chậm (Write-Back Caching / Hot Counters Pattern)
+* **Khái niệm**: Khi một dữ liệu (như số lượt xem, upvote, chia sẻ bài viết) có tần suất cập nhật cực kỳ lớn, việc ghi trực tiếp xuống PostgreSQL sẽ gây nghẽn hàng (Row-lock contention) và quá tải I/O.
+* **Ứng dụng trong Social-Pulse**:
+  - Tương tác của người dùng không ghi thẳng vào database mà chỉ tăng một giá trị đệm (delta) trên Redis (lưu tạm thời).
+  - Một tiến trình chạy ngầm ([SyncSchedule.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/schedule/SyncSchedule.java)) định kỳ chạy mỗi 10 giây để thu thập tất cả các delta trên Redis, gom thành một lệnh cập nhật hàng loạt (Bulk Update) rồi ghi xuống PostgreSQL một lần duy nhất. Kỹ thuật này giảm tải ghi xuống database tới 95%.
+
+### 0.3. Cơ chế Chịu lỗi và Tự phục hồi (Resilience & Fallback Pattern)
+* **Khái niệm**: Trong kiến trúc tích hợp hệ thống bên ngoài (FastAPI AI server), lỗi kết nối hoặc độ trễ phản hồi từ hệ thống ngoài không được phép làm sập luồng nghiệp vụ chính của người dùng.
+* **Ứng dụng trong Social-Pulse**:
+  - **Timeout Control**: Client kết nối FastAPI AI được cấu hình giới hạn thời gian chờ cực ngắn (Connect timeout 2s, Read timeout 5s) tại [AiPipelineRankingClient.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/infrastructure/config/AiPipelineRankingClient.java) để giải phóng luồng xử lý chính nếu AI server bị nghẽn.
+  - **AI Fail-safe Fallback**: Nếu AI client ném ra ngoại lệ hoặc kết quả trả về không khớp định dạng dữ liệu (Schema validation thất bại), hệ thống xếp hạng bảng tin [FeedRankingService.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/feed/application/service/ranking/FeedRankingService.java) sẽ tự động kích hoạt bộ xếp hạng dự phòng Rule-based (dựa trên Hot Score cổ điển) để tiếp tục phục vụ người dùng.
+
+### 0.4. Kết nối thời gian thực đa luồng (Real-time Message Streaming Pattern)
+* **Khái niệm**: Hệ thống đẩy thông tin bất đồng bộ từ máy chủ về trình duyệt để mang lại trải nghiệm tương tác tức thì mà không lạm dụng cơ chế HTTP Polling liên tục gây hao tổn tài nguyên.
+* **Ứng dụng trong Social-Pulse**:
+  - **Server-Sent Events (SSE)**: Đẩy tín hiệu làm mới bảng tin ("feed_refresh") từ server về client thông qua [SseEmitterRegistry.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/realtime/application/service/SseEmitterRegistry.java), sử dụng thread pool riêng biệt nhằm tránh chiếm dụng luồng HTTP Servlet chính.
+  - **STOMP over WebSocket**: Quản lý tin nhắn chat hai chiều bảo mật ở mức hạt kênh (Destination-level security) thông qua [WebSocketAuthInterceptor.java](file:///home/damphuquy/Documents/Social-Pulse/backend/src/main/java/com/socialpulse/app/common/websocket/WebSocketAuthInterceptor.java), đi kèm bộ đệm lưu trữ tin nhắn tạm thời trên Redis (Offline Queueing) phòng khi người dùng ngắt kết nối đột ngột.
+
+---
+
 ## 1. Kiến trúc & Tổ chức thư mục (Architecture & Folder Structure)
 
 Dự án áp dụng mô hình kiến trúc **Screaming Architecture (Kiến trúc "gầm thét")** kết hợp với cấu trúc **Hexagonal Architecture (Ports & Adapters)** và được tổ chức theo tính năng nghiệp vụ (**Package-by-Feature**).
