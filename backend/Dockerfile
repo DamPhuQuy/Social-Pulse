@@ -1,17 +1,29 @@
-FROM maven:3.9-eclipse-temurin-21-alpine AS build
+# Stage 1: Build stage using JDK 25
+FROM eclipse-temurin:25-jdk AS builder
 WORKDIR /app
 
-COPY pom.xml .
-RUN mvn dependency:go-offline
+# Copy gradle files for dependency caching
+COPY gradle/ gradle/
+COPY gradlew build.gradle settings.gradle ./
 
-COPY src ./src
-RUN mvn clean package -DskipTests
+# Ensure gradlew has execute permission and download dependencies
+RUN chmod +x gradlew && ./gradlew dependencies --no-daemon
 
-FROM eclipse-temurin:21-jre-alpine
+# Copy source code
+COPY src/ src/
+
+# Build the application jar file (skipping tests)
+RUN ./gradlew bootJar -x test --no-daemon
+
+# Stage 2: Runtime stage using JRE 25
+FROM eclipse-temurin:25-jre
 WORKDIR /app
 
-COPY --from=build /app/target/*.jar app.jar
+# Copy the built jar from the builder stage
+COPY --from=builder /app/build/libs/*.jar app.jar
 
+# Expose standard Spring Boot port
 EXPOSE 8080
 
+# Run the jar
 ENTRYPOINT ["java", "-jar", "app.jar"]

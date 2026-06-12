@@ -1,21 +1,13 @@
 spring:
+  # Use in-memory H2 database for tests
   datasource:
-    url: jdbc:h2:mem:testdb;MODE=PostgreSQL;DB_CLOSE_DELAY=-1
-    driver-class-name: org.h2.Driver
+    url: jdbc:h2:mem:testdb;DB_CLOSE_DELAY=-1;MODE=PostgreSQL
     username: sa
     password:
-  flyway:
-    enabled: false
-  jpa:
-    database-platform: org.hibernate.dialect.H2Dialect
-    hibernate:
-      ddl-auto: none
-  mail:
-    host: localhost
-    port: 2525
+    driver-class-name: org.h2.Driver
 
-cloudinary:
-  url: cloudinary://key:secret@test-cloud
-
-app:
-  version: test
+  # Exclude Neo4j configuration during basic context test loads to avoid connection failures
+  autoconfigure:
+    exclude:
+      - org.springframework.boot.autoconfigure.neo4j.Neo4jAutoConfiguration
+      - org.springframework.boot.autoconfigure.data.neo4j.Neo4jDataAutoConfiguration
