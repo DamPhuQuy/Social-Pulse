@@ -1,6 +1,7 @@
 services:
   db:
     image: postgres:17-alpine
+    container_name: social-pulse-postgres
     restart: unless-stopped
     environment:
       TZ: Asia/Ho_Chi_Minh
@@ -8,95 +9,46 @@ services:
       POSTGRES_PASSWORD: ${DB_PASSWORD:-postgres}
       POSTGRES_DB: ${DB_NAME:-postgres}
     ports:
-      - "5432:5432"
+      - "${DB_PORT:-5432}:5432"
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-postgres}",
-        ]
+      test: ["CMD-SHELL", "pg_isready -U ${DB_USERNAME:-postgres} -d ${DB_NAME:-postgres}"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app-network
 
   redis:
     image: redis:7-alpine
+    container_name: social-pulse-redis
     restart: unless-stopped
     ports:
-      - "6379:6379"
+      - "${REDIS_PORT:-6379}:6379"
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 10s
       timeout: 5s
       retries: 5
-    networks:
-      - app-network
 
-  ai-pipeline:
-    build: ./ai_pipeline
+  neo4j:
+    image: neo4j:5.20-community
+    container_name: social-pulse-neo4j
     restart: unless-stopped
     ports:
-      - "8001:8000"
+      - "7474:7474" # Neo4j Browser (HTTP)
+      - "7687:7687" # Bolt protocol
     environment:
-      AI_PIPELINE_ENABLED: "true"
-      AI_PIPELINE_MODEL_LOCATION: /app/model/model.json
-      AI_PIPELINE_FEATURE_SCHEMA_VERSION: ${AI_PIPELINE_FEATURE_SCHEMA_VERSION:-v2}
-      AI_PIPELINE_INFERENCE_DEVICE: cpu
+      - NEO4J_AUTH=${NEO4J_AUTH:-neo4j/password}
+    volumes:
+      - neo4j_data:/data
+      - neo4j_logs:/logs
     healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()\"",
-        ]
-      interval: 30s
+      test: ["CMD-SHELL", "cypher-shell -u neo4j -p ${NEO4J_PASSWORD:-password} 'RETURN 1' || exit 1"]
+      interval: 10s
       timeout: 5s
-      retries: 3
-    networks:
-      - app-network
-
-  backend:
-    build: ./backend
-    restart: unless-stopped
-    mem_limit: 4g
-    ports:
-      - "8080:8080"
-    env_file:
-      - .env
-    environment:
-      DB_HOST: db
-      REDIS_HOST: redis
-      AI_PIPELINE_BASE_URL: http://ai-pipeline:8000
-    depends_on:
-      db:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-      ai-pipeline:
-        condition: service_healthy
-    networks:
-      - app-network
-
-  frontend:
-    build:
-      context: ./frontend
-      args:
-        VITE_API_BASE_URL: http://localhost:8080/api/v1
-    ports:
-      - "5173:80"
-    restart: unless-stopped
-    depends_on:
-      backend:
-        condition: service_started
-    networks:
-      - app-network
+      retries: 5
 
 volumes:
   postgres_data:
-
-networks:
-  app-network:
-    driver: bridge
+  neo4j_data:
+  neo4j_logs:
