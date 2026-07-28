@@ -53,32 +53,3 @@ cd frontend
 npm install
 npm run dev
 ```
-
-## Train AI
-
-Put Pushshift `.zst` files in `ai_pipeline/data`, then run:
-
-```powershell
-cd ai_pipeline
-.\scripts\train-full-gpu.ps1
-```
-
-Training writes model artifacts to `ai_pipeline/model`.
-
-The full GPU script clears stale artifacts first and stops immediately if LightGBM cannot stay on GPU.
-
-## Verify AI And Feed
-
-After AI and backend are running, test that the AI service predicts and the backend feed is using AI-ranked rows:
-
-```powershell
-.\scripts\test-ai-feed.ps1 -AiBaseUrl http://localhost:8000 -BackendBaseUrl http://localhost:8080/api/v1
-```
-
-When running through Docker Compose, use:
-
-```powershell
-.\scripts\test-ai-feed.ps1 -AiBaseUrl http://localhost:8001 -BackendBaseUrl http://localhost:8080/api/v1
-```
-
-The script prints rank, post id, score, candidate source, feature schema, and `rankingProvider`. `rankingProvider=AI` proves the row came from the model. `rankingProvider=FALLBACK` means the backend used deterministic fallback ranking.
