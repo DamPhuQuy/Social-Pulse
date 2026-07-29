@@ -416,13 +416,13 @@ SELECT
           OR LOWER(COALESCE(p.content, '')) LIKE '%react%'
           OR LOWER(COALESCE(p.content, '')) LIKE '%frontend%'
           OR LOWER(COALESCE(p.content, '')) LIKE '%tech%'
-          THEN 'technology'
+          THEN 'cong-nghe'
         WHEN LOWER(COALESCE(p.content, '')) LIKE '%onboarding%'
           OR LOWER(COALESCE(p.content, '')) LIKE '%flow%'
-          THEN 'design'
+          THEN 'giao-duc'
         WHEN LOWER(COALESCE(p.content, '')) LIKE '%topic bucket%'
-          THEN 'community'
-        ELSE 'general'
+          THEN 'tam-su'
+        ELSE 'hoi-dap'
     END
 FROM posts p
 WHERE NOT EXISTS (
