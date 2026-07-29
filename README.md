@@ -1,84 +1,65 @@
 # Social Pulse
 
-Social Pulse is a social network prototype with a React frontend, Spring Boot backend, PostgreSQL, Redis, and a Python LightGBM feed-ranking service.
+Social Pulse is a topic-based social network that helps users discover and discuss content through explicit topic follows, user follows, and transparent rule-based feed ranking.
 
-## Stack
+> **Định vị sản phẩm**: Social Pulse là mạng xã hội khám phá nội dung theo chủ đề, trong đó người dùng chủ động lựa chọn chủ đề và người dùng muốn theo dõi. Bảng tin được xây dựng bằng các quy tắc minh bạch dựa trên mối quan hệ, thời gian đăng và mức độ tương tác.
 
-- Frontend: React, Vite, TypeScript, Tailwind CSS.
-- Backend: Java, Spring Boot, PostgreSQL, Redis, Flyway.
-- AI: Python, FastAPI, LightGBM.
-- Runtime: Docker Compose.
+## 🚀 Architecture
 
-## Run With Docker
+```text
+Frontend (React + Vite + TypeScript)
+        ↓
+Spring Boot Backend (Java 21)
+        ↓
+PostgreSQL 17 (Core Business Data) + Redis 7 (Cache / Rate Limiting)
+        ↓
+Transparent Rule-Based Feed Engine
+```
+
+## 🛠️ Stack
+
+- **Frontend**: React, Vite, TypeScript, Tailwind CSS (Meta Design System).
+- **Backend**: Java 21, Spring Boot 3, PostgreSQL, Redis, Flyway.
+- **Feed Engine**: Rule-Based Ranking (`Recency * 0.6 + Engagement * 0.4`) & Chronological Feed.
+- **Runtime**: Docker Compose.
+
+## ⚡ Quick Start (Docker)
 
 Create `.env` from `.env.example`, then run:
 
-```powershell
+```bash
 docker compose up -d --build
 ```
 
 Services:
+- **Frontend**: `http://localhost:5173` (or port 80 in prod)
+- **Backend API**: `http://localhost:8080/api/v1`
+- **Swagger UI**: `http://localhost:8080/swagger-ui.html`
 
-- Frontend: `http://localhost:5173`
-- Backend API: `http://localhost:8080/api/v1`
-- Swagger UI: `http://localhost:8080/swagger-ui.html`
-- AI health: `http://localhost:8001/health`
+## 💻 Run Locally For Development
 
-## Run Locally For Development
+1. Start Infrastructure (Database & Cache):
 
-Infrastructure:
-
-```powershell
+```bash
 docker compose up -d db redis
 ```
 
-AI service:
+2. Start Backend:
 
-```powershell
-cd ai_pipeline
-uv run uvicorn ai_pipeline.server:app --host 0.0.0.0 --port 8000 --reload
-```
-
-Backend:
-
-```powershell
+```bash
 cd backend
-.\mvnw.cmd spring-boot:run
+./mvnw spring-boot:run
 ```
 
-Frontend:
+3. Start Frontend:
 
-```powershell
+```bash
 cd frontend
 npm install
 npm run dev
 ```
 
-## Train AI
+## 🧪 Testing & Verification
 
-Put Pushshift `.zst` files in `ai_pipeline/data`, then run:
-
-```powershell
-cd ai_pipeline
-.\scripts\train-full-gpu.ps1
-```
-
-Training writes model artifacts to `ai_pipeline/model`.
-
-The full GPU script clears stale artifacts first and stops immediately if LightGBM cannot stay on GPU.
-
-## Verify AI And Feed
-
-After AI and backend are running, test that the AI service predicts and the backend feed is using AI-ranked rows:
-
-```powershell
-.\scripts\test-ai-feed.ps1 -AiBaseUrl http://localhost:8000 -BackendBaseUrl http://localhost:8080/api/v1
-```
-
-When running through Docker Compose, use:
-
-```powershell
-.\scripts\test-ai-feed.ps1 -AiBaseUrl http://localhost:8001 -BackendBaseUrl http://localhost:8080/api/v1
-```
-
-The script prints rank, post id, score, candidate source, feature schema, and `rankingProvider`. `rankingProvider=AI` proves the row came from the model. `rankingProvider=FALLBACK` means the backend used deterministic fallback ranking.
+- Backend unit tests: `cd backend && ./mvnw test`
+- Frontend build: `cd frontend && npm run build`
