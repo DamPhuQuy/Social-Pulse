@@ -45,11 +45,6 @@ app:
     refresh-expiration-ms: ${JWT_REFRESH_EXPIRATION_MS:604800000}
   version: 1.0.0
 
-ai:
-  pipeline:
-    enabled: ${AI_PIPELINE_ENABLED:false}
-    base-url: ${AI_PIPELINE_BASE_URL:http://ai-pipeline:8000}
-    feature-schema-version: ${AI_PIPELINE_FEATURE_SCHEMA_VERSION:v2}
 
 cloudinary:
   url: ${CLOUDINARY_URL:}
