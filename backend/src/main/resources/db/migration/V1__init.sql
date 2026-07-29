@@ -13,9 +13,9 @@ CREATE TABLE users (
     verification VARCHAR(50) NOT NULL,
     is_locked BOOLEAN NOT NULL DEFAULT FALSE,
     failed_attempts INT NOT NULL DEFAULT 0 CHECK (failed_attempts >= 0),
-    last_login_at TIMESTAMP NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    last_login_at TIMESTAMPTZ NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE profiles (
@@ -28,7 +28,7 @@ CREATE TABLE profiles (
     avatar_public_id VARCHAR(255),
     cover_image_url VARCHAR(2048),
     cover_image_public_id VARCHAR(255),
-    updated_at TIMESTAMP,
+    updated_at TIMESTAMPTZ,
     CONSTRAINT fk_profiles_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -36,10 +36,12 @@ CREATE TABLE topics (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(255) NOT NULL UNIQUE,
     slug VARCHAR(255) NOT NULL UNIQUE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
+-- posts.topic_id represents the primary topic category (single FK).
+-- Multi-topic tags are managed separately in post_topics.
 CREATE TABLE posts (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
@@ -58,9 +60,9 @@ CREATE TABLE posts (
     hot_score DOUBLE PRECISION NOT NULL DEFAULT 0.0,
     toxic BOOLEAN NOT NULL DEFAULT FALSE,
     toxic_score DOUBLE PRECISION NOT NULL DEFAULT 0.0,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    deleted_at TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    deleted_at TIMESTAMPTZ,
     CONSTRAINT fk_posts_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_posts_parent_post FOREIGN KEY (parent_post_id) REFERENCES posts(id) ON DELETE CASCADE,
     CONSTRAINT fk_posts_topic FOREIGN KEY (topic_id) REFERENCES topics(id) ON DELETE SET NULL
@@ -76,7 +78,7 @@ CREATE TABLE comments (
     upvote_count BIGINT NOT NULL DEFAULT 0,
     down_vote_count BIGINT NOT NULL DEFAULT 0,
     deleted BOOLEAN NOT NULL DEFAULT FALSE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_comment_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_comment_parent FOREIGN KEY (parent_id) REFERENCES comments(id) ON DELETE CASCADE
@@ -87,7 +89,7 @@ CREATE TABLE comment_reactions (
     comment_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     reaction_type VARCHAR(50) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_cmt_reaction_comment FOREIGN KEY (comment_id) REFERENCES comments(id) ON DELETE CASCADE,
     CONSTRAINT fk_cmt_reaction_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT uq_cmt_reaction UNIQUE (comment_id, user_id)
@@ -98,7 +100,7 @@ CREATE TABLE post_reactions (
     post_id BIGINT NOT NULL,
     user_id BIGINT NOT NULL,
     reaction_type VARCHAR(50),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_post_reaction_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     CONSTRAINT fk_post_reaction_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT uq_post_reaction UNIQUE (post_id, user_id)
@@ -108,9 +110,9 @@ CREATE TABLE refresh_tokens (
     id UUID PRIMARY KEY,
     user_id BIGINT NOT NULL,
     token_hash VARCHAR(64) NOT NULL,
-    expires_at TIMESTAMP NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    revoked_at TIMESTAMP,
+    expires_at TIMESTAMPTZ NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    revoked_at TIMESTAMPTZ,
     replaced_by_token UUID,
     CONSTRAINT fk_refresh_tokens_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_refresh_tokens_replaced_by FOREIGN KEY (replaced_by_token) REFERENCES refresh_tokens(id) ON DELETE SET NULL,
@@ -124,7 +126,7 @@ CREATE TABLE reports (
     target_id BIGINT NOT NULL,
     reason TEXT NOT NULL,
     status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_report_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
 );
 
@@ -132,7 +134,7 @@ CREATE TABLE follows (
     id BIGSERIAL PRIMARY KEY,
     follower_id BIGINT NOT NULL,
     following_id BIGINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_follower FOREIGN KEY (follower_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_following FOREIGN KEY (following_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT unique_follow UNIQUE (follower_id, following_id),
@@ -143,16 +145,16 @@ CREATE TABLE permissions (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(100) NOT NULL UNIQUE,
     description VARCHAR(255),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE roles (
     id BIGSERIAL PRIMARY KEY,
     name VARCHAR(50) NOT NULL UNIQUE,
     description VARCHAR(255),
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE role_permissions (
@@ -175,7 +177,7 @@ CREATE TABLE bookmarks (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
     post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT uq_bookmarks_user_post UNIQUE (user_id, post_id)
 );
 
@@ -187,16 +189,16 @@ CREATE TABLE notifications (
     resource_type VARCHAR(50) NOT NULL,
     resource_id BIGINT NOT NULL,
     message TEXT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    read_at TIMESTAMP NULL
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    read_at TIMESTAMPTZ NULL
 );
 
 CREATE TABLE conversations (
     id BIGSERIAL PRIMARY KEY,
     participant1_id BIGINT NOT NULL REFERENCES users(id),
     participant2_id BIGINT NOT NULL REFERENCES users(id),
-    created_at TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
-    last_message_at TIMESTAMP WITH TIME ZONE,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    last_message_at TIMESTAMPTZ,
     CONSTRAINT uk_conversation_participants UNIQUE (participant1_id, participant2_id),
     CONSTRAINT chk_different_participants CHECK (participant1_id < participant2_id)
 );
@@ -206,7 +208,7 @@ CREATE TABLE messages (
     conversation_id BIGINT NOT NULL REFERENCES conversations(id),
     sender_id BIGINT NOT NULL REFERENCES users(id),
     content VARCHAR(2000) NOT NULL,
-    timestamp TIMESTAMP WITH TIME ZONE NOT NULL DEFAULT NOW(),
+    timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     status VARCHAR(10) NOT NULL DEFAULT 'SENT',
     CONSTRAINT chk_message_status CHECK (status IN ('SENT', 'DELIVERED', 'READ'))
 );
@@ -216,7 +218,7 @@ CREATE TABLE user_interactions (
     viewer_id BIGINT NOT NULL REFERENCES users(id),
     author_id BIGINT NOT NULL REFERENCES users(id),
     interaction_type VARCHAR(20) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT NOW()
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP
 );
 
 CREATE TABLE user_topics (
@@ -231,29 +233,59 @@ CREATE TABLE search_history (
     id BIGSERIAL PRIMARY KEY,
     user_id BIGINT NOT NULL,
     keyword VARCHAR(255) NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    updated_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_search_history_user FOREIGN KEY (user_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT unique_user_keyword UNIQUE (user_id, keyword)
 );
 
+-- Multiple topic tags per post, with FK constraint referencing topics(slug)
 CREATE TABLE post_topics (
     post_id BIGINT NOT NULL,
     topic_order INT NOT NULL DEFAULT 0,
-    topic_slug VARCHAR(80) NOT NULL,
+    topic_slug VARCHAR(255) NOT NULL,
     PRIMARY KEY (post_id, topic_order),
-    CONSTRAINT fk_post_topics_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE
+    CONSTRAINT fk_post_topics_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
+    CONSTRAINT fk_post_topics_slug FOREIGN KEY (topic_slug) REFERENCES topics(slug) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 CREATE TABLE user_blocks (
     id BIGSERIAL PRIMARY KEY,
     blocker_id BIGINT NOT NULL,
     blocked_id BIGINT NOT NULL,
-    created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT fk_blocker FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT fk_blocked FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
     CONSTRAINT unique_block UNIQUE (blocker_id, blocked_id),
     CONSTRAINT check_not_self_block CHECK (blocker_id != blocked_id)
+);
+
+CREATE TABLE feed_impressions (
+    id BIGSERIAL PRIMARY KEY,
+    viewer_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
+    rank_position INT NOT NULL,
+    page_number INT NOT NULL,
+    page_size INT NOT NULL,
+    ranking_score DOUBLE PRECISION,
+    candidate_source VARCHAR(20),
+    ranking_provider VARCHAR(20) NOT NULL,
+    feature_schema_version VARCHAR(16) NOT NULL,
+    feed_context VARCHAR(64) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT chk_feed_impressions_ranking_provider CHECK (ranking_provider IN ('RULE_BASED', 'CHRONOLOGICAL', 'TOPIC', 'FALLBACK')),
+    CONSTRAINT chk_feed_impressions_candidate_source CHECK (candidate_source IS NULL OR candidate_source IN ('RECENT', 'FOLLOWING', 'POPULAR', 'RANDOM', 'TOPIC')),
+    CONSTRAINT chk_feed_impressions_ranking_score CHECK (ranking_score IS NULL OR ranking_score >= 0.0),
+    CONSTRAINT chk_feed_impressions_positions CHECK (rank_position >= 0 AND page_number >= 0 AND page_size > 0)
+);
+
+CREATE TABLE topic_follows (
+    id BIGSERIAL PRIMARY KEY,
+    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+    topic_slug VARCHAR(255) NOT NULL,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    CONSTRAINT uq_topic_follows UNIQUE (user_id, topic_slug),
+    CONSTRAINT fk_topic_follows_slug FOREIGN KEY (topic_slug) REFERENCES topics(slug) ON DELETE CASCADE ON UPDATE CASCADE
 );
 
 -- ============================================================
@@ -268,6 +300,11 @@ CREATE INDEX idx_post_created ON posts(created_at);
 CREATE INDEX idx_posts_parent_post_id ON posts(parent_post_id);
 CREATE INDEX idx_posts_type ON posts(type);
 CREATE INDEX idx_posts_topic ON posts(topic_id);
+CREATE INDEX idx_posts_created_at_id ON posts(created_at DESC, id DESC);
+CREATE INDEX idx_public_posts_feed ON posts (created_at DESC, id DESC) WHERE deleted_at IS NULL AND privacy = 'PUBLIC' AND toxic = false;
+
+CREATE INDEX idx_topics_slug ON topics(slug);
+CREATE INDEX idx_topics_slug_id ON topics(slug, id);
 
 CREATE INDEX idx_comment_post ON comments(post_id);
 CREATE INDEX idx_comment_user ON comments(user_id);
@@ -291,6 +328,7 @@ CREATE INDEX idx_report_created ON reports(created_at);
 
 CREATE INDEX idx_follower ON follows(follower_id);
 CREATE INDEX idx_following ON follows(following_id);
+CREATE INDEX idx_follows_follower_following ON follows(follower_id, following_id);
 
 CREATE INDEX idx_bookmarks_user ON bookmarks(user_id);
 CREATE INDEX idx_bookmarks_post ON bookmarks(post_id);
@@ -319,3 +357,11 @@ CREATE INDEX idx_post_topics_slug ON post_topics(topic_slug);
 
 CREATE INDEX idx_blocker ON user_blocks(blocker_id);
 CREATE INDEX idx_blocked ON user_blocks(blocked_id);
+
+CREATE INDEX idx_feed_impressions_viewer_created ON feed_impressions(viewer_id, created_at DESC);
+CREATE INDEX idx_feed_impressions_post_created ON feed_impressions(post_id, created_at DESC);
+CREATE INDEX idx_feed_impressions_provider_created ON feed_impressions(ranking_provider, created_at DESC);
+
+CREATE INDEX idx_topic_follows_user ON topic_follows(user_id);
+CREATE INDEX idx_topic_follows_slug ON topic_follows(topic_slug);
+CREATE INDEX idx_topic_follows_user_slug ON topic_follows(user_id, topic_slug);
