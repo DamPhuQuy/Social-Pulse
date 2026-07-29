@@ -1,21 +1,22 @@
 package com.socialpulse.app.feed.adapter.persistence;
 
-import java.sql.PreparedStatement;
-import java.sql.SQLException;
 import java.time.LocalDateTime;
+import java.util.ArrayList;
 import java.util.List;
 
-import org.springframework.jdbc.core.BatchPreparedStatementSetter;
-import org.springframework.jdbc.core.JdbcTemplate;
+import org.springframework.stereotype.Repository;
 
 import com.socialpulse.app.feed.domain.model.FeedItem;
 import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
+import com.socialpulse.app.feed.infrastructure.persistence.entity.FeedImpressionEntity;
+import com.socialpulse.app.feed.infrastructure.persistence.repository.JpaFeedImpressionRepository;
 
+@Repository
 public class FeedImpressionRepositoryAdapter implements FeedImpressionRepository {
-    private final JdbcTemplate jdbcTemplate;
+    private final JpaFeedImpressionRepository jpaFeedImpressionRepository;
 
-    public FeedImpressionRepositoryAdapter(JdbcTemplate jdbcTemplate) {
-        this.jdbcTemplate = jdbcTemplate;
+    public FeedImpressionRepositoryAdapter(JpaFeedImpressionRepository jpaFeedImpressionRepository) {
+        this.jpaFeedImpressionRepository = jpaFeedImpressionRepository;
     }
 
     @Override
@@ -24,54 +25,33 @@ public class FeedImpressionRepositoryAdapter implements FeedImpressionRepository
             return;
         }
 
-        String sql = """
-                INSERT INTO feed_impressions (
-                    viewer_id,
-                    post_id,
-                    rank_position,
-                    page_number,
-                    page_size,
-                    ai_score,
-                    candidate_source,
-                    ranking_provider,
-                    feature_schema_version,
-                    feed_context
-                )
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-                """;
-
         int startRank = Math.max(page, 0) * Math.max(size, 0);
-        jdbcTemplate.batchUpdate(sql, new BatchPreparedStatementSetter() {
-            @Override
-            public void setValues(PreparedStatement ps, int i) throws SQLException {
-                FeedItem item = feedItems.get(i);
-                ps.setLong(1, viewerId);
-                ps.setLong(2, item.getPostId());
-                ps.setInt(3, startRank + i);
-                ps.setInt(4, page);
-                ps.setInt(5, size);
-                if (item.getAiScore() != null) {
-                    ps.setDouble(6, item.getAiScore());
-                } else {
-                    ps.setNull(6, java.sql.Types.DOUBLE);
-                }
-                ps.setString(7, item.getSource() != null ? item.getSource().name() : null);
-                ps.setString(8, item.getRankingProvider() != null ? item.getRankingProvider().name() : "FALLBACK");
-                ps.setString(9, item.getFeatureSchemaVersion());
-                ps.setString(10, feedContext);
-            }
+        List<FeedImpressionEntity> entities = new ArrayList<>(feedItems.size());
 
-            @Override
-            public int getBatchSize() {
-                return feedItems.size();
-            }
-        });
+        for (int i = 0; i < feedItems.size(); i++) {
+            FeedItem item = feedItems.get(i);
+            FeedImpressionEntity entity = FeedImpressionEntity.builder()
+                    .viewerId(viewerId)
+                    .postId(item.getPostId())
+                    .rankPosition(startRank + i)
+                    .pageNumber(page)
+                    .pageSize(size)
+                    .rankingScore(item.getRankingScore())
+                    .candidateSource(item.getSource() != null ? item.getSource().name() : null)
+                    .rankingProvider(item.getRankingProvider() != null ? item.getRankingProvider().name() : "FALLBACK")
+                    .featureSchemaVersion(item.getFeatureSchemaVersion())
+                    .feedContext(feedContext)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            entities.add(entity);
+        }
+
+        jpaFeedImpressionRepository.saveAll(entities);
     }
 
     @Override
     public long countAll() {
-        Long count = jdbcTemplate.queryForObject("SELECT COUNT(*) FROM feed_impressions", Long.class);
-        return count != null ? count : 0L;
+        return jpaFeedImpressionRepository.countAllImpressions();
     }
 
     @Override
@@ -79,28 +59,14 @@ public class FeedImpressionRepositoryAdapter implements FeedImpressionRepository
         if (since == null) {
             return countAll();
         }
-        Long count = jdbcTemplate.queryForObject(
-                "SELECT COUNT(*) FROM feed_impressions WHERE created_at >= ?",
-                Long.class,
-                since);
-        return count != null ? count : 0L;
+        return jpaFeedImpressionRepository.countByCreatedAtAfter(since);
     }
 
     @Override
     public long countByRankingProviderSince(String rankingProvider, LocalDateTime since) {
-        Long count;
         if (since == null) {
-            count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM feed_impressions WHERE ranking_provider = ?",
-                    Long.class,
-                    rankingProvider);
-        } else {
-            count = jdbcTemplate.queryForObject(
-                    "SELECT COUNT(*) FROM feed_impressions WHERE ranking_provider = ? AND created_at >= ?",
-                    Long.class,
-                    rankingProvider,
-                    since);
+            return jpaFeedImpressionRepository.countByRankingProvider(rankingProvider);
         }
-        return count != null ? count : 0L;
+        return jpaFeedImpressionRepository.countByRankingProviderAndCreatedAtAfter(rankingProvider, since);
     }
 }
