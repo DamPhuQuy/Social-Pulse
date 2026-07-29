@@ -32,32 +32,6 @@ services:
     networks:
       - app-network
 
-  ai-pipeline:
-    build: ./ai_pipeline
-    restart: unless-stopped
-    ports:
-      - "8001:8000"
-    environment:
-      AI_PIPELINE_ENABLED: "true"
-      AI_PIPELINE_MODEL_LOCATION: /app/model/model.json
-      AI_PIPELINE_FEATURE_SCHEMA_VERSION: ${AI_PIPELINE_FEATURE_SCHEMA_VERSION:-v2}
-      AI_PIPELINE_INFERENCE_DEVICE: cpu
-    volumes:
-      - type: bind
-        source: ./ai_pipeline
-        target: /app
-    healthcheck:
-      test:
-        [
-          "CMD-SHELL",
-          "python -c \"import urllib.request; urllib.request.urlopen('http://localhost:8000/health', timeout=2).read()\"",
-        ]
-      interval: 30s
-      timeout: 5s
-      retries: 3
-    networks:
-      - app-network
-
   backend:
     build:
       context: ./backend
@@ -70,7 +44,6 @@ services:
     environment:
       DB_HOST: db
       REDIS_HOST: redis
-      AI_PIPELINE_BASE_URL: http://ai-pipeline:8000
     volumes:
       - type: bind
         source: ./backend/src
@@ -85,8 +58,6 @@ services:
       db:
         condition: service_healthy
       redis:
-        condition: service_healthy
-      ai-pipeline:
         condition: service_healthy
     command: ["mvn", "spring-boot:run"]
     networks:
