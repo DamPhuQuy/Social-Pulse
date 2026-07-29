@@ -14,15 +14,11 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
-import com.socialpulse.app.feed.application.dto.features.core.RankingFeatures;
-import com.socialpulse.app.feed.application.dto.response.RankingResponse;
-import com.socialpulse.app.feed.application.service.ranking.FallbackRankingService;
 import com.socialpulse.app.feed.application.service.ranking.FeedRankingService;
+import com.socialpulse.app.feed.application.service.ranking.RuleBasedRankingService;
 import com.socialpulse.app.feed.application.service.ranking.ScoreBoostService;
 import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.candidate.SelectCandidatesUseCase;
-import com.socialpulse.app.feed.application.usecase.extraction.ExtractFeaturesUseCase;
-import com.socialpulse.app.feed.application.usecase.ranking.PredictRankingUseCase;
 import com.socialpulse.app.feed.domain.enums.RankingProvider;
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
@@ -35,16 +31,10 @@ class FeedRankingServiceTest {
     private SelectCandidatesUseCase selectCandidatesUseCase;
 
     @Mock
-    private ExtractFeaturesUseCase extractFeaturesUseCase;
-
-    @Mock
-    private PredictRankingUseCase predictRankingUseCase;
-
-    @Mock
     private CacheFeedUseCase cacheFeedUseCase;
 
     @Test
-    void fallsBackToDeterministicRankingWhenModelPredictionIsUnavailable() {
+    void ranksFeedUsingTransparentRuleBasedRankingService() {
         List<CandidatePost> candidates = List.of(
                 CandidatePost.builder()
                         .post(Post.builder()
@@ -70,21 +60,14 @@ class FeedRankingServiceTest {
                                 .build())
                         .source(Source.RECENT)
                         .build());
-        List<RankingFeatures> features = List.of(
-                RankingFeatures.builder().postId(100L).build(),
-                RankingFeatures.builder().postId(200L).build());
 
         when(cacheFeedUseCase.getCachedFeed(42L)).thenReturn(null);
         when(selectCandidatesUseCase.selectCandidates(42L)).thenReturn(candidates);
-        when(extractFeaturesUseCase.extractFeatures(42L, candidates)).thenReturn(features);
-        when(predictRankingUseCase.predictScores(any())).thenReturn(List.of());
 
         FeedRankingService service = new FeedRankingService(
                 selectCandidatesUseCase,
-                extractFeaturesUseCase,
-                predictRankingUseCase,
                 cacheFeedUseCase,
-                new FallbackRankingService("v2"),
+                new RuleBasedRankingService("v2"),
                 new ScoreBoostService(),
                 "v2");
 
@@ -92,49 +75,8 @@ class FeedRankingServiceTest {
 
         assertEquals(2, rankedFeed.size());
         assertEquals(100L, rankedFeed.get(0).getPostId());
-        assertEquals(RankingProvider.FALLBACK, rankedFeed.get(0).getRankingProvider());
+        assertEquals(RankingProvider.RULE_BASED, rankedFeed.get(0).getRankingProvider());
         assertEquals(200L, rankedFeed.get(1).getPostId());
-        verify(predictRankingUseCase).predictScores(any());
         verify(cacheFeedUseCase).cacheFeed(eq(42L), any());
-    }
-
-    @Test
-    void usesPredictedScoresWhenPredictionSetIsValid() {
-        List<CandidatePost> candidates = List.of(
-                CandidatePost.builder()
-                        .post(Post.builder().id(100L).userId(10L).createdAt(LocalDateTime.now().minusHours(3)).build())
-                        .source(Source.RECENT)
-                        .build(),
-                CandidatePost.builder()
-                        .post(Post.builder().id(200L).userId(20L).createdAt(LocalDateTime.now().minusHours(3)).build())
-                        .source(Source.POPULAR)
-                        .build());
-        List<RankingFeatures> features = List.of(
-                RankingFeatures.builder().postId(100L).build(),
-                RankingFeatures.builder().postId(200L).build());
-        List<RankingResponse> predictions = List.of(
-                RankingResponse.builder().postId(100L).score(0.1).featureSchemaVersion("v2").build(),
-                RankingResponse.builder().postId(200L).score(0.9).featureSchemaVersion("v2").build());
-
-        when(cacheFeedUseCase.getCachedFeed(42L)).thenReturn(null);
-        when(selectCandidatesUseCase.selectCandidates(42L)).thenReturn(candidates);
-        when(extractFeaturesUseCase.extractFeatures(42L, candidates)).thenReturn(features);
-        when(predictRankingUseCase.predictScores(any())).thenReturn(predictions);
-
-        FeedRankingService service = new FeedRankingService(
-                selectCandidatesUseCase,
-                extractFeaturesUseCase,
-                predictRankingUseCase,
-                cacheFeedUseCase,
-                new FallbackRankingService("v2"),
-                new ScoreBoostService(),
-                "v2");
-
-        var rankedFeed = service.getRankedFeed(42L);
-
-        assertEquals(2, rankedFeed.size());
-        assertEquals(200L, rankedFeed.get(0).getPostId());
-        assertEquals(RankingProvider.AI, rankedFeed.get(0).getRankingProvider());
-        assertEquals(100L, rankedFeed.get(1).getPostId());
     }
 }

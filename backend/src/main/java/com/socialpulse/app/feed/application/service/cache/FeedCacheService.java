@@ -4,12 +4,14 @@ import java.time.Duration;
 import java.util.List;
 
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.domain.model.FeedItem;
 
+@Service
 public class FeedCacheService implements CacheFeedUseCase {
     private final StringRedisTemplate redisTemplate;
     private final ObjectMapper objectMapper;

@@ -32,7 +32,7 @@ public class FeedItemResponse {
     private long shareCount;
     private ReactionType myReaction;
     private Integer myVote;
-    private Double aiScore;
+    private Double rankingScore;
     private String source;
     private String rankingProvider;
     private String featureSchemaVersion;

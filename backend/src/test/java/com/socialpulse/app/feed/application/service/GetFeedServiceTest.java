@@ -12,9 +12,10 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.data.redis.core.SetOperations;
+import org.springframework.data.redis.core.StringRedisTemplate;
 
+import com.socialpulse.app.feed.application.dto.response.FeedItemResponse;
 import com.socialpulse.app.feed.application.service.assembler.FeedItemResponseAssembler;
 import com.socialpulse.app.feed.application.usecase.cache.CacheFeedUseCase;
 import com.socialpulse.app.feed.application.usecase.ranking.RankFeedUseCase;
@@ -59,13 +60,13 @@ class GetFeedServiceTest {
                 .build());
 
         List<FeedItem> feedItems = List.of(
-                FeedItem.builder().postId(100L).userId(42L).aiScore(0.9).source(Source.RECENT).rankedAt(LocalDateTime.now()).build(),
-                FeedItem.builder().postId(101L).userId(42L).aiScore(0.8).source(Source.POPULAR).rankedAt(LocalDateTime.now()).build());
+                FeedItem.builder().postId(100L).userId(42L).rankingScore(0.9).source(Source.RECENT).rankedAt(LocalDateTime.now()).build(),
+                FeedItem.builder().postId(101L).userId(42L).rankingScore(0.8).source(Source.POPULAR).rankedAt(LocalDateTime.now()).build());
         when(rankFeedUseCase.getPaginatedFeed(42L, 2, 2)).thenReturn(feedItems);
         when(redisTemplate.opsForSet()).thenReturn(setOperations);
         when(feedItemResponseAssembler.assemble(feedItems, 42L)).thenReturn(List.of(
-                com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(100L).build(),
-                com.socialpulse.app.feed.application.dto.response.FeedItemResponse.builder().postId(101L).build()));
+                FeedItemResponse.builder().postId(100L).build(),
+                FeedItemResponse.builder().postId(101L).build()));
 
         var response = service.getFeed(2, 2, currentUser);
 
@@ -73,5 +74,35 @@ class GetFeedServiceTest {
         verify(rankFeedUseCase).getPaginatedFeed(42L, 2, 2);
         verify(feedImpressionRepository).saveAll(42L, feedItems, 2, 2, "HOME");
         verify(feedItemResponseAssembler).assemble(feedItems, 42L);
+    }
+
+    @Test
+    void returnsTopicFilteredFeedWhenTopicSlugProvided() {
+        GetFeedService service = new GetFeedService(
+                rankFeedUseCase,
+                feedItemResponseAssembler,
+                cacheFeedUseCase,
+                redisTemplate,
+                feedImpressionRepository);
+        CustomUserDetails currentUser = new CustomUserDetails(User.builder()
+                .id(42L)
+                .email("user@example.com")
+                .status(UserStatus.ACTIVE)
+                .verification(VerificationStatus.VERIFIED)
+                .roles(Set.of(Role.builder().name("USER").build()))
+                .build());
+
+        List<FeedItem> topicItems = List.of(
+                FeedItem.builder().postId(300L).userId(42L).rankingScore(0.95).source(Source.TOPIC).rankedAt(LocalDateTime.now()).build());
+        when(rankFeedUseCase.getPaginatedFeed(42L, 0, 10, "cong-nghe")).thenReturn(topicItems);
+        when(redisTemplate.opsForSet()).thenReturn(setOperations);
+        when(feedItemResponseAssembler.assemble(topicItems, 42L)).thenReturn(List.of(
+                FeedItemResponse.builder().postId(300L).build()));
+
+        var response = service.getFeed(0, 10, "cong-nghe", currentUser);
+
+        assertEquals(1, response.size());
+        assertEquals(300L, response.get(0).getPostId());
+        verify(rankFeedUseCase).getPaginatedFeed(42L, 0, 10, "cong-nghe");
     }
 }

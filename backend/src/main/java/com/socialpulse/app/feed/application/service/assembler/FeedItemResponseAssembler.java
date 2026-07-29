@@ -143,7 +143,7 @@ public class FeedItemResponseAssembler {
                 .shareCount(safeCount(post.getShareCount()))
                 .myReaction(myReaction)
                 .myVote(toVote(myReaction))
-                .aiScore(item.getAiScore())
+                .rankingScore(item.getRankingScore())
                 .source(item.getSource() != null ? item.getSource().name() : null)
                 .rankingProvider(item.getRankingProvider() != null ? item.getRankingProvider().name() : null)
                 .featureSchemaVersion(item.getFeatureSchemaVersion())

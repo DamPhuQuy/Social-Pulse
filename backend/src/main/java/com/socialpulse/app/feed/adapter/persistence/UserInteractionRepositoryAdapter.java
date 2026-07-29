@@ -6,11 +6,14 @@ import java.util.List;
 import java.util.Map;
 import java.util.Set;
 
+import org.springframework.stereotype.Repository;
+
 import com.socialpulse.app.feed.domain.model.UserInteractionAggregate;
 import com.socialpulse.app.feed.domain.repository.UserInteractionRepository;
 import com.socialpulse.app.feed.infrastructure.persistence.entity.UserInteractionEntity;
 import com.socialpulse.app.feed.infrastructure.persistence.repository.JpaUserInteractionRepository;
 
+@Repository
 public class UserInteractionRepositoryAdapter implements UserInteractionRepository {
     private final JpaUserInteractionRepository jpaUserInteractionRepository;
 
