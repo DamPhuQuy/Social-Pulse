@@ -1,4 +1,5 @@
 package com.socialpulse.app.follow.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.HashSet;
 import java.util.Optional;
@@ -17,6 +18,7 @@ import com.socialpulse.app.follow.infrastructure.persistence.repository.JpaFollo
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
+@Repository
 public class FollowRepositoryAdapter implements FollowRepository {
 
     private final JpaFollowRepository jpaFollowRepository;

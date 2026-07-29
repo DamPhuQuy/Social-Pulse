@@ -17,7 +17,7 @@ import lombok.NoArgsConstructor;
 public class FeedItem {
     private Long postId;
     private Long userId;
-    private Double aiScore;
+    private Double rankingScore;
     private Source source;
     private RankingProvider rankingProvider;
     private String featureSchemaVersion;

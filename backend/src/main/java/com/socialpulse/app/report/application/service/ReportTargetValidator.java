@@ -1,4 +1,5 @@
 package com.socialpulse.app.report.application.service;
+import org.springframework.stereotype.Component;
 
 import org.springframework.stereotype.Service;
 
@@ -12,6 +13,7 @@ import com.socialpulse.app.report.domain.enums.ReportTargetType;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
 @Service
+@Component
 public class ReportTargetValidator {
     private final PostRepository postRepository;
     private final CommentRepository commentRepository;

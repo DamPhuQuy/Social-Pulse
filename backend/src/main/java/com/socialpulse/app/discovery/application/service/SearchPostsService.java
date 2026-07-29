@@ -1,4 +1,5 @@
 package com.socialpulse.app.discovery.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -11,6 +12,7 @@ import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.discovery.application.usecase.SearchPostsUseCase;
 
+@Service
 public class SearchPostsService implements SearchPostsUseCase {
     private final PostRepository postRepository;
     private final PostSummaryAssembler postSummaryAssembler;

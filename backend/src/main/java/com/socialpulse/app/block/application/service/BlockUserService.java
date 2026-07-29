@@ -1,4 +1,5 @@
 package com.socialpulse.app.block.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -10,6 +11,7 @@ import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class BlockUserService implements BlockUserUseCase {
     private final BlockRepository blockRepository;
     private final UserRepository userRepository;

@@ -1,4 +1,5 @@
 package com.socialpulse.app.discovery.application.service;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Comparator;
@@ -11,6 +12,7 @@ import com.socialpulse.app.discovery.application.usecase.GetTrendingHashtagsUseC
 import com.socialpulse.app.feed.application.service.ContentAnalysisService;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 
+@Service
 public class GetTrendingHashtagsService implements GetTrendingHashtagsUseCase {
     private final PostRepository postRepository;
     private final ContentAnalysisService contentAnalysisService;

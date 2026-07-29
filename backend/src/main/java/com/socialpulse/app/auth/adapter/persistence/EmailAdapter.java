@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.adapter.persistence;
+import org.springframework.stereotype.Component;
 
 import org.springframework.mail.javamail.JavaMailSender;
 import org.springframework.mail.javamail.MimeMessageHelper;
@@ -10,6 +11,7 @@ import com.socialpulse.app.common.exception.status.SystemCode;
 
 import jakarta.mail.internet.MimeMessage;
 
+@Component
 public class EmailAdapter implements EmailPort {
 
     private final JavaMailSender mailSender;

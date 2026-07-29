@@ -1,4 +1,5 @@
 package com.socialpulse.app.admin.application.service;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 import java.util.Map;
@@ -9,6 +10,7 @@ import com.socialpulse.app.feed.domain.repository.FeedImpressionRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class GetSystemMetricsService implements GetSystemMetricsUseCase {
     private final UserRepository userRepository;
     private final PostRepository postRepository;

@@ -5,10 +5,13 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
 import com.socialpulse.app.topic.adapter.web.dto.TopicRequest;
 import com.socialpulse.app.topic.adapter.web.dto.TopicResponse;
 import com.socialpulse.app.topic.infrastructure.persistence.entity.TopicEntity;
+import com.socialpulse.app.topic.infrastructure.persistence.entity.TopicFollowEntity;
+import com.socialpulse.app.topic.infrastructure.persistence.repository.JpaTopicFollowRepository;
 import com.socialpulse.app.topic.infrastructure.persistence.repository.TopicRepository;
 
 import jakarta.persistence.EntityNotFoundException;
@@ -19,6 +22,7 @@ import lombok.RequiredArgsConstructor;
 public class TopicService {
 
     private final TopicRepository topicRepository;
+    private final JpaTopicFollowRepository topicFollowRepository;
 
     public List<TopicResponse> getAllTopics() {
         return topicRepository.findAllByOrderByNameAsc().stream()
@@ -50,6 +54,36 @@ public class TopicService {
             throw new EntityNotFoundException("Topic not found: " + id);
         }
         topicRepository.deleteById(id);
+    }
+
+    @Transactional
+    public void followTopic(Long userId, String topicSlug) {
+        String normalizedSlug = topicSlug.trim().toLowerCase();
+        if (!topicFollowRepository.existsByUserIdAndTopicSlug(userId, normalizedSlug)) {
+            TopicFollowEntity entity = TopicFollowEntity.builder()
+                    .userId(userId)
+                    .topicSlug(normalizedSlug)
+                    .createdAt(LocalDateTime.now())
+                    .build();
+            topicFollowRepository.save(entity);
+        }
+    }
+
+    @Transactional
+    public void unfollowTopic(Long userId, String topicSlug) {
+        String normalizedSlug = topicSlug.trim().toLowerCase();
+        topicFollowRepository.deleteByUserIdAndTopicSlug(userId, normalizedSlug);
+    }
+
+    @Transactional(readOnly = true)
+    public List<String> getFollowedTopicSlugs(Long userId) {
+        return topicFollowRepository.findFollowedTopicSlugsByUserId(userId);
+    }
+
+    @Transactional(readOnly = true)
+    public boolean isFollowingTopic(Long userId, String topicSlug) {
+        if (userId == null) return false;
+        return topicFollowRepository.existsByUserIdAndTopicSlug(userId, topicSlug.trim().toLowerCase());
     }
 
     private TopicResponse toResponse(TopicEntity e) {

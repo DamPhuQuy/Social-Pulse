@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 
@@ -14,6 +15,7 @@ import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.enums.UserStatus;
 
+@Service
 public class VerifyEmailService implements VerifyEmailUseCase {
 
     private final UserRepository userRepository;

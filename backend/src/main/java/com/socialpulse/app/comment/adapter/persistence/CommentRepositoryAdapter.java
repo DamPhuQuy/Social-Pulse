@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.comment.infrastructure.persistence.mapper.CommentPersistenceMapper;
 import com.socialpulse.app.comment.infrastructure.persistence.repository.JpaCommentRepository;
 
+@Repository
 public class CommentRepositoryAdapter implements CommentRepository {
 
 	private final JpaCommentRepository jpaCommentRepository;

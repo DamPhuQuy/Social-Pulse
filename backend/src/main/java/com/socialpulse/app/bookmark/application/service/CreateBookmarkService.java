@@ -1,4 +1,5 @@
 package com.socialpulse.app.bookmark.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.bookmark.application.dto.response.BookmarkResponse;
 import com.socialpulse.app.bookmark.application.usecase.CreateBookmarkUseCase;
@@ -11,6 +12,7 @@ import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class CreateBookmarkService implements CreateBookmarkUseCase {
     private final BookmarkRepository bookmarkRepository;
     private final PostRepository postRepository;

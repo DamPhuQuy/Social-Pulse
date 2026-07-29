@@ -1,4 +1,5 @@
 package com.socialpulse.app.notification.application.service;
+import org.springframework.stereotype.Service;
 
 import java.time.LocalDateTime;
 
@@ -6,6 +7,7 @@ import com.socialpulse.app.notification.application.usecase.MarkAllNotifications
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class MarkAllNotificationsReadService implements MarkAllNotificationsReadUseCase {
     private final NotificationRepository notificationRepository;
 

@@ -28,7 +28,6 @@ import com.socialpulse.app.common.dto.response.ApiResponse;
 import com.socialpulse.app.common.dto.response.PageResponse;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
-import com.socialpulse.app.feed.infrastructure.config.AiPipelineProperties;
 import com.socialpulse.app.security.permission.RequiresPermission;
 import com.socialpulse.app.user.application.service.UserRoleService;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaRoleRepository;
@@ -52,18 +51,15 @@ public class AdminController {
     private final UserRepository userRepository;
     private final UserRoleService userRoleService;
     private final JpaRoleRepository jpaRoleRepository;
-    private final AiPipelineProperties aiPipelineProperties;
 
     public AdminController(GetSystemMetricsUseCase getSystemMetricsUseCase,
                            UserRepository userRepository,
                            UserRoleService userRoleService,
-                           JpaRoleRepository jpaRoleRepository,
-                           AiPipelineProperties aiPipelineProperties) {
+                           JpaRoleRepository jpaRoleRepository) {
         this.getSystemMetricsUseCase = getSystemMetricsUseCase;
         this.userRepository = userRepository;
         this.userRoleService = userRoleService;
         this.jpaRoleRepository = jpaRoleRepository;
-        this.aiPipelineProperties = aiPipelineProperties;
     }
 
     // ── Metrics ──────────────────────────────────────────────────────────────
@@ -174,16 +170,14 @@ public class AdminController {
     @RequiresPermission.AdminAccess
     @Operation(summary = "Get AI pipeline status", description = "Return the current feed-ranking AI pipeline configuration and health reachability")
     public ResponseEntity<ApiResponse<AiStatusResponse>> getAiStatus() {
-        java.util.Map<String, Object> health = fetchAiHealthStatus();
-        boolean healthReachable = !health.isEmpty();
         return ResponseEntity.ok(ApiResponse.<AiStatusResponse>builder()
                 .data(AiStatusResponse.builder()
-                        .enabled(aiPipelineProperties.isEnabled())
-                        .baseUrl(aiPipelineProperties.getBaseUrl())
-                        .featureSchemaVersion(aiPipelineProperties.getFeatureSchemaVersion())
-                        .healthReachable(healthReachable)
-                        .modelAvailable(Boolean.TRUE.equals(health.get("model_available")))
-                        .modelLoaded(Boolean.TRUE.equals(health.get("model_loaded")))
+                        .enabled(false)
+                        .baseUrl("none (rule-based ranking engine)")
+                        .featureSchemaVersion("v2")
+                        .healthReachable(true)
+                        .modelAvailable(false)
+                        .modelLoaded(false)
                         .trainingControlsAvailable(false)
                         .build())
                 .build());
@@ -223,20 +217,6 @@ public class AdminController {
     }
 
     private java.util.Map<String, Object> fetchAiHealthStatus() {
-        if (!aiPipelineProperties.isEnabled()) {
-            return java.util.Map.of();
-        }
-        try {
-            java.util.Map<String, Object> response = RestClient.builder()
-                    .baseUrl(aiPipelineProperties.getBaseUrl())
-                    .build()
-                    .get()
-                    .uri("/health")
-                    .retrieve()
-                    .body(new org.springframework.core.ParameterizedTypeReference<java.util.Map<String, Object>>() {});
-            return response != null ? response : java.util.Map.of();
-        } catch (Exception ignored) {
-            return java.util.Map.of();
-        }
+        return java.util.Map.of("status", "DISABLED");
     }
 }

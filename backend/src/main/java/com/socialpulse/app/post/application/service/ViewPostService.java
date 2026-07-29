@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.PostCode;
@@ -16,6 +17,7 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class ViewPostService implements ViewPostUseCase {
 
     private final PostRepository postRepositoryPort;

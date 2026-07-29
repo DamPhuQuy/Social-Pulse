@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.auth.application.dto.TokenPair;
 import com.socialpulse.app.auth.application.dto.mapper.AuthMapper;
@@ -24,6 +25,7 @@ import org.springframework.security.authentication.UsernamePasswordAuthenticatio
 import org.springframework.security.core.Authentication;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class AuthenticationService implements AuthenticationUseCase {
 
     private static final int MAX_FAILED_ATTEMPTS = 5;

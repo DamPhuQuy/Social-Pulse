@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +19,7 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 
 import java.util.Map;
 
+@Service
 public class EditPostService implements EditPostUseCase {
 
     private final PostRepository postRepository;

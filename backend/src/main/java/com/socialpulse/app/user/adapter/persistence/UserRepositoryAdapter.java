@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.List;
@@ -15,6 +16,7 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.infrastructure.persistence.mapper.UserPersistenceMapper;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
+@Repository
 public class UserRepositoryAdapter implements UserRepository {
     private final JpaUserRepository jpaUserRepository;
     private final UserPersistenceMapper userPersistenceMapper;

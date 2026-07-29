@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -21,6 +22,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class ReactCommentService implements ReactCommentUseCase {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;

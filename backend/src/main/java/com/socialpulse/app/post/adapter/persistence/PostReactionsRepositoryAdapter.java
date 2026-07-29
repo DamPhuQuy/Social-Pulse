@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -9,6 +10,7 @@ import com.socialpulse.app.post.domain.model.PostReactions;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostReactionRepository;
 
+@Repository
 public class PostReactionsRepositoryAdapter implements PostReactionsRepository {
     private final JpaPostReactionRepository jpaPostReactionRepository;
     private final PostPersistenceMapper postPersistenceMapper;

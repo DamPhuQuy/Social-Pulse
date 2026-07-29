@@ -1,10 +1,12 @@
 package com.socialpulse.app.notification.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.notification.application.dto.response.NotificationUnreadCountResponse;
 import com.socialpulse.app.notification.application.usecase.GetUnreadNotificationCountUseCase;
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class GetUnreadNotificationCountService implements GetUnreadNotificationCountUseCase {
     private final NotificationRepository notificationRepository;
 

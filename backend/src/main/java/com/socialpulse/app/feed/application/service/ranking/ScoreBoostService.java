@@ -3,6 +3,8 @@ package com.socialpulse.app.feed.application.service.ranking;
 import java.time.Duration;
 import java.time.LocalDateTime;
 
+import org.springframework.stereotype.Component;
+
 import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.post.domain.model.Post;
@@ -14,6 +16,7 @@ import com.socialpulse.app.post.domain.model.Post;
  *   <li>Following boost: followed-author posts within 24 h get up to +5 000 (decays hourly)</li>
  * </ul>
  */
+@Component
 public class ScoreBoostService {
 
     public double boost(double baseScore, Long viewerId, CandidatePost candidate) {

@@ -1,4 +1,5 @@
 package com.socialpulse.app.block.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -10,6 +11,7 @@ import com.socialpulse.app.block.application.usecase.GetUsersWhoBlockedMeUseCase
 import com.socialpulse.app.block.domain.model.Block;
 import com.socialpulse.app.block.domain.repository.BlockRepository;
 
+@Service
 public class GetBlockedUserIdsService implements GetBlockedUserIdsUseCase, GetUsersWhoBlockedMeUseCase {
     private final BlockRepository blockRepository;
 

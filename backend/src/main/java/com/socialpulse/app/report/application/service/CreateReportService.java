@@ -1,4 +1,5 @@
 package com.socialpulse.app.report.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.report.application.dto.mapper.ReportMapper;
 import com.socialpulse.app.report.application.dto.request.CreateReportRequest;
@@ -6,6 +7,7 @@ import com.socialpulse.app.report.application.usecase.CreateReportUseCase;
 import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.domain.model.Report;
 
+@Service
 public class CreateReportService implements CreateReportUseCase {
 
     private final ReportRepository reportRepositoryPort;

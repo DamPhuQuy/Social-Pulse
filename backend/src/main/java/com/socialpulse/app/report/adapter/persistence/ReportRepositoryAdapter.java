@@ -1,4 +1,5 @@
 package com.socialpulse.app.report.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
@@ -12,6 +13,7 @@ import com.socialpulse.app.report.domain.repository.ReportRepository;
 import com.socialpulse.app.report.infrastructure.persistence.mapper.ReportPersistenceMapper;
 import com.socialpulse.app.report.infrastructure.persistence.repository.JpaReportRepository;
 
+@Repository
 public class ReportRepositoryAdapter implements ReportRepository {
 
     private final JpaReportRepository jpaReportRepository;

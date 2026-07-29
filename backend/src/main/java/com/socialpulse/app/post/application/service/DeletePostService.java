@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -18,6 +19,7 @@ import java.util.Map;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Service
 public class DeletePostService implements DeletePostUseCase {
 
     private final PostRepository postRepository;

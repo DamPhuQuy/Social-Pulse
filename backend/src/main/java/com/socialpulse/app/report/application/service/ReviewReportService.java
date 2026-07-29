@@ -1,4 +1,5 @@
 package com.socialpulse.app.report.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,7 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Service
 public class ReviewReportService implements ReviewReportUseCase {
 
     private final ReportRepository reportRepository;

@@ -1,4 +1,5 @@
 package com.socialpulse.app.follow.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
@@ -13,6 +14,7 @@ import com.socialpulse.app.user.application.dto.response.UserSummary;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class FollowGraphPageService {
 
     private final UserRepository userRepository;

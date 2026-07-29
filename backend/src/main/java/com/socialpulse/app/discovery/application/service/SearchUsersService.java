@@ -1,4 +1,5 @@
 package com.socialpulse.app.discovery.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +11,7 @@ import com.socialpulse.app.discovery.application.usecase.SearchUsersUseCase;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class SearchUsersService implements SearchUsersUseCase {
     private final UserRepository userRepository;
 

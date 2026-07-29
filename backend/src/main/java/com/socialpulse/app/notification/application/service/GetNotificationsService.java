@@ -1,4 +1,5 @@
 package com.socialpulse.app.notification.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.PageRequest;
@@ -10,6 +11,7 @@ import com.socialpulse.app.notification.domain.model.Notification;
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class GetNotificationsService implements GetNotificationsUseCase {
     private final NotificationRepository notificationRepository;
     private final NotificationResponseAssembler notificationResponseAssembler;

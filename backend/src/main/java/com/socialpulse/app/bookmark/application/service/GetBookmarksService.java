@@ -1,4 +1,5 @@
 package com.socialpulse.app.bookmark.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 import java.util.Map;
@@ -18,6 +19,7 @@ import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class GetBookmarksService implements GetBookmarksUseCase {
     private final BookmarkRepository bookmarkRepository;
     private final PostRepository postRepository;

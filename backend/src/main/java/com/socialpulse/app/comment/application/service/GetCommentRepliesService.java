@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -12,6 +13,7 @@ import com.socialpulse.app.common.exception.status.PostCode;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 
+@Service
 public class GetCommentRepliesService implements GetCommentRepliesUseCase {
     private final CommentRepository commentRepository;
     private final PostRepository postRepository;

@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.application.service;
+import org.springframework.stereotype.Service;
 
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -10,6 +11,7 @@ import com.socialpulse.app.user.application.dto.request.UserCreationRequest;
 import com.socialpulse.app.user.application.dto.response.UserCreationResponse;
 import com.socialpulse.app.user.application.usecase.CreateUserUseCase;
 
+@Service
 public class RegisterService implements RegisterUseCase {
 
     private final CreateUserUseCase createUserUseCase;

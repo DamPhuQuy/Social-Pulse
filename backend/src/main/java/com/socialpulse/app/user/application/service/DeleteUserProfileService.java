@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -7,6 +8,7 @@ import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.user.application.usecase.DeleteUserProfileUseCase;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 
+@Service
 public class DeleteUserProfileService implements DeleteUserProfileUseCase {
 
     private final UserProfileRepository userProfileRepository;

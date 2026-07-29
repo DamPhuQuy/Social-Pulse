@@ -1,4 +1,5 @@
 package com.socialpulse.app.report.application.service;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.stream.Collectors;
@@ -15,6 +16,7 @@ import lombok.extern.slf4j.Slf4j;
  * (post body, comment text, or user info) so admins can review without extra API calls.
  */
 @Slf4j
+@Component
 public class ReportResponseEnricher {
 
     private final PostRepository postRepository;

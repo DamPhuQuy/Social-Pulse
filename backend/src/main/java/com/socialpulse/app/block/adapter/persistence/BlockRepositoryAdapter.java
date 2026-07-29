@@ -1,4 +1,5 @@
 package com.socialpulse.app.block.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,6 +14,7 @@ import com.socialpulse.app.common.exception.status.UserCode;
 import com.socialpulse.app.user.infrastructure.persistence.entity.UserEntity;
 import com.socialpulse.app.user.infrastructure.persistence.repository.JpaUserRepository;
 
+@Repository
 public class BlockRepositoryAdapter implements BlockRepository {
     private final JpaBlockRepository jpaBlockRepository;
     private final JpaUserRepository jpaUserRepository;

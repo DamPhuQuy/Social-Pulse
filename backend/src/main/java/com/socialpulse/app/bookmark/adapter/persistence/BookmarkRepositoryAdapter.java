@@ -1,4 +1,5 @@
 package com.socialpulse.app.bookmark.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 
@@ -10,6 +11,7 @@ import com.socialpulse.app.bookmark.domain.repository.BookmarkRepository;
 import com.socialpulse.app.bookmark.infrastructure.persistence.mapper.BookmarkPersistenceMapper;
 import com.socialpulse.app.bookmark.infrastructure.persistence.repository.JpaBookmarkRepository;
 
+@Repository
 public class BookmarkRepositoryAdapter implements BookmarkRepository {
     private final JpaBookmarkRepository jpaBookmarkRepository;
     private final BookmarkPersistenceMapper bookmarkPersistenceMapper;

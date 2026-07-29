@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 import org.springframework.data.redis.core.StringRedisTemplate;
@@ -21,6 +22,7 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 
 import java.util.Map;
 
+@Service
 public class CreatePostService implements CreatePostUseCase {
 
     private final PostRepository postRepository;

@@ -1,4 +1,5 @@
 package com.socialpulse.app.realtime.application.service;
+import org.springframework.stereotype.Component;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -12,6 +13,7 @@ import org.springframework.web.servlet.mvc.method.annotation.SseEmitter;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Component
 public class SseEmitterRegistry {
 
     private final Map<Long, List<SseEmitter>> userEmitters = new ConcurrentHashMap<>();

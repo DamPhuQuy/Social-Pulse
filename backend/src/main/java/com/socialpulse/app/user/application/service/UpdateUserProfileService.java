@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -11,6 +12,7 @@ import com.socialpulse.app.user.domain.model.UserProfile;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class UpdateUserProfileService implements UpdateUserProfileUseCase {
 
     private final UserRepository userRepository;

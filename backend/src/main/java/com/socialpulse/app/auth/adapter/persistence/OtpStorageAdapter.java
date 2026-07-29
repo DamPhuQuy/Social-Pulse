@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.time.Duration;
 
@@ -8,6 +9,7 @@ import org.springframework.stereotype.Service;
 import com.socialpulse.app.auth.domain.repository.OtpRepository;
 
 @Service
+@Repository
 public class OtpStorageAdapter implements OtpRepository {
 
     private static final String OTP_KEY_PREFIX = "auth:otp:";

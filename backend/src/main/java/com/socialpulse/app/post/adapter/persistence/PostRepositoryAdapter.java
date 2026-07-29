@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.util.List;
 import java.util.Map;
@@ -17,6 +18,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.post.infrastructure.persistence.mapper.PostPersistenceMapper;
 import com.socialpulse.app.post.infrastructure.persistence.repository.JpaPostRepository;
 
+@Repository
 public class PostRepositoryAdapter implements PostRepository {
     private final JpaPostRepository jpaPostRepository;
     private final PostPersistenceMapper postPersistenceMapper;

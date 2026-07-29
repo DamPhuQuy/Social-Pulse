@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.comment.application.usecase.ValidateParentCommentUseCase;
 import com.socialpulse.app.comment.domain.repository.CommentRepository;
@@ -6,6 +7,7 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.CommentCode;
 
+@Service
 public class ValidateParentCommentService implements ValidateParentCommentUseCase {
 
     private final CommentRepository commentRepositoryPort;

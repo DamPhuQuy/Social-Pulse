@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 
@@ -17,6 +18,7 @@ import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
+@Service
 public class CreateUserService implements CreateUserUseCase {
 
     private final UserRepository userRepository;

@@ -9,6 +9,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.data.domain.PageRequest;
 import org.springframework.data.redis.core.StringRedisTemplate;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.block.domain.model.Block;
 import com.socialpulse.app.block.domain.repository.BlockRepository;
@@ -17,26 +18,30 @@ import com.socialpulse.app.feed.domain.enums.Source;
 import com.socialpulse.app.feed.domain.model.CandidatePost;
 import com.socialpulse.app.feed.domain.repository.FeedRepository;
 import com.socialpulse.app.post.domain.model.Post;
+import com.socialpulse.app.topic.infrastructure.persistence.repository.JpaTopicFollowRepository;
 
+@Service
 public class CandidateSelectionService implements SelectCandidatesUseCase {
     private final FeedRepository feedRepository;
     private final StringRedisTemplate redisTemplate;
     private final BlockRepository blockRepository;
+    private final JpaTopicFollowRepository topicFollowRepository;
 
-    private static final int RECENT_COUNT = 200;
+    private static final int RECENT_COUNT = 150;
     private static final int FOLLOWING_COUNT = 100;
     private static final int POPULAR_COUNT = 100;
-    private static final int RANDOM_COUNT = 100;
-    private static final int LOOKBACK_DAYS = 7;
-    private static final int EXTENDED_LOOKBACK_DAYS = 30;
-    private static final int MIN_CANDIDATES = 20;
+    private static final int LOOKBACK_DAYS = 14;
+    private static final int EXTENDED_LOOKBACK_DAYS = 60;
+    private static final int MIN_CANDIDATES = 15;
 
     public CandidateSelectionService(FeedRepository feedRepository, 
                                      StringRedisTemplate redisTemplate,
-                                     BlockRepository blockRepository) {
+                                     BlockRepository blockRepository,
+                                     JpaTopicFollowRepository topicFollowRepository) {
         this.feedRepository = feedRepository;
         this.redisTemplate = redisTemplate;
         this.blockRepository = blockRepository;
+        this.topicFollowRepository = topicFollowRepository;
     }
 
     @Override
@@ -60,7 +65,7 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
 
     private List<CandidatePost> collectCandidates(Long userId, LocalDateTime since) {
         List<CandidatePost> candidates = new ArrayList<>();
-        Set<Long> seenIds = new HashSet<>();
+        Set<Long> addedPostIds = new HashSet<>();
 
         // Fetch user blocking graph to filter out content
         Set<Long> blockedUserIds = new HashSet<>();
@@ -77,71 +82,34 @@ public class CandidateSelectionService implements SelectCandidatesUseCase {
             );
         }
 
-        // Initialize seenIds with the user's view history to filter out seen posts
+        // 1. Fetch Following User & Topic Posts
         if (userId != null) {
-            String seenKey = "user:seen:" + userId;
-            Set<String> history = redisTemplate.opsForSet().members(seenKey);
-            if (history != null) {
-                for (String idStr : history) {
-                    try {
-                        seenIds.add(Long.parseLong(idStr));
-                    } catch (NumberFormatException ignored) {}
-                }
-            }
-        }
+            List<Post> followingPosts = feedRepository.findFollowingUserAndTopicPosts(
+                    userId, since, PageRequest.of(0, FOLLOWING_COUNT));
 
-        List<Post> recentPosts = feedRepository.findRecentPosts(since, PageRequest.of(0, RECENT_COUNT));
-        for (Post post : recentPosts) {
-            if (blockedUserIds.contains(post.getUserId())) {
-                continue;
-            }
-            if (seenIds.add(post.getId())) {
-                candidates.add(CandidatePost.builder()
-                        .post(post)
-                        .source(Source.RECENT)
-                        .build());
-            }
-        }
-
-        if (userId != null) {
-            List<Post> followingPosts = feedRepository.findFollowingPosts(userId, since, PageRequest.of(0, FOLLOWING_COUNT));
             for (Post post : followingPosts) {
-                if (blockedUserIds.contains(post.getUserId())) {
-                    continue;
-                }
-                if (seenIds.add(post.getId())) {
-                    candidates.add(CandidatePost.builder()
-                            .post(post)
-                            .source(Source.FOLLOWING)
-                            .build());
+                if (blockedUserIds.contains(post.getUserId())) continue;
+                if (addedPostIds.add(post.getId())) {
+                    candidates.add(CandidatePost.builder().post(post).source(Source.FOLLOWING).build());
                 }
             }
         }
 
+        // 2. Fetch Popular / Engaging Posts (Discover Feed)
         List<Post> popularPosts = feedRepository.findPopularPosts(since, PageRequest.of(0, POPULAR_COUNT));
         for (Post post : popularPosts) {
-            if (blockedUserIds.contains(post.getUserId())) {
-                continue;
-            }
-            if (seenIds.add(post.getId())) {
-                candidates.add(CandidatePost.builder()
-                        .post(post)
-                        .source(Source.POPULAR)
-                        .build());
+            if (blockedUserIds.contains(post.getUserId())) continue;
+            if (addedPostIds.add(post.getId())) {
+                candidates.add(CandidatePost.builder().post(post).source(Source.POPULAR).build());
             }
         }
 
-        List<Long> excludeIds = new ArrayList<>(seenIds);
-        List<Post> randomPosts = feedRepository.findRandomPosts(excludeIds, PageRequest.of(0, RANDOM_COUNT));
-        for (Post post : randomPosts) {
-            if (blockedUserIds.contains(post.getUserId())) {
-                continue;
-            }
-            if (seenIds.add(post.getId())) {
-                candidates.add(CandidatePost.builder()
-                        .post(post)
-                        .source(Source.RANDOM)
-                        .build());
+        // 3. Fetch Recent Posts (Fallback & Fresh Content)
+        List<Post> recentPosts = feedRepository.findRecentPosts(since, PageRequest.of(0, RECENT_COUNT));
+        for (Post post : recentPosts) {
+            if (blockedUserIds.contains(post.getUserId())) continue;
+            if (addedPostIds.add(post.getId())) {
+                candidates.add(CandidatePost.builder().post(post).source(Source.RECENT).build());
             }
         }
 

@@ -12,9 +12,9 @@ public interface FeedRepository {
 
     List<Post> findFollowingPosts(Long userId, LocalDateTime since, Pageable pageable);
 
-    List<Post> findPopularPosts(LocalDateTime since, Pageable pageable);
+    List<Post> findFollowingUserAndTopicPosts(Long userId, LocalDateTime since, Pageable pageable);
 
-    List<Post> findRandomPosts(List<Long> excludeIds, Pageable pageable);
+    List<Post> findPopularPosts(LocalDateTime since, Pageable pageable);
 
     List<Post> findByTopicSlug(String topicSlug, LocalDateTime since, Pageable pageable);
 }

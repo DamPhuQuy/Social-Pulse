@@ -1,4 +1,5 @@
 package com.socialpulse.app.block.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -7,6 +8,7 @@ import com.socialpulse.app.block.domain.repository.BlockRepository;
 import com.socialpulse.app.common.exception.AppException;
 import com.socialpulse.app.common.exception.status.UserCode;
 
+@Service
 public class UnblockUserService implements UnblockUserUseCase {
     private final BlockRepository blockRepository;
 

@@ -1,4 +1,5 @@
 package com.socialpulse.app.security.encoder;
+import org.springframework.stereotype.Component;
 
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -15,6 +16,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
  * (mỗi lần hash mất ~300ms trên máy thông thường).
  */
 
+@Component
 public class AppPasswordEncoder implements PasswordEncoder {
 
     private final BCryptPasswordEncoder encoder;

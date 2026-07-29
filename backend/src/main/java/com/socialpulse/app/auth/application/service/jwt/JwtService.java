@@ -1,4 +1,5 @@
 package com.socialpulse.app.auth.application.service.jwt;
+import org.springframework.stereotype.Service;
 
 import java.nio.charset.StandardCharsets;
 import java.util.Date;
@@ -30,6 +31,7 @@ import lombok.Getter;
  *   - Signature: HMAC-SHA256(base64(header) + "." + base64(payload), secret)
  */
 @Getter
+@Service
 public class JwtService implements JwtUseCase {
 
     private JwtProperties jwtProperties;

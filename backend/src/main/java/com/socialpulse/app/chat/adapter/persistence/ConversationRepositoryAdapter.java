@@ -1,4 +1,5 @@
 package com.socialpulse.app.chat.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.time.Instant;
 import java.util.List;
@@ -12,6 +13,7 @@ import com.socialpulse.app.chat.domain.repository.ConversationRepository;
 import com.socialpulse.app.chat.infrastructure.persistence.mapper.ConversationPersistenceMapper;
 import com.socialpulse.app.chat.infrastructure.persistence.repository.JpaConversationRepository;
 
+@Repository
 public class ConversationRepositoryAdapter implements ConversationRepository {
 
     private final JpaConversationRepository jpaConversationRepository;

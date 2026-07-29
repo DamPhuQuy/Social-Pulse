@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Component;
 
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.post.domain.repository.PostRepository;
@@ -6,6 +7,7 @@ import com.socialpulse.app.user.application.dto.response.UserViewProfileResponse
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.model.UserProfile;
 
+@Component
 public class UserProfileResponseAssembler {
 
     private final PostRepository postRepository;

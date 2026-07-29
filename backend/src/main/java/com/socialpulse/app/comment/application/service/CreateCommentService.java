@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
 import java.util.Map;
@@ -22,6 +23,7 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.model.User;
 
+@Service
 public class CreateCommentService implements CreateCommentUseCase {
 
     private final CommentRepository commentRepositoryPort;

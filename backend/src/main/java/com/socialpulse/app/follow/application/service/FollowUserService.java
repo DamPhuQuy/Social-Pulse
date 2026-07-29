@@ -1,4 +1,5 @@
 package com.socialpulse.app.follow.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -13,6 +14,7 @@ import com.socialpulse.app.notification.application.service.NotificationCommandS
 import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class FollowUserService implements FollowUserUseCase {
 
     private final FollowRepository followRepository;

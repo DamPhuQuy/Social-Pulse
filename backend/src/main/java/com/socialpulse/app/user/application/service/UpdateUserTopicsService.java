@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.HashSet;
 import java.util.Set;
@@ -15,6 +16,7 @@ import com.socialpulse.app.user.application.usecase.UpdateUserTopicsUseCase;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class UpdateUserTopicsService implements UpdateUserTopicsUseCase {
 
     private final UserRepository userRepository;

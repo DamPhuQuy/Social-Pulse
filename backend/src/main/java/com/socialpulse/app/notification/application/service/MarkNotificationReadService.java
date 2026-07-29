@@ -1,4 +1,5 @@
 package com.socialpulse.app.notification.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -10,6 +11,7 @@ import com.socialpulse.app.notification.domain.model.Notification;
 import com.socialpulse.app.notification.domain.repository.NotificationRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class MarkNotificationReadService implements MarkNotificationReadUseCase {
     private final NotificationRepository notificationRepository;
     private final NotificationResponseAssembler notificationResponseAssembler;

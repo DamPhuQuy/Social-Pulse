@@ -1,4 +1,5 @@
 package com.socialpulse.app.notification.adapter.persistence;
+import org.springframework.stereotype.Repository;
 
 import java.time.LocalDateTime;
 import java.util.Optional;
@@ -11,6 +12,7 @@ import com.socialpulse.app.notification.domain.repository.NotificationRepository
 import com.socialpulse.app.notification.infrastructure.persistence.mapper.NotificationPersistenceMapper;
 import com.socialpulse.app.notification.infrastructure.persistence.repository.JpaNotificationRepository;
 
+@Repository
 public class NotificationRepositoryAdapter implements NotificationRepository {
     private final JpaNotificationRepository jpaNotificationRepository;
     private final NotificationPersistenceMapper notificationPersistenceMapper;

@@ -1,4 +1,5 @@
 package com.socialpulse.app.post.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.Map;
 import com.socialpulse.app.realtime.application.service.SseEmitterRegistry;
@@ -25,6 +26,7 @@ import com.socialpulse.app.user.domain.repository.UserRepository;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Service
 public class ReactPostService implements ReactPostUseCase {
 
     private final PostRepository postRepository;

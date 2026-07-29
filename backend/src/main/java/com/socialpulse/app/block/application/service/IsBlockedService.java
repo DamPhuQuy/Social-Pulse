@@ -1,4 +1,5 @@
 package com.socialpulse.app.block.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -6,6 +7,7 @@ import com.socialpulse.app.block.application.usecase.IsBlockedEitherUseCase;
 import com.socialpulse.app.block.application.usecase.IsBlockedUseCase;
 import com.socialpulse.app.block.domain.repository.BlockRepository;
 
+@Service
 public class IsBlockedService implements IsBlockedUseCase, IsBlockedEitherUseCase {
     private final BlockRepository blockRepository;
 

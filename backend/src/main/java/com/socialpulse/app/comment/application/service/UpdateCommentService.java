@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.comment.application.dto.request.CommentUpdateRequest;
 import com.socialpulse.app.comment.application.dto.response.CommentCreationResponse;
@@ -15,6 +16,7 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class UpdateCommentService implements UpdateCommentUseCase {
 
     private final CommentRepository commentRepository;

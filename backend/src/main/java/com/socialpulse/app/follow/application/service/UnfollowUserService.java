@@ -1,4 +1,5 @@
 package com.socialpulse.app.follow.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -8,6 +9,7 @@ import com.socialpulse.app.follow.application.usecase.UnfollowUserUseCase;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 
+@Service
 public class UnfollowUserService implements UnfollowUserUseCase {
 
     private final FollowRepository followRepository;

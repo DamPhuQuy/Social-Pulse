@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.comment.application.usecase.DeleteCommentUseCase;
 import com.socialpulse.app.comment.domain.model.Comment;
@@ -11,6 +12,7 @@ import com.socialpulse.app.post.domain.repository.PostRepository;
 import com.socialpulse.app.security.user.CustomUserDetails;
 import org.springframework.transaction.annotation.Transactional;
 
+@Service
 public class DeleteCommentService implements DeleteCommentUseCase {
 
     private final CommentRepository commentRepository;

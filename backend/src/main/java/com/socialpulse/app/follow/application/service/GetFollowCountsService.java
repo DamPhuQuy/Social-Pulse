@@ -1,4 +1,5 @@
 package com.socialpulse.app.follow.application.service;
+import org.springframework.stereotype.Service;
 
 import org.springframework.transaction.annotation.Transactional;
 
@@ -9,6 +10,7 @@ import com.socialpulse.app.follow.application.usecase.GetFollowCountsUseCase;
 import com.socialpulse.app.follow.domain.repository.FollowRepository;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+@Service
 public class GetFollowCountsService implements GetFollowCountsUseCase {
 
     private final FollowRepository followRepository;

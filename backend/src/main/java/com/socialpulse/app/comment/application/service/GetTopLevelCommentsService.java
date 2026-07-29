@@ -1,4 +1,5 @@
 package com.socialpulse.app.comment.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.List;
 
@@ -11,6 +12,7 @@ import com.socialpulse.app.comment.domain.model.Comment;
 import com.socialpulse.app.post.domain.model.Post;
 import com.socialpulse.app.post.domain.repository.PostRepository;
 
+@Service
 public class GetTopLevelCommentsService implements GetTopLevelCommentsUseCase {
 
     private final CommentRepository commentRepository;

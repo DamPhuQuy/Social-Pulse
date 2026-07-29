@@ -1,4 +1,5 @@
 package com.socialpulse.app.user.application.service;
+import org.springframework.stereotype.Service;
 
 import java.util.Locale;
 
@@ -12,6 +13,7 @@ import com.socialpulse.app.user.application.usecase.GetUserProfileUseCase;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 import com.socialpulse.app.user.domain.repository.UserProfileRepository;
 
+@Service
 public class GetUserProfileService implements GetUserProfileUseCase {
 
     private final UserRepository userRepository;
