@@ -84,7 +84,13 @@ public class CreatePostService implements CreatePostUseCase {
             );
         }
 
+        String sourceDomain = extractDomain(request.getSourceUrl());
+
         Post post = Post.builder()
+                .title(request.getTitle())
+                .sourceUrl(request.getSourceUrl())
+                .sourceDomain(sourceDomain)
+                .summary(request.getSummary())
                 .content(request.getContent())
                 .imageUrl(request.getImageUrl())
                 .imagePublicId(request.getImagePublicId())
@@ -116,6 +122,22 @@ public class CreatePostService implements CreatePostUseCase {
         }
 
         return postMapper.toPostCreationResponse(savedPost);
+    }
+
+    private String extractDomain(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url.trim());
+            String host = uri.getHost();
+            if (host != null && host.startsWith("www.")) {
+                host = host.substring(4);
+            }
+            return host;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }
 

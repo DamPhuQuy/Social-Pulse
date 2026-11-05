@@ -1,41 +1,41 @@
 import { apiClient } from "@/core/http/axiosClient";
-import type { PageResponse, UserPost } from "@/features/profiles/infrastructure/api/userService";
+import type { FeedItem } from "@/features/feed/infrastructure/api/postService";
 
-export interface BookmarkResponse {
-  id: number;
-  userId: number;
-  postId: number;
-  createdAt: string;
-}
-
-export async function createBookmark(postId: number): Promise<{ ok: boolean; data?: BookmarkResponse; message?: string }> {
+export async function toggleBookmark(
+  postId: number
+): Promise<{ ok: boolean; bookmarked?: boolean; message?: string }> {
   try {
-    const res = await apiClient.post<{ code: number; message: string; data: BookmarkResponse }>(`/bookmarks/${postId}`);
-    return { ok: true, data: res.data.data };
+    const res = await apiClient.post<{
+      code: number;
+      message: string;
+      data: { postId: number; bookmarked: boolean };
+    }>(`/posts/${postId}/bookmark`);
+    return { ok: true, bookmarked: res.data.data.bookmarked };
   } catch (err: unknown) {
     const axiosErr = err as { response?: { data?: { message?: string } } };
-    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to bookmark post." };
+    return {
+      ok: false,
+      message: axiosErr?.response?.data?.message ?? "Không thể lưu bài viết.",
+    };
   }
 }
 
-export async function deleteBookmark(postId: number): Promise<{ ok: boolean; message?: string }> {
+export async function getMyBookmarks(
+  page: number = 0,
+  size: number = 20
+): Promise<{ ok: boolean; data?: FeedItem[]; message?: string }> {
   try {
-    await apiClient.delete(`/bookmarks/${postId}`);
-    return { ok: true };
+    const res = await apiClient.get<{
+      code: number;
+      message: string;
+      data: FeedItem[];
+    }>(`/bookmarks?page=${page}&size=${size}`);
+    return { ok: true, data: res.data.data ?? [] };
   } catch (err: unknown) {
     const axiosErr = err as { response?: { data?: { message?: string } } };
-    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to remove bookmark." };
-  }
-}
-
-export async function getBookmarks(page = 0, size = 20): Promise<{ ok: boolean; data?: PageResponse<UserPost>; message?: string }> {
-  try {
-    const res = await apiClient.get<{ code: number; message: string; data: PageResponse<UserPost> }>(
-      `/bookmarks?page=${page}&size=${size}`
-    );
-    return { ok: true, data: res.data.data };
-  } catch (err: unknown) {
-    const axiosErr = err as { response?: { data?: { message?: string } } };
-    return { ok: false, message: axiosErr?.response?.data?.message ?? "Failed to fetch bookmarks." };
+    return {
+      ok: false,
+      message: axiosErr?.response?.data?.message ?? "Không thể tải danh sách đã lưu.",
+    };
   }
 }

@@ -54,6 +54,18 @@ public class PostEntity {
     @JoinColumn(name = "user_id", nullable = false)
     private UserEntity user;
 
+    @Column(nullable = false, length = 255)
+    private String title;
+
+    @Column(name = "source_url", length = 2048)
+    private String sourceUrl;
+
+    @Column(name = "source_domain", length = 100)
+    private String sourceDomain;
+
+    @Column(columnDefinition = "TEXT")
+    private String summary;
+
     @Column(columnDefinition = "TEXT")
     private String content;
 

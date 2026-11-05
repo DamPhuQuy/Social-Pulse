@@ -72,8 +72,30 @@ public class PostRepositoryAdapter implements PostRepository {
     }
 
     @Override
+    public void updateUpvoteCountAtomic(Long postId, Long delta) {
+        jpaPostRepository.updateUpvoteCountAtomic(postId, delta);
+    }
+
+    @Override
+    public void updateDownvoteCountAtomic(Long postId, Long delta) {
+        jpaPostRepository.updateDownvoteCountAtomic(postId, delta);
+    }
+
+    @Override
     public void updateShareCount(Map<Long, Long> updates) {
         updates.forEach(jpaPostRepository::updateShareCount);
+    }
+
+    @Override
+    public void updateViewCount(Map<Long, Long> updates) {
+        if (updates == null || updates.isEmpty()) return;
+        updates.forEach(jpaPostRepository::updateViewCount);
+    }
+
+    @Override
+    public void incrementViewCount(Long postId) {
+        if (postId == null) return;
+        jpaPostRepository.updateViewCount(postId, 1L);
     }
 
     @Override

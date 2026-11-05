@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from "react";
-import { Activity, Flag, Loader2, MessageCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
+import { Activity, Loader2, MessageCircle, MoreHorizontal, Pencil, Trash2 } from "lucide-react";
 import { toast } from "sonner";
 import { SafeAvatar } from "@/shared/components/ui/SafeAvatar";
 import { type UserProfile } from "@/features/profiles/infrastructure/api/userService";
@@ -11,7 +11,6 @@ import {
   getCommentReplies,
   updateComment,
 } from "@/features/feed/infrastructure/api/commentService";
-import ReportModal from "@/shared/components/ReportModal";
 
 // ─── Time formatter ────────────────────────────────────────────────────────────
 function timeAgo(dateStr: string): string {
@@ -72,7 +71,6 @@ export default function CommentNode({
   const [isEditing, setIsEditing] = useState(false);
   const [editContent, setEditContent] = useState(comment.content);
   const [isSavingEdit, setIsSavingEdit] = useState(false);
-  const [showReportModal, setShowReportModal] = useState(false);
 
   useEffect(() => {
     setUpvoteCount(comment.upvoteCount);
@@ -309,7 +307,8 @@ export default function CommentNode({
             </button>
 
             {/* 3. OPTION MENU FOR OWNER (HOVER EFFECT) */}
-            <div className="relative opacity-0 group-hover/card:opacity-100 transition-opacity duration-200">
+            {comment.user.id === currentUser?.userId && (
+              <div className="relative opacity-0 group-hover/card:opacity-100 transition-opacity duration-200">
                 <button
                   onClick={() => setShowOptions(!showOptions)}
                   className="p-1 rounded-full text-slate-400 hover:bg-slate-100 dark:text-neutral-500 dark:hover:bg-neutral-800 dark:hover:text-neutral-400"
@@ -319,49 +318,35 @@ export default function CommentNode({
 
                 {showOptions && (
                   <div className="absolute left-0 mt-1 w-28 bg-white dark:bg-neutral-900 border border-slate-200 dark:border-neutral-800 rounded-xl shadow-lg py-1 z-30">
-                    {comment.user.id === currentUser?.userId ? (
-                      <>
-                        <button
-                          onClick={() => {
-                            setShowOptions(false);
-                            setIsEditing(true);
-                          }}
-                          className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-neutral-800 flex items-center gap-2"
-                        >
-                          <Pencil className="w-3.5 h-3.5" />
-                          <span>Sửa</span>
-                        </button>
-                        <button
-                          onClick={() => {
-                            setShowOptions(false);
-                            handleDelete();
-                          }}
-                          disabled={isDeleting}
-                          className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
-                        >
-                          {isDeleting ? (
-                            <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                          ) : (
-                            <Trash2 className="w-3.5 h-3.5" />
-                          )}
-                          <span>Xóa</span>
-                        </button>
-                      </>
-                    ) : (
-                      <button
-                        onClick={() => {
-                          setShowOptions(false);
-                          setShowReportModal(true);
-                        }}
-                        className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
-                      >
-                        <Flag className="w-3.5 h-3.5" />
-                        <span>Báo cáo</span>
-                      </button>
-                    )}
+                    <button
+                      onClick={() => {
+                        setShowOptions(false);
+                        setIsEditing(true);
+                      }}
+                      className="w-full text-left px-3 py-1.5 text-xs text-slate-600 hover:bg-slate-50 dark:text-neutral-300 dark:hover:bg-neutral-800 flex items-center gap-2"
+                    >
+                      <Pencil className="w-3.5 h-3.5" />
+                      <span>Sửa</span>
+                    </button>
+                    <button
+                      onClick={() => {
+                        setShowOptions(false);
+                        handleDelete();
+                      }}
+                      disabled={isDeleting}
+                      className="w-full text-left px-3 py-1.5 text-xs text-red-500 hover:bg-red-50 dark:hover:bg-red-950/20 flex items-center gap-2"
+                    >
+                      {isDeleting ? (
+                        <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                      ) : (
+                        <Trash2 className="w-3.5 h-3.5" />
+                      )}
+                      <span>Xóa</span>
+                    </button>
                   </div>
                 )}
               </div>
+            )}
           </div>
         </div>
       </div>
@@ -443,13 +428,6 @@ export default function CommentNode({
           </div>
         )}
       </div>
-      <ReportModal
-        isOpen={showReportModal}
-        targetType="COMMENT"
-        targetId={comment.id}
-        title="bình luận"
-        onClose={() => setShowReportModal(false)}
-      />
     </div>
   );
 }

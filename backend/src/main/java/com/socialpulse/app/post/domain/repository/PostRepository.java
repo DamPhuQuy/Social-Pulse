@@ -28,7 +28,15 @@ public interface PostRepository {
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 
+    void updateUpvoteCountAtomic(Long postId, Long delta);
+
+    void updateDownvoteCountAtomic(Long postId, Long delta);
+
     void updateShareCount(Map<Long, Long> updates);
+
+    void updateViewCount(Map<Long, Long> updates);
+
+    void incrementViewCount(Long postId);
 
     void deleteById(Long id);
 

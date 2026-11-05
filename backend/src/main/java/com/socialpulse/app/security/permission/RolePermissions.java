@@ -1,11 +1,6 @@
 package com.socialpulse.app.security.permission;
 
 import static com.socialpulse.app.security.permission.AppPermission.ADMIN_ACCESS;
-import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_CREATE;
-import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_DELETE;
-import static com.socialpulse.app.security.permission.AppPermission.BOOKMARK_READ;
-import static com.socialpulse.app.security.permission.AppPermission.CHAT_CREATE;
-import static com.socialpulse.app.security.permission.AppPermission.CHAT_READ;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_CREATE;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_DELETE;
 import static com.socialpulse.app.security.permission.AppPermission.COMMENT_MANAGE;
@@ -27,8 +22,6 @@ import static com.socialpulse.app.security.permission.AppPermission.POST_MANAGE;
 import static com.socialpulse.app.security.permission.AppPermission.POST_REACT;
 import static com.socialpulse.app.security.permission.AppPermission.POST_READ;
 import static com.socialpulse.app.security.permission.AppPermission.POST_UPDATE;
-import static com.socialpulse.app.security.permission.AppPermission.REPORT_CREATE;
-import static com.socialpulse.app.security.permission.AppPermission.REPORT_MANAGE;
 import static com.socialpulse.app.security.permission.AppPermission.TOPIC_MANAGE;
 import static com.socialpulse.app.security.permission.AppPermission.USER_CREATE;
 import static com.socialpulse.app.security.permission.AppPermission.USER_DELETE;
@@ -59,11 +52,8 @@ public final class RolePermissions {
             USER_CREATE, USER_READ, USER_UPDATE, USER_DELETE,
             FOLLOW_READ, FOLLOW_CREATE, FOLLOW_DELETE,
             FEED_READ,
-            REPORT_CREATE,
             DISCOVERY_READ, DISCOVERY_WRITE, DISCOVERY_DELETE,
-            BOOKMARK_CREATE, BOOKMARK_DELETE, BOOKMARK_READ,
-            NOTIFICATION_READ, NOTIFICATION_UPDATE,
-            CHAT_READ, CHAT_CREATE
+            NOTIFICATION_READ, NOTIFICATION_UPDATE
     );
 
     protected static final Set<AppPermission> ADMIN = EnumSet.copyOf(USER);
@@ -74,7 +64,6 @@ public final class RolePermissions {
                 POST_MANAGE,
                 COMMENT_MANAGE,
                 USER_MANAGE, USER_MODERATE,
-                REPORT_MANAGE,
                 TOPIC_MANAGE,
                 ADMIN_ACCESS
         ));

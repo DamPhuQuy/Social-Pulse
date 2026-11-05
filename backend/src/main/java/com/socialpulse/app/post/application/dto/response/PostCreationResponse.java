@@ -17,6 +17,10 @@ import lombok.NoArgsConstructor;
 @Getter
 public class PostCreationResponse {
     private Long id;
+    private String title;
+    private String sourceUrl;
+    private String sourceDomain;
+    private String summary;
     private String content;
     private String imageUrl;
     private String imagePublicId;

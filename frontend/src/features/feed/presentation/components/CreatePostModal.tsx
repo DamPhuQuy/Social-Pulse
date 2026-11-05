@@ -26,6 +26,9 @@ import {
 
 interface EditablePost {
   postId: number;
+  title?: string;
+  sourceUrl?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl: string | null;
   topicSlugs?: string[] | null;
@@ -42,6 +45,10 @@ interface CreatePostModalProps {
   onPostCreated?: () => void;
   onPostUpdated?: (post: {
     postId: number;
+    title: string;
+    sourceUrl?: string | null;
+    sourceDomain?: string | null;
+    summary?: string | null;
     content: string;
     imageUrl: string | null;
     topicSlugs: string[];
@@ -78,6 +85,9 @@ export default function CreatePostModal({
   parentPostContent,
 }: CreatePostModalProps) {
   const [view, setView] = useState<"COMPOSER" | "PRIVACY" | "TOPICS">("COMPOSER");
+  const [title, setTitle] = useState("");
+  const [sourceUrl, setSourceUrl] = useState("");
+  const [summary, setSummary] = useState("");
   const [content, setContent] = useState("");
   const [privacy, setPrivacy] = useState<Privacy>("PUBLIC");
   const [topicSlugs, setTopicSlugs] = useState<string[]>([]);
@@ -117,6 +127,9 @@ export default function CreatePostModal({
     if (!isOpen) return;
 
     setView("COMPOSER");
+    setTitle(mode === "edit" && initialPost?.title ? initialPost.title : "");
+    setSourceUrl(mode === "edit" && initialPost?.sourceUrl ? initialPost.sourceUrl : "");
+    setSummary(mode === "edit" && initialPost?.summary ? initialPost.summary : "");
     setContent(mode === "edit" && initialPost ? initialPost.content : "");
     setPrivacy((mode === "edit" && initialPost?.privacy) || "PUBLIC");
     setTopicSlugs((mode === "edit" && initialPost?.topicSlugs?.length ? initialPost.topicSlugs : []).filter(Boolean));
@@ -173,6 +186,7 @@ export default function CreatePostModal({
   const isOverLimit = charCount > MAX_CHARS;
   const totalMediaCount = existingMediaUrls.length + selectedFiles.length;
   const canPost =
+    (title.trim().length > 0 || !!parentPostId) &&
     (content.trim().length > 0 || totalMediaCount > 0) &&
     topicSlugs.length > 0 &&
     !isOverLimit &&
@@ -249,7 +263,11 @@ export default function CreatePostModal({
 
       setUploadProgress(80);
       const mediaUrls = [...existingMediaUrls, ...uploadedUrls];
+      const finalTitle = title.trim() || (parentPostContent ? `Chia sẻ: ${parentPostContent.slice(0, 40)}` : content.trim().slice(0, 60));
       const payload = {
+        title: finalTitle,
+        sourceUrl: sourceUrl.trim() || null,
+        summary: summary.trim() || null,
         content: content.trim(),
         imageUrl: mediaUrls.length > 0 ? mediaUrls.join(",") : null,
         imagePublicId: null,
@@ -270,6 +288,10 @@ export default function CreatePostModal({
         toast.success("Đã cập nhật bài viết.");
         onPostUpdated?.({
           postId: initialPost.postId,
+          title: result.data.title,
+          sourceUrl: result.data.sourceUrl,
+          sourceDomain: result.data.sourceDomain,
+          summary: result.data.summary,
           content: result.data.content,
           imageUrl: result.data.imageUrl,
           topicSlugs: result.data.topicSlugs ?? [],
@@ -335,11 +357,44 @@ export default function CreatePostModal({
                 </div>
               </div>
 
+              {/* Title input (Required for direct posts) */}
+              {!parentPostId && (
+                <div className="mt-2 mb-3">
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={(e) => setTitle(e.target.value)}
+                    placeholder="Tiêu đề bài viết kỹ thuật... *"
+                    className="w-full text-base font-bold bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-400 dark:placeholder-zinc-500 outline-none border-b border-slate-200 dark:border-zinc-800 pb-2 focus:border-blue-500 transition-colors"
+                  />
+                </div>
+              )}
+
+              {/* Source URL & Summary inputs */}
+              {!parentPostId && (
+                <div className="flex flex-col gap-2 mb-3">
+                  <input
+                    type="url"
+                    value={sourceUrl}
+                    onChange={(e) => setSourceUrl(e.target.value)}
+                    placeholder="Link bài viết gốc / Github / Video (tùy chọn)..."
+                    className="w-full text-xs font-mono bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-blue-600 dark:text-blue-400 placeholder-gray-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500"
+                  />
+                  <input
+                    type="text"
+                    value={summary}
+                    onChange={(e) => setSummary(e.target.value)}
+                    placeholder="Tóm tắt ngắn 1-2 câu / TL;DR (tùy chọn)..."
+                    className="w-full text-xs bg-slate-50 dark:bg-zinc-900 border border-slate-200 dark:border-zinc-800 rounded-lg px-3 py-2 text-gray-700 dark:text-zinc-300 placeholder-gray-400 dark:placeholder-zinc-500 outline-none focus:border-blue-500"
+                  />
+                </div>
+              )}
+
               <textarea
                 ref={textareaRef}
                 value={content}
                 onChange={(event) => setContent(event.target.value)}
-                placeholder={parentPostId ? "Thêm bình luận cho chia sẻ này..." : "Bạn đang nghĩ gì thế?"}
+                placeholder={parentPostId ? "Thêm bình luận cho chia sẻ này..." : "Nội dung chi tiết / ghi chú kỹ thuật..."}
                 rows={2}
                 className="w-full min-h-[60px] bg-transparent text-gray-900 dark:text-gray-100 placeholder-gray-500 dark:placeholder-gray-400 leading-normal outline-none border-none resize-none"
               />

@@ -97,7 +97,7 @@ WHERE p.id = stats.post_id;
 -- Recalculate hot_score after reaction sync
 UPDATE posts
 SET hot_score = (upvote_count * 1.8 + cmt_count * 2.6 + view_count / 18.0 + share_count * 3.1 - downvote_count * 1.5)
-WHERE deleted_at IS NULL;
+WHERE deleted_at IS NULL;chr
 
 -- ============================================================
 -- USER INTERACTIONS (for AI feed ranking affinity)
@@ -151,22 +151,6 @@ FROM (
     GROUP BY comment_id
 ) AS stats
 WHERE c.id = stats.comment_id;
-
--- ============================================================
--- BOOKMARKS (~200 bookmarks)
--- ============================================================
-
-INSERT INTO bookmarks (user_id, post_id, created_at)
-SELECT u.id, p.id, p.created_at + INTERVAL '1 day'
-FROM (
-    SELECT id, created_at, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
-    FROM posts WHERE privacy = 'PUBLIC' AND deleted_at IS NULL
-) AS p
-CROSS JOIN (
-    SELECT id, row_number() OVER (ORDER BY id)::INT AS rank FROM users WHERE username LIKE 'seed_user_%'
-) AS u
-WHERE (p.rank * 3 + u.rank * 7) % 60 = 0  -- sparse
-ON CONFLICT (user_id, post_id) DO NOTHING;
 
 -- ============================================================
 -- NOTIFICATIONS (from reactions and follows)

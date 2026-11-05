@@ -12,13 +12,10 @@ export const PATHS = {
   HOME: "/home",
   DISCOVERY: "/discovery",
   NOTIFICATIONS: "/notifications",
-  BOOKMARKS: "/bookmarks",
   SETTINGS: "/settings",
-  CHAT: "/chat",
   PROFILE: "/profile",
   USER_PROFILE: "/profile/:username",
   POST_DETAIL: "/posts/:postId",
-  ADMIN_REPORTS: "/admin/reports",
   ADMIN_AI: "/admin/ai",
   ADMIN_RBAC: "/admin/rbac",
 } as const;

@@ -310,24 +310,6 @@ WHERE c.user_id != p.user_id AND c.deleted = false
 ON CONFLICT DO NOTHING;
 
 -- ============================================================
--- BOOKMARKS (~2000)
--- ============================================================
-
-INSERT INTO bookmarks (user_id, post_id, created_at)
-SELECT u.id, p.id, p.created_at + INTERVAL '6 hours'
-FROM (
-    SELECT id, created_at, row_number() OVER (ORDER BY hot_score DESC)::INT AS rank
-    FROM posts WHERE privacy = 'PUBLIC' AND deleted_at IS NULL
-    LIMIT 500
-) AS p
-CROSS JOIN (
-    SELECT id, row_number() OVER (ORDER BY id)::INT AS rank
-    FROM users WHERE username LIKE 'seed_user_%'
-) AS u
-WHERE (p.rank * 3 + u.rank * 7) % 120 = 0
-ON CONFLICT (user_id, post_id) DO NOTHING;
-
--- ============================================================
 -- NOTIFICATIONS (~3000)
 -- ============================================================
 

@@ -1,4 +1,6 @@
 package com.socialpulse.app.post.application.service;
+
+import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
 import com.socialpulse.app.common.exception.AppException;
@@ -17,23 +19,33 @@ import com.socialpulse.app.security.user.CustomUserDetails;
 import com.socialpulse.app.user.domain.model.User;
 import com.socialpulse.app.user.domain.repository.UserRepository;
 
+import lombok.extern.slf4j.Slf4j;
+
+@Slf4j
 @Service
 public class ViewPostService implements ViewPostUseCase {
+
+    public static final String VIEW_KEYS_SET = "views:delta:keys";
+    public static final String VIEW_HLL_PREFIX = "post:%d:views:hll";
+    public static final String VIEW_DELTA_PREFIX = "post:%d:views:delta";
 
     private final PostRepository postRepositoryPort;
     private final PostReactionsRepository postReactionsRepository;
     private final UserRepository userRepository;
     private final PostMapper postMapper;
+    private final StringRedisTemplate redisTemplate;
 
     public ViewPostService(
             PostRepository postRepositoryPort,
             PostReactionsRepository postReactionsRepository,
             UserRepository userRepository,
-            PostMapper postMapper) {
+            PostMapper postMapper,
+            StringRedisTemplate redisTemplate) {
         this.postRepositoryPort = postRepositoryPort;
         this.postReactionsRepository = postReactionsRepository;
         this.userRepository = userRepository;
         this.postMapper = postMapper;
+        this.redisTemplate = redisTemplate;
     }
 
     @Override
@@ -41,7 +53,7 @@ public class ViewPostService implements ViewPostUseCase {
         Post post = postRepositoryPort.findById(postId)
                 .orElseThrow(() -> new AppException(PostCode.POST_NOT_FOUND));
 
-        if(post.getDeletedAt() != null){
+        if (post.getDeletedAt() != null) {
             throw new AppException(PostCode.POST_NOT_FOUND);
         }
         Long userId = currentUser.getId();
@@ -49,20 +61,20 @@ public class ViewPostService implements ViewPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
-        post.incrementViewCount();
-        Post viewedPost = postRepositoryPort.save(post);
+        // Increment view count directly
+        postRepositoryPort.incrementViewCount(postId);
 
-        User author = userRepository.findById(viewedPost.getUserId())
+        User author = userRepository.findById(post.getUserId())
                 .orElseThrow(() -> new AppException(UserCode.USER_NOT_FOUND));
         Integer myVote = postReactionsRepository.findByPostIdAndUserId(postId, userId)
                 .map(PostReactions::getReactionType)
                 .map(this::toVote)
                 .orElse(0);
 
-        ViewPostResponse response = postMapper.toViewPostResponse(viewedPost, author, myVote);
+        ViewPostResponse response = postMapper.toViewPostResponse(post, author, myVote);
 
-        if (viewedPost.getType() == com.socialpulse.app.post.domain.enums.PostType.SHARE && viewedPost.getParentPostId() != null) {
-            Post parent = postRepositoryPort.findById(viewedPost.getParentPostId()).orElse(null);
+        if (post.getType() == com.socialpulse.app.post.domain.enums.PostType.SHARE && post.getParentPostId() != null) {
+            Post parent = postRepositoryPort.findById(post.getParentPostId()).orElse(null);
             if (parent != null && parent.getDeletedAt() == null) {
                 User parentAuthor = userRepository.findById(parent.getUserId()).orElse(null);
                 com.socialpulse.app.feed.application.dto.response.OriginalPostData originalPost = 
@@ -81,6 +93,23 @@ public class ViewPostService implements ViewPostUseCase {
         }
 
         return response;
+    }
+
+    private void bufferUniqueView(Long postId, Long userId) {
+        if (userId == null || redisTemplate == null) {
+            return;
+        }
+        try {
+            String hllKey = String.format(VIEW_HLL_PREFIX, postId);
+            Long added = redisTemplate.opsForHyperLogLog().add(hllKey, String.valueOf(userId));
+            if (added != null && added == 1L) {
+                String deltaKey = String.format(VIEW_DELTA_PREFIX, postId);
+                redisTemplate.opsForValue().increment(deltaKey, 1L);
+                redisTemplate.opsForSet().add(VIEW_KEYS_SET, deltaKey);
+            }
+        } catch (Exception e) {
+            log.warn("Failed to buffer unique view in Redis for post {}: {}", postId, e.getMessage());
+        }
     }
 
     private int toVote(ReactionType reactionType) {

@@ -1,4 +1,4 @@
-import { Bookmark, Compass, Home, LogOut, Settings, User, Bell, Flag, Brain, Shield, MessageSquare } from "lucide-react";
+import { Compass, Home, LogOut, Settings, User, Bell, Brain, Shield, Bookmark } from "lucide-react";
 import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { PATHS } from "@/shared/constants/paths";
@@ -13,11 +13,8 @@ type SidebarKey =
   | "home"
   | "discovery"
   | "notifications"
-  | "chat"
-  | "bookmarks"
   | "profile"
   | "settings"
-  | "admin-reports"
   | "admin-ai"
   | "admin-rbac";
 
@@ -75,22 +72,34 @@ export default function AppSidebar({ active }: AppSidebarProps) {
 
   return (
     <aside className="hidden lg:flex flex-col gap-6 sticky top-24 h-[calc(100vh-120px)] overflow-y-auto pr-2">
-      <nav className="flex flex-col gap-1">
-        <NavItem icon={Home} label="Trang chủ" active={active === "home"} onClick={() => handleNav(PATHS.HOME, "Trang chủ")} />
-        <NavItem icon={Compass} label="Khám phá" active={active === "discovery"} onClick={() => handleNav(PATHS.DISCOVERY, "Khám phá")} />
-        <NavItem icon={Bell} label={unreadCount > 0 ? `Thông báo (${unreadCount})` : "Thông báo"} active={active === "notifications"} onClick={() => handleNav(PATHS.NOTIFICATIONS, "Thông báo")} />
-        <NavItem icon={MessageSquare} label="Tin nhắn" active={active === "chat"} onClick={() => handleNav(PATHS.CHAT, "Tin nhắn")} />
-        <NavItem icon={Bookmark} label="Đã lưu" active={active === "bookmarks"} onClick={() => handleNav(PATHS.BOOKMARKS, "Đã lưu")} />
-        <NavItem icon={User} label="Hồ sơ" active={active === "profile"} onClick={() => handleNav(PATHS.PROFILE, "Hồ sơ")} />
-        <NavItem icon={Settings} label="Cài đặt" active={active === "settings"} onClick={() => handleNav(PATHS.SETTINGS, "Cài đặt")} />
-      </nav>
+      <div className="flex flex-col gap-4">
+        {/* FEEDS SECTION */}
+        <div className="flex flex-col gap-1">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-zinc-500 px-3">Feeds</span>
+          <NavItem icon={Home} label="Trang chủ" active={active === "home"} onClick={() => handleNav(PATHS.HOME, "Trang chủ")} />
+          <NavItem icon={Compass} label="Khám phá" active={active === "discovery"} onClick={() => handleNav(PATHS.DISCOVERY, "Khám phá")} />
+        </div>
+
+        {/* LIBRARY SECTION */}
+        <div className="flex flex-col gap-1 pt-2 border-t border-slate-100 dark:border-zinc-800">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-zinc-500 px-3">Thư viện</span>
+          <NavItem icon={Bookmark} label="Đã lưu 🔖" active={false} onClick={() => handleNav(`${PATHS.HOME}?tab=bookmarks`, "Đã lưu")} />
+          <NavItem icon={Bell} label={unreadCount > 0 ? `Thông báo (${unreadCount})` : "Thông báo"} active={active === "notifications"} onClick={() => handleNav(PATHS.NOTIFICATIONS, "Thông báo")} />
+        </div>
+
+        {/* ACCOUNT SECTION */}
+        <div className="flex flex-col gap-1 pt-2 border-t border-slate-100 dark:border-zinc-800">
+          <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-zinc-500 px-3">Cá nhân</span>
+          <NavItem icon={User} label="Hồ sơ" active={active === "profile"} onClick={() => handleNav(PATHS.PROFILE, "Hồ sơ")} />
+          <NavItem icon={Settings} label="Cài đặt" active={active === "settings"} onClick={() => handleNav(PATHS.SETTINGS, "Cài đặt")} />
+        </div>
+      </div>
 
       {/* ADMIN CONTROL PANEL SECTION — only rendered for ADMIN role */}
       {isAdmin && (
         <div className="flex flex-col gap-2 pt-4 border-t border-slate-200/80 dark:border-neutral-800">
           <span className="text-[10px] uppercase font-bold tracking-wider text-slate-400 dark:text-neutral-500 px-3">Quản trị viên</span>
           <nav className="flex flex-col gap-1 mt-1">
-            <NavItem icon={Flag} label="Báo cáo" active={active === "admin-reports"} onClick={() => navigate(PATHS.ADMIN_REPORTS)} />
             <NavItem icon={Brain} label="Giám sát AI" active={active === "admin-ai"} onClick={() => navigate(PATHS.ADMIN_AI)} />
             <NavItem icon={Shield} label="Phân quyền RBAC" active={active === "admin-rbac"} onClick={() => navigate(PATHS.ADMIN_RBAC)} />
           </nav>

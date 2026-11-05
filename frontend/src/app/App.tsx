@@ -23,7 +23,7 @@ function App() {
     <AuthProvider>
       <RealTimeProvider>
         <Routes>
-          {routesConfig.map((route: any) => {
+          {routesConfig.map((route) => {
             const Element: React.ComponentType = route.element;
 
             return (

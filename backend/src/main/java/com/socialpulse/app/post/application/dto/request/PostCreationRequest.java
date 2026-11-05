@@ -18,7 +18,16 @@ import lombok.NoArgsConstructor;
 @Getter
 @Builder
 public class PostCreationRequest {
-    @NotBlank(message = "Content must not be blank")
+    @NotBlank(message = "Title must not be blank")
+    @Size(max = 255, message = "Title must not exceed 255 characters")
+    private String title;
+
+    @Size(max = 2048, message = "Source URL must not exceed 2048 characters")
+    private String sourceUrl;
+
+    @Size(max = 2000, message = "Summary must not exceed 2000 characters")
+    private String summary;
+
     @Size(max = 5000, message = "Content must not exceed 5000 characters")
     private String content;
 

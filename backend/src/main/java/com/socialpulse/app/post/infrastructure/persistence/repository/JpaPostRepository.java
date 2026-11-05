@@ -7,6 +7,7 @@ import java.time.LocalDateTime;
 import org.springframework.data.domain.Page;
 import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -29,8 +30,31 @@ public interface JpaPostRepository extends JpaRepository<PostEntity, Long> {
 
     boolean existsByUserIdAndParentPostIdAndType(Long userId, Long parentPostId, PostType type);
 
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE PostEntity p
+            SET p.upvoteCount = CASE WHEN (p.upvoteCount + :delta) < 0L THEN 0L ELSE (p.upvoteCount + :delta) END,
+                p.hotScore = (CASE WHEN (p.upvoteCount + :delta) < 0L THEN 0L ELSE (p.upvoteCount + :delta) END) - p.downvoteCount
+            WHERE p.id = :postId
+            """)
+    int updateUpvoteCountAtomic(@Param("postId") Long postId, @Param("delta") Long delta);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("""
+            UPDATE PostEntity p
+            SET p.downvoteCount = CASE WHEN (p.downvoteCount + :delta) < 0L THEN 0L ELSE (p.downvoteCount + :delta) END,
+                p.hotScore = p.upvoteCount - (CASE WHEN (p.downvoteCount + :delta) < 0L THEN 0L ELSE (p.downvoteCount + :delta) END)
+            WHERE p.id = :postId
+            """)
+    int updateDownvoteCountAtomic(@Param("postId") Long postId, @Param("delta") Long delta);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
     @Query("UPDATE PostEntity p SET p.shareCount = p.shareCount + :delta WHERE p.id = :postId")
     void updateShareCount(@Param("postId") Long postId, @Param("delta") Long delta);
+
+    @Modifying(clearAutomatically = true, flushAutomatically = true)
+    @Query("UPDATE PostEntity p SET p.viewCount = p.viewCount + :delta WHERE p.id = :postId")
+    void updateViewCount(@Param("postId") Long postId, @Param("delta") Long delta);
 
     long countByUserId(Long userId);
 

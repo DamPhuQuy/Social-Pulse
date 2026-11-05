@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { Activity, ArrowLeft, Loader2, MessageCircle, Link, Bookmark, Share2 } from "lucide-react";
+import { Activity, ArrowLeft, Loader2, MessageCircle, Link, Share2 } from "lucide-react";
 import { useNavigate, useParams } from "react-router-dom";
 import { toast } from "sonner";
 import AppHeader from "@/shared/components/AppHeader";
@@ -11,7 +11,6 @@ import { reactPost, type OriginalPostData } from "@/features/feed/infrastructure
 import { getPostDetail, type ViewPostResponse } from "@/features/social-relations/infrastructure/api/postDetailService";
 import { nextPostPulseState } from "@/core/utils/postUtils";
 import { timeAgo } from "@/core/utils/dateUtils";
-import { createBookmark, deleteBookmark, getBookmarks } from "@/features/bookmarks/infrastructure/api/bookmarkService";
 
 export default function PostDetailPage() {
   const navigate = useNavigate();
@@ -20,20 +19,10 @@ export default function PostDetailPage() {
   const [loading, setLoading] = useState(true);
   const [reacting, setReacting] = useState(false);
   const [commentCount, setCommentCount] = useState(0);
-  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<Set<number>>(() => new Set());
-  const [bookmarkingPostIds, setBookmarkingPostIds] = useState<Set<number>>(() => new Set());
 
   useEffect(() => {
     if (!postId) return;
     loadPost(Number(postId));
-
-    getBookmarks(0, 100).then((res) => {
-      if (res.ok && res.data) {
-        setBookmarkedPostIds(
-          new Set((res.data.items ?? []).map((item) => item.postId))
-        );
-      }
-    });
 
     const handleRealtimePostStats = (e: Event) => {
       const customEvent = e as CustomEvent;
@@ -83,38 +72,6 @@ export default function PostDetailPage() {
       setPost(previous);
       toast.error(res.message ?? "Không thể pulse bài viết.");
     }
-  };
-
-  const handleToggleBookmark = async () => {
-    if (!post || bookmarkingPostIds.has(post.id)) return;
-
-    const wasBookmarked = bookmarkedPostIds.has(post.id);
-    setBookmarkingPostIds((prev) => new Set(prev).add(post.id));
-    setBookmarkedPostIds((prev) => {
-      const next = new Set(prev);
-      if (wasBookmarked) next.delete(post.id);
-      else next.add(post.id);
-      return next;
-    });
-
-    const res = wasBookmarked
-      ? await deleteBookmark(post.id)
-      : await createBookmark(post.id);
-    if (!res.ok) {
-      setBookmarkedPostIds((prev) => {
-        const next = new Set(prev);
-        if (wasBookmarked) next.add(post.id);
-        else next.delete(post.id);
-        return next;
-      });
-      toast.error(res.message ?? "Không thể cập nhật bookmark.");
-    }
-
-    setBookmarkingPostIds((prev) => {
-      const next = new Set(prev);
-      next.delete(post.id);
-      return next;
-    });
   };
 
   const handleShare = () => {
@@ -202,21 +159,6 @@ export default function PostDetailPage() {
                   </div>
                   <span>{commentCount}</span>
                 </div>
-
-                {/* Bookmark */}
-                <button
-                  onClick={handleToggleBookmark}
-                  title={bookmarkedPostIds.has(post.id) ? "Bỏ lưu bài viết" : "Lưu bài viết"}
-                  className={`flex items-center gap-2 hover:text-slate-900 dark:hover:text-white transition-colors group ${
-                    bookmarkedPostIds.has(post.id)
-                      ? "text-slate-900 dark:text-white"
-                      : "text-slate-600 dark:text-neutral-400"
-                  }`}
-                >
-                  <div className="p-1.5 rounded-full group-hover:bg-slate-100 dark:group-hover:bg-neutral-800">
-                    <Bookmark className={`w-5 h-5 stroke-2 ${bookmarkedPostIds.has(post.id) ? "fill-current" : ""}`} />
-                  </div>
-                </button>
 
                 {/* Share */}
                 <button

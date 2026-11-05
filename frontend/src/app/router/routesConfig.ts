@@ -6,20 +6,17 @@ import RegisterPage from "@/features/authentication/presentation/pages/RegisterP
 import ResetPasswordOtpPage from "@/features/authentication/presentation/pages/ResetPasswordOtpPage";
 import ResetPasswordPage from "@/features/authentication/presentation/pages/ResetPasswordPage";
 import VerifyOtpPage from "@/features/authentication/presentation/pages/VerifyOtpPage";
-import BookmarksPage from "@/features/bookmarks/presentation/pages/BookmarksPage";
 import DiscoveryPage from "@/features/discovery/presentation/pages/DiscoveryPage";
 import HomePage from "@/features/feed/presentation/pages/HomePage";
 import NotificationsPage from "@/features/notifications/presentation/pages/NotificationsPage";
 import PostDetailPage from "@/features/feed/presentation/pages/PostDetailPage";
 import ProfilePage from "@/features/profiles/presentation/pages/ProfilePage";
 import SettingsPage from "@/features/static-pages/presentation/pages/SettingsPage";
-import AdminDashboard from "@/features/admin/presentation/pages/AdminDashboard";
 import AiModelDashboard from "@/features/admin/presentation/pages/AiModelDashboard";
 import RbacManagement from "@/features/admin/presentation/pages/RbacManagement";
 import LearnMorePage from "@/features/static-pages/presentation/pages/LearnMorePage";
 import TermsPage from "@/features/static-pages/presentation/pages/TermsPage";
 import PrivacyPage from "@/features/static-pages/presentation/pages/PrivacyPage";
-import ChatPage from "@/features/chat/presentation/pages/ChatPage";
 
 type RouteConfig = {
   path: (typeof PATHS)[keyof typeof PATHS];
@@ -95,18 +92,8 @@ export const routesConfig: RouteConfig[] = [
     isPrivate: true,
   },
   {
-    path: PATHS.BOOKMARKS,
-    element: BookmarksPage,
-    isPrivate: true,
-  },
-  {
     path: PATHS.SETTINGS,
     element: SettingsPage,
-    isPrivate: true,
-  },
-  {
-    path: PATHS.CHAT,
-    element: ChatPage,
     isPrivate: true,
   },
   {
@@ -123,12 +110,6 @@ export const routesConfig: RouteConfig[] = [
     path: PATHS.USER_PROFILE,
     element: ProfilePage,
     isPrivate: true,
-  },
-  {
-    path: PATHS.ADMIN_REPORTS,
-    element: AdminDashboard,
-    isPrivate: true,
-    requiresAdmin: true,
   },
   {
     path: PATHS.ADMIN_AI,

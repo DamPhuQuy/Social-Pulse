@@ -8,8 +8,12 @@ import org.springframework.context.annotation.Configuration;
 
 import com.cloudinary.Cloudinary;
 
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
+
 @Configuration
 public class CloudinaryConfig {
+    private static final Logger logger = LoggerFactory.getLogger(CloudinaryConfig.class);
     private final CloudinaryProperties cloudinaryProperties;
 
     public CloudinaryConfig(CloudinaryProperties cloudinaryProperties) {
@@ -33,8 +37,12 @@ public class CloudinaryConfig {
             return new Cloudinary(cloudinaryProperties.getUrl());
         }
 
-        throw new IllegalStateException(
-                "Cloudinary is not configured. Set CLOUDINARY_URL or CLOUDINARY_CLOUD_NAME, CLOUDINARY_API_KEY, CLOUDINARY_API_SECRET.");
+        logger.warn("Cloudinary is not configured. Media upload will fail until valid credentials are set.");
+        Map<String, String> dummyConfig = new HashMap<>();
+        dummyConfig.put("cloud_name", "dummy");
+        dummyConfig.put("api_key", "dummy");
+        dummyConfig.put("api_secret", "dummy");
+        return new Cloudinary(dummyConfig);
     }
 
     private boolean isBlank(String value) {

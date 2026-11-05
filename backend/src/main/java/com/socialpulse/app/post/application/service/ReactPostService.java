@@ -81,10 +81,9 @@ public class ReactPostService implements ReactPostUseCase {
             PostReactions newReaction = postMapper.toPostReaction(currentUser.getId(), post.getId(), targetReaction);
 
             PostReactions savedReaction = postReactionsRepository.save(newReaction);
-            incrementReactionCount(post, targetReaction);
-            postRepository.save(post);
+            applyReactionDelta(post.getId(), targetReaction, 1L);
             notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
-            broadcastPostStats(post);
+            broadcastPostStats(post.getId());
 
             // Record interaction for personalized feed ranking
             if (targetReaction == ReactionType.UPVOTE && !currentUser.getId().equals(post.getUserId())) {
@@ -97,45 +96,29 @@ public class ReactPostService implements ReactPostUseCase {
 
         if (currentReaction.getReactionType() == targetReaction) {
             postReactionsRepository.delete(currentReaction);
-            decrementReactionCount(post, targetReaction);
-            postRepository.save(post);
-            broadcastPostStats(post);
+            applyReactionDelta(post.getId(), targetReaction, -1L);
+            broadcastPostStats(post.getId());
             log.debug("Reaction removed for user {} on post {}", currentUser.getId(), post.getId());
             return postMapper.toPostReactionResponse(currentReaction);
         }
 
-        decrementReactionCount(post, currentReaction.getReactionType());
-        incrementReactionCount(post, targetReaction);
+        applyReactionDelta(post.getId(), currentReaction.getReactionType(), -1L);
+        applyReactionDelta(post.getId(), targetReaction, 1L);
         currentReaction.changeReactionType(targetReaction);
 
         PostReactions updatedReaction = postReactionsRepository.save(currentReaction);
-        postRepository.save(post);
         notificationCommandService.notifyPostReaction(currentUser.getId(), post.getUserId(), post.getId(), targetReaction);
-        broadcastPostStats(post);
+        broadcastPostStats(post.getId());
 
         log.debug("Reaction updated for user {} on post {} to {}", currentUser.getId(), post.getId(), targetReaction);
         return postMapper.toPostReactionResponse(updatedReaction);
     }
 
-    private void incrementReactionCount(Post post, ReactionType reactionType) {
+    private void applyReactionDelta(Long postId, ReactionType reactionType, Long delta) {
         if (reactionType == ReactionType.UPVOTE) {
-            post.incrementUpvoteCount();
-            return;
-        }
-
-        if (reactionType == ReactionType.DOWNVOTE) {
-            post.incrementDownvoteCount();
-        }
-    }
-
-    private void decrementReactionCount(Post post, ReactionType reactionType) {
-        if (reactionType == ReactionType.UPVOTE) {
-            post.decrementUpvoteCount();
-            return;
-        }
-
-        if (reactionType == ReactionType.DOWNVOTE) {
-            post.decrementDownvoteCount();
+            postRepository.updateUpvoteCountAtomic(postId, delta);
+        } else if (reactionType == ReactionType.DOWNVOTE) {
+            postRepository.updateDownvoteCountAtomic(postId, delta);
         }
     }
 
@@ -148,11 +131,13 @@ public class ReactPostService implements ReactPostUseCase {
                 .anyMatch(authority -> authority.getAuthority().equals("post:manage"));
     }
 
-    private void broadcastPostStats(Post post) {
-        sseEmitterRegistry.broadcast("post_stats", Map.of(
-            "postId", post.getId(),
-            "upvoteCount", post.getUpvoteCount(),
-            "downvoteCount", post.getDownvoteCount()
-        ));
+    private void broadcastPostStats(Long postId) {
+        postRepository.findById(postId).ifPresent(post -> {
+            sseEmitterRegistry.broadcast("post_stats", Map.of(
+                "postId", post.getId(),
+                "upvoteCount", post.getUpvoteCount(),
+                "downvoteCount", post.getDownvoteCount()
+            ));
+        });
     }
 }

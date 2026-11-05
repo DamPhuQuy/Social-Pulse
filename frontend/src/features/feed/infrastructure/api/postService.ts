@@ -11,6 +11,9 @@ export interface PostTopic {
 }
 
 export interface PostCreationRequest {
+  title: string;
+  sourceUrl?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl?: string | null;
   imagePublicId?: string | null;
@@ -20,6 +23,9 @@ export interface PostCreationRequest {
 }
 
 export interface PostUpdateRequest {
+  title: string;
+  sourceUrl?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl?: string | null;
   imagePublicId?: string | null;
@@ -29,6 +35,10 @@ export interface PostUpdateRequest {
 
 export interface PostCreationResponse {
   id: number;
+  title: string;
+  sourceUrl?: string | null;
+  sourceDomain?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl: string | null;
   imagePublicId: string | null;
@@ -42,6 +52,10 @@ export interface PostCreationResponse {
 
 export interface PostUpdateResponse {
   id: number;
+  title: string;
+  sourceUrl?: string | null;
+  sourceDomain?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl: string | null;
   imagePublicId: string | null;
@@ -55,6 +69,10 @@ export interface PostUpdateResponse {
 
 export interface OriginalPostData {
   postId: number;
+  title?: string | null;
+  sourceUrl?: string | null;
+  sourceDomain?: string | null;
+  summary?: string | null;
   content: string | null;
   imageUrl: string | null;
   topicSlugs: string[];
@@ -68,6 +86,11 @@ export interface FeedItem {
   postId: number;
   parentPostId: number | null;
   type: string;
+  title: string;
+  sourceUrl?: string | null;
+  sourceDomain?: string | null;
+  summary?: string | null;
+  isBookmarked?: boolean;
   content: string;
   imageUrl: string | null;
   topicSlugs: string[];

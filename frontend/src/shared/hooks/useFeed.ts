@@ -1,8 +1,9 @@
 import { useState, useEffect, useCallback } from "react";
 import { getFeed, getPostTopics, type FeedItem, type PostTopic } from "@/features/feed/infrastructure/api/postService";
 import { getFollowedTopics, followTopic, unfollowTopic } from "@/features/discovery/infrastructure/api/topicService";
+import { getMyBookmarks } from "@/features/bookmarks/infrastructure/api/bookmarkService";
 
-export type FeedMode = "discover" | "following" | "topic";
+export type FeedMode = "discover" | "following" | "bookmarks" | "topic";
 
 export function useFeed(initialTopicSlug?: string) {
   const [feed, setFeed] = useState<FeedItem[]>([]);
@@ -21,8 +22,10 @@ export function useFeed(initialTopicSlug?: string) {
       setPage(0);
       setHasMore(true);
 
-      const targetTopic = mode === "topic" ? topicSlug : undefined;
-      const res = await getFeed(0, 20, targetTopic);
+      const res =
+        mode === "bookmarks"
+          ? await getMyBookmarks(0, 20)
+          : await getFeed(0, 20, mode === "topic" ? topicSlug : undefined);
 
       if (res.ok && res.data) {
         setFeed(res.data);
@@ -43,7 +46,10 @@ export function useFeed(initialTopicSlug?: string) {
       setLoadingMore(true);
       const nextPage = page + 1;
       const targetTopic = feedMode === "topic" ? (selectedTopic || undefined) : undefined;
-      const res = await getFeed(nextPage, 20, targetTopic);
+      const res =
+        feedMode === "bookmarks"
+          ? await getMyBookmarks(nextPage, 20)
+          : await getFeed(nextPage, 20, targetTopic);
 
       if (res.ok && res.data) {
         if (res.data.length < 20) {

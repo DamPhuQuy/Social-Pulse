@@ -119,17 +119,6 @@ CREATE TABLE refresh_tokens (
     CONSTRAINT uq_refresh_tokens_hash UNIQUE (token_hash)
 );
 
-CREATE TABLE reports (
-    id BIGSERIAL PRIMARY KEY,
-    reporter_id BIGINT NOT NULL,
-    target_type VARCHAR(50) NOT NULL,
-    target_id BIGINT NOT NULL,
-    reason TEXT NOT NULL,
-    status VARCHAR(50) NOT NULL DEFAULT 'PENDING',
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_report_reporter FOREIGN KEY (reporter_id) REFERENCES users(id) ON DELETE CASCADE
-);
-
 CREATE TABLE follows (
     id BIGSERIAL PRIMARY KEY,
     follower_id BIGINT NOT NULL,
@@ -173,14 +162,6 @@ CREATE TABLE user_roles (
     FOREIGN KEY (role_id) REFERENCES roles(id) ON DELETE CASCADE
 );
 
-CREATE TABLE bookmarks (
-    id BIGSERIAL PRIMARY KEY,
-    user_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
-    post_id BIGINT NOT NULL REFERENCES posts(id) ON DELETE CASCADE,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT uq_bookmarks_user_post UNIQUE (user_id, post_id)
-);
-
 CREATE TABLE notifications (
     id BIGSERIAL PRIMARY KEY,
     recipient_id BIGINT NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -191,26 +172,6 @@ CREATE TABLE notifications (
     message TEXT NOT NULL,
     created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
     read_at TIMESTAMPTZ NULL
-);
-
-CREATE TABLE conversations (
-    id BIGSERIAL PRIMARY KEY,
-    participant1_id BIGINT NOT NULL REFERENCES users(id),
-    participant2_id BIGINT NOT NULL REFERENCES users(id),
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    last_message_at TIMESTAMPTZ,
-    CONSTRAINT uk_conversation_participants UNIQUE (participant1_id, participant2_id),
-    CONSTRAINT chk_different_participants CHECK (participant1_id < participant2_id)
-);
-
-CREATE TABLE messages (
-    id BIGSERIAL PRIMARY KEY,
-    conversation_id BIGINT NOT NULL REFERENCES conversations(id),
-    sender_id BIGINT NOT NULL REFERENCES users(id),
-    content VARCHAR(2000) NOT NULL,
-    timestamp TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    status VARCHAR(10) NOT NULL DEFAULT 'SENT',
-    CONSTRAINT chk_message_status CHECK (status IN ('SENT', 'DELIVERED', 'READ'))
 );
 
 CREATE TABLE user_interactions (
@@ -247,17 +208,6 @@ CREATE TABLE post_topics (
     PRIMARY KEY (post_id, topic_order),
     CONSTRAINT fk_post_topics_post FOREIGN KEY (post_id) REFERENCES posts(id) ON DELETE CASCADE,
     CONSTRAINT fk_post_topics_slug FOREIGN KEY (topic_slug) REFERENCES topics(slug) ON DELETE CASCADE ON UPDATE CASCADE
-);
-
-CREATE TABLE user_blocks (
-    id BIGSERIAL PRIMARY KEY,
-    blocker_id BIGINT NOT NULL,
-    blocked_id BIGINT NOT NULL,
-    created_at TIMESTAMPTZ NOT NULL DEFAULT CURRENT_TIMESTAMP,
-    CONSTRAINT fk_blocker FOREIGN KEY (blocker_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT fk_blocked FOREIGN KEY (blocked_id) REFERENCES users(id) ON DELETE CASCADE,
-    CONSTRAINT unique_block UNIQUE (blocker_id, blocked_id),
-    CONSTRAINT check_not_self_block CHECK (blocker_id != blocked_id)
 );
 
 CREATE TABLE feed_impressions (
@@ -321,31 +271,14 @@ CREATE INDEX idx_refresh_tokens_user ON refresh_tokens(user_id);
 CREATE INDEX idx_refresh_tokens_hash ON refresh_tokens(token_hash);
 CREATE INDEX idx_refresh_tokens_expires ON refresh_tokens(expires_at);
 
-CREATE INDEX idx_report_reporter ON reports(reporter_id);
-CREATE INDEX idx_report_target ON reports(target_type, target_id);
-CREATE INDEX idx_report_status ON reports(status);
-CREATE INDEX idx_report_created ON reports(created_at);
-
 CREATE INDEX idx_follower ON follows(follower_id);
 CREATE INDEX idx_following ON follows(following_id);
 CREATE INDEX idx_follows_follower_following ON follows(follower_id, following_id);
-
-CREATE INDEX idx_bookmarks_user ON bookmarks(user_id);
-CREATE INDEX idx_bookmarks_post ON bookmarks(post_id);
-CREATE INDEX idx_bookmarks_created ON bookmarks(created_at);
 
 CREATE INDEX idx_notifications_recipient ON notifications(recipient_id);
 CREATE INDEX idx_notifications_actor ON notifications(actor_id);
 CREATE INDEX idx_notifications_created ON notifications(created_at);
 CREATE INDEX idx_notifications_unread ON notifications(recipient_id, read_at);
-
-CREATE INDEX idx_conv_participant1 ON conversations(participant1_id);
-CREATE INDEX idx_conv_participant2 ON conversations(participant2_id);
-CREATE INDEX idx_conv_last_message ON conversations(last_message_at DESC);
-
-CREATE INDEX idx_msg_conversation_ts ON messages(conversation_id, timestamp DESC);
-CREATE INDEX idx_msg_sender ON messages(sender_id);
-CREATE INDEX idx_msg_unread ON messages(conversation_id, status, sender_id) WHERE status != 'READ';
 
 CREATE INDEX idx_user_interactions_viewer_author ON user_interactions(viewer_id, author_id);
 CREATE INDEX idx_user_interactions_viewer_created ON user_interactions(viewer_id, created_at DESC);
@@ -354,9 +287,6 @@ CREATE INDEX idx_user_keyword ON search_history(user_id, keyword);
 CREATE INDEX idx_user_updated ON search_history(user_id, updated_at DESC);
 
 CREATE INDEX idx_post_topics_slug ON post_topics(topic_slug);
-
-CREATE INDEX idx_blocker ON user_blocks(blocker_id);
-CREATE INDEX idx_blocked ON user_blocks(blocked_id);
 
 CREATE INDEX idx_feed_impressions_viewer_created ON feed_impressions(viewer_id, created_at DESC);
 CREATE INDEX idx_feed_impressions_post_created ON feed_impressions(post_id, created_at DESC);

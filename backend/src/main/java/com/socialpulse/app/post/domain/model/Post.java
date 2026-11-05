@@ -19,6 +19,10 @@ import lombok.NoArgsConstructor;
 public class Post {
 	private Long id;
 	private Long userId;
+	private String title;
+	private String sourceUrl;
+	private String sourceDomain;
+	private String summary;
 	private String content;
 	private String imageUrl;
 	private String imagePublicId;
@@ -116,7 +120,11 @@ public class Post {
 		return this.privacy == Privacy.PRIVATE;
 	}
 
-	public void update(String content, String imageUrl, String imagePublicId, Privacy privacy, List<String> topicSlugs) {
+	public void update(String title, String sourceUrl, String sourceDomain, String summary, String content, String imageUrl, String imagePublicId, Privacy privacy, List<String> topicSlugs) {
+		this.title = title;
+		this.sourceUrl = sourceUrl;
+		this.sourceDomain = sourceDomain;
+		this.summary = summary;
 		this.content = content;
 		this.imageUrl = imageUrl;
 		this.imagePublicId = imagePublicId;

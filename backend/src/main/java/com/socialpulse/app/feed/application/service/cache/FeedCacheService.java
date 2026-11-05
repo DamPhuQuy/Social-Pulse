@@ -25,36 +25,79 @@ public class FeedCacheService implements CacheFeedUseCase {
     }
 
     @Override
-    public void cacheFeed(Long userId, List<FeedItem> feedItems) {
-        if (userId == null) return;
-        String key = FEED_CACHE_PREFIX + userId;
+    public void cacheFeed(String cacheKey, List<FeedItem> feedItems) {
+        if (cacheKey == null || feedItems == null) return;
         try {
             String json = objectMapper.writeValueAsString(feedItems);
-            redisTemplate.opsForValue().set(key, json, CACHE_TTL);
+            redisTemplate.opsForValue().set(cacheKey, json, CACHE_TTL);
         } catch (Exception e) {
-            // Log error but don't fail
+            // Non-fatal cache write failure
         }
     }
 
     @Override
-    public List<FeedItem> getCachedFeed(Long userId) {
-        if (userId == null) return null;
-        String key = FEED_CACHE_PREFIX + userId;
+    public List<FeedItem> getCachedFeed(String cacheKey) {
+        if (cacheKey == null) return null;
         try {
-            String json = redisTemplate.opsForValue().get(key);
+            String json = redisTemplate.opsForValue().get(cacheKey);
             if (json != null) {
                 return objectMapper.readValue(json, new TypeReference<List<FeedItem>>() {});
             }
         } catch (Exception e) {
-            // Log error but don't fail
+            // Non-fatal cache read failure
         }
         return null;
     }
 
     @Override
+    public void invalidateFeed(String cacheKey) {
+        if (cacheKey == null) return;
+        try {
+            redisTemplate.delete(cacheKey);
+        } catch (Exception e) {
+            // Non-fatal cache invalidation failure
+        }
+    }
+
+    @Override
+    public boolean acquireLock(String lockKey, long timeoutMs) {
+        if (lockKey == null) return false;
+        try {
+            Boolean acquired = redisTemplate.opsForValue().setIfAbsent(
+                "lock:" + lockKey,
+                "1",
+                Duration.ofMillis(timeoutMs)
+            );
+            return Boolean.TRUE.equals(acquired);
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
+    @Override
+    public void releaseLock(String lockKey) {
+        if (lockKey == null) return;
+        try {
+            redisTemplate.delete("lock:" + lockKey);
+        } catch (Exception ignored) {
+        }
+    }
+
+    @Override
+    public void cacheFeed(Long userId, List<FeedItem> feedItems) {
+        if (userId == null) return;
+        cacheFeed(FEED_CACHE_PREFIX + userId, feedItems);
+    }
+
+    @Override
+    public List<FeedItem> getCachedFeed(Long userId) {
+        if (userId == null) return null;
+        return getCachedFeed(FEED_CACHE_PREFIX + userId);
+    }
+
+    @Override
     public void invalidateFeed(Long userId) {
         if (userId == null) return;
-        String key = FEED_CACHE_PREFIX + userId;
-        redisTemplate.delete(key);
+        invalidateFeed(FEED_CACHE_PREFIX + userId);
     }
 }

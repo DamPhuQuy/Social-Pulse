@@ -41,13 +41,15 @@ public class GetFeedService implements GetFeedUseCase {
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, CustomUserDetails currentUser) {
         Long userId = currentUser != null ? currentUser.getId() : null;
+        String cacheKey = (userId != null)
+                ? "feed:user:" + userId + ":p" + page + ":s" + size
+                : "feed:global:p" + page + ":s" + size;
 
-        if (page == 0 && userId != null) {
-            cacheFeedUseCase.invalidateFeed(userId);
-        }
+        List<FeedItem> feedItems = getFeedWithCacheStampedeProtection(cacheKey, () ->
+                rankFeedUseCase.getPaginatedFeed(userId, page, size)
+        );
 
-        List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size);
-        if (userId != null) {
+        if (userId != null && feedItems != null) {
             markSeen(userId, feedItems);
             feedImpressionRepository.saveAll(userId, feedItems, page, size, "HOME");
         }
@@ -58,18 +60,51 @@ public class GetFeedService implements GetFeedUseCase {
     @Override
     public List<FeedItemResponse> getFeed(int page, int size, String topicSlug, CustomUserDetails currentUser) {
         Long userId = currentUser != null ? currentUser.getId() : null;
+        String cacheKey = "feed:topic:" + topicSlug + ":p" + page + ":s" + size;
 
-        if (page == 0 && userId != null) {
-            cacheFeedUseCase.invalidateFeed(userId);
-        }
+        List<FeedItem> feedItems = getFeedWithCacheStampedeProtection(cacheKey, () ->
+                rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug)
+        );
 
-        List<FeedItem> feedItems = rankFeedUseCase.getPaginatedFeed(userId, page, size, topicSlug);
-        if (userId != null) {
+        if (userId != null && feedItems != null) {
             markSeen(userId, feedItems);
             feedImpressionRepository.saveAll(userId, feedItems, page, size, "TOPIC:" + topicSlug);
         }
 
         return feedItemResponseAssembler.assemble(feedItems, userId);
+    }
+
+    private List<FeedItem> getFeedWithCacheStampedeProtection(String cacheKey, java.util.function.Supplier<List<FeedItem>> computeFallback) {
+        if (cacheFeedUseCase == null) {
+            return computeFallback.get();
+        }
+
+        List<FeedItem> cached = cacheFeedUseCase.getCachedFeed(cacheKey);
+        if (cached != null && !cached.isEmpty()) {
+            return cached;
+        }
+
+        String lockKey = "stampede:" + cacheKey;
+        boolean locked = cacheFeedUseCase.acquireLock(lockKey, 5000);
+
+        if (locked) {
+            try {
+                List<FeedItem> doubleCheck = cacheFeedUseCase.getCachedFeed(cacheKey);
+                if (doubleCheck != null && !doubleCheck.isEmpty()) {
+                    return doubleCheck;
+                }
+
+                List<FeedItem> computed = computeFallback.get();
+                if (computed != null && !computed.isEmpty()) {
+                    cacheFeedUseCase.cacheFeed(cacheKey, computed);
+                }
+                return computed != null ? computed : List.of();
+            } finally {
+                cacheFeedUseCase.releaseLock(lockKey);
+            }
+        }
+
+        return computeFallback.get();
     }
 
     private void markSeen(Long userId, List<FeedItem> feedItems) {

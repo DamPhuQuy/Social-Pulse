@@ -148,18 +148,6 @@ public @interface RequiresPermission {
     @PreAuthorize("hasAuthority('feed:read')")
     @interface FeedRead {}
 
-    // ── Report ────────────────────────────────────────────────────────────────
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('report:create')")
-    @interface ReportCreate {}
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('report:manage')")
-    @interface ReportManage {}
-
     // ── Discovery ─────────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
@@ -177,23 +165,6 @@ public @interface RequiresPermission {
     @PreAuthorize("hasAuthority('discovery:delete')")
     @interface DiscoveryDelete {}
 
-    // ── Bookmark ──────────────────────────────────────────────────────────────
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('bookmark:read')")
-    @interface BookmarkRead {}
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('bookmark:create')")
-    @interface BookmarkCreate {}
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('bookmark:delete')")
-    @interface BookmarkDelete {}
-
     // ── Notification ──────────────────────────────────────────────────────────
 
     @Target({ElementType.METHOD, ElementType.TYPE})
@@ -205,18 +176,6 @@ public @interface RequiresPermission {
     @Retention(RetentionPolicy.RUNTIME)
     @PreAuthorize("hasAuthority('notification:update')")
     @interface NotificationUpdate {}
-
-    // ── Topic & Admin ─────────────────────────────────────────────────────────
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('chat:read')")
-    @interface ChatRead {}
-
-    @Target({ElementType.METHOD, ElementType.TYPE})
-    @Retention(RetentionPolicy.RUNTIME)
-    @PreAuthorize("hasAuthority('chat:create')")
-    @interface ChatCreate {}
 
     @Target({ElementType.METHOD, ElementType.TYPE})
     @Retention(RetentionPolicy.RUNTIME)

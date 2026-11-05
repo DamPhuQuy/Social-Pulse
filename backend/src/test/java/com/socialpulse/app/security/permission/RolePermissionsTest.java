@@ -21,7 +21,7 @@ class RolePermissionsTest {
         assertTrue(user.contains(AppPermission.POST_CREATE));
         assertTrue(user.contains(AppPermission.COMMENT_CREATE));
         assertTrue(user.contains(AppPermission.FOLLOW_CREATE));
-        assertTrue(user.contains(AppPermission.CHAT_READ));
+        assertTrue(user.contains(AppPermission.FEED_READ));
         assertFalse(user.contains(AppPermission.ADMIN_ACCESS));
         assertFalse(user.contains(AppPermission.POST_MANAGE));
     }
@@ -35,7 +35,7 @@ class RolePermissionsTest {
         assertTrue(admin.contains(AppPermission.ADMIN_ACCESS));
         assertTrue(admin.contains(AppPermission.POST_MANAGE));
         assertTrue(admin.contains(AppPermission.USER_MANAGE));
-        assertTrue(admin.contains(AppPermission.REPORT_MANAGE));
+        assertTrue(admin.contains(AppPermission.TOPIC_MANAGE));
     }
 
     @Test

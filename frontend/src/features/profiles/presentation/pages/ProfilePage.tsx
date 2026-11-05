@@ -5,7 +5,6 @@ import { Edit3, Loader2, X } from "lucide-react";
 
 import AppSidebar from "@/shared/components/AppSidebar";
 import BottomNavBar from "@/shared/components/BottomNavBar";
-import ReportModal from "@/shared/components/ReportModal";
 import UserListModal from "@/shared/components/UserListModal";
 import { PostCard } from "@/features/feed/presentation/components/PostCard";
 import { SafeAvatar } from "@/shared/components/ui/SafeAvatar";
@@ -14,8 +13,6 @@ import { PATHS } from "@/shared/constants/paths";
 import { useAuth } from "@/shared/hooks/useAuth";
 import { usePostActions } from "@/shared/hooks/usePostActions";
 
-import { checkIsBlocked } from "@/features/social-relations/infrastructure/api/blockService";
-import { getBookmarks } from "@/features/bookmarks/infrastructure/api/bookmarkService";
 import {
   followUser,
   getFollowers,
@@ -29,6 +26,7 @@ import {
   getUserProfile,
   updateProfile,
   type UserProfile,
+  type UserPost,
 } from "@/features/profiles/infrastructure/api/userService";
 import { uploadMedia, type FeedItem } from "@/features/feed/infrastructure/api/postService";
 
@@ -40,7 +38,6 @@ export default function ProfilePage() {
   const [myProfile, setMyProfile] = useState<UserProfile | null>(null);
   const [profile, setProfile] = useState<UserProfile | null>(null);
   const [posts, setPosts] = useState<FeedItem[]>([]);
-  const [bookmarkedPostIds, setBookmarkedPostIds] = useState<Set<number>>(() => new Set());
   const [isFollowing, setIsFollowing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [followingAction, setFollowingAction] = useState(false);
@@ -60,14 +57,10 @@ export default function ProfilePage() {
   const {
     reactingPostIds,
     setEditingPost,
-    reportPostId,
-    setReportPostId,
     setSharingPost,
     handleReact,
-    handleToggleBookmark,
     handleDeletePost,
-    handleBlockUser,
-  } = usePostActions<FeedItem>(posts, setPosts, bookmarkedPostIds, setBookmarkedPostIds);
+  } = usePostActions<FeedItem>(posts, setPosts);
 
   const isOwnProfile = !paramUsername || (myProfile && myProfile.username === paramUsername);
 
@@ -78,10 +71,6 @@ export default function ProfilePage() {
         const myRes = await getMyProfile();
         if (myRes.ok && myRes.data) {
           setMyProfile(myRes.data);
-        }
-        const bRes = await getBookmarks(0, 100).catch(() => ({ ok: false, data: { items: [] } }));
-        if (bRes.ok && bRes.data) {
-          setBookmarkedPostIds(new Set((bRes.data.items ?? []).map((i: any) => i.postId)));
         }
       }
 
@@ -105,16 +94,17 @@ export default function ProfilePage() {
         setIsFollowing(!!pData.isFollowing);
         setEditForm({ displayName: pData.displayName || "", bio: pData.bio || "" });
 
-        if (accessToken && !isOwnProfile) {
-          await checkIsBlocked(pData.userId);
-        }
-
         const postsRes = await getUserPosts(pData.userId, 0, 50);
         if (postsRes.ok && postsRes.data) {
-          const mappedItems: FeedItem[] = (postsRes.data.items || []).map((p: any) => ({
+          const mappedItems: FeedItem[] = (postsRes.data.items || []).map((p: UserPost) => ({
             postId: p.postId,
             parentPostId: p.parentPostId || null,
             type: p.type || "ORIGINAL",
+            title: p.title || (p.content ? p.content.slice(0, 60) : `Bài viết #${p.postId}`),
+            sourceUrl: p.sourceUrl || null,
+            sourceDomain: p.sourceDomain || null,
+            summary: p.summary || null,
+            isBookmarked: false,
             content: p.content || "",
             imageUrl: p.imageUrl || null,
             topicSlugs: p.topicSlugs || [],
@@ -189,7 +179,7 @@ export default function ProfilePage() {
       if (avatarFile) {
         const upRes = await uploadMedia(avatarFile);
         if (upRes.ok && upRes.data) {
-          avatarUrl = typeof upRes.data === "string" ? upRes.data : (upRes.data as any).url;
+          avatarUrl = typeof upRes.data === "string" ? upRes.data : ((upRes.data as { url?: string }).url || undefined);
         }
       }
       const res = await updateProfile({
@@ -322,14 +312,10 @@ export default function ProfilePage() {
                       key={post.postId}
                       post={post}
                       currentUserId={myProfile?.userId}
-                      isBookmarked={bookmarkedPostIds.has(post.postId)}
                       isReacting={reactingPostIds.has(post.postId)}
                       onReact={handleReact}
-                      onToggleBookmark={handleToggleBookmark}
                       onEdit={setEditingPost}
                       onDelete={handleDeletePost}
-                      onReport={setReportPostId}
-                      onBlockUser={handleBlockUser}
                       onShare={setSharingPost}
                     />
                   ))
@@ -420,14 +406,6 @@ export default function ProfilePage() {
         onClose={() => setShowFollowingModal(false)}
       />
 
-      <ReportModal
-        isOpen={reportPostId !== null}
-        targetType="POST"
-        targetId={reportPostId}
-        title="bài viết"
-        onClose={() => setReportPostId(null)}
-        onReportSuccess={fetchProfileData}
-      />
       <BottomNavBar active="profile" />
     </div>
   );

@@ -20,6 +20,11 @@ public class FeedItemResponse {
     private Long postId;
     private Long parentPostId;
     private PostType type;
+    private String title;
+    private String sourceUrl;
+    private String sourceDomain;
+    private String summary;
+    private boolean isBookmarked;
     private String content;
     private String imageUrl;
     private List<String> topicSlugs;

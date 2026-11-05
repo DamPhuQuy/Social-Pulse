@@ -22,6 +22,10 @@ export interface UserPost {
   postId: number;
   parentPostId: number | null;
   type: string;
+  title?: string;
+  sourceUrl?: string | null;
+  sourceDomain?: string | null;
+  summary?: string | null;
   content: string;
   imageUrl: string | null;
   topicSlugs: string[];

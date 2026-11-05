@@ -39,27 +39,14 @@ public enum AppPermission {
     // Feed
     FEED_READ("feed:read", "Read personalized feed"),
 
-    // Report
-    REPORT_CREATE("report:create", "Create reports"),
-    REPORT_MANAGE("report:manage", "Manage reports and moderation queue"),
-
     // Discovery
     DISCOVERY_READ("discovery:read", "Read discovery and search results"),
     DISCOVERY_WRITE("discovery:write", "Write and save search history"),
     DISCOVERY_DELETE("discovery:delete", "Delete search history"),
 
-    // Bookmark
-    BOOKMARK_CREATE("bookmark:create", "Create bookmarks"),
-    BOOKMARK_DELETE("bookmark:delete", "Delete bookmarks"),
-    BOOKMARK_READ("bookmark:read", "Read bookmarks"),
-
     // Notification
     NOTIFICATION_READ("notification:read", "Read notifications"),
     NOTIFICATION_UPDATE("notification:update", "Mark notifications as read"),
-
-    // Chat
-    CHAT_READ("chat:read", "Read chat conversations and messages"),
-    CHAT_CREATE("chat:create", "Create conversations and send messages"),
 
     // Topic & Admin
     TOPIC_MANAGE("topic:manage", "Create, update, delete topics"),

@@ -48,7 +48,13 @@ public class EditPostService implements EditPostUseCase {
             throw new AppException(PostCode.POST_NOT_ACCESSIBLE);
         }
 
+        String sourceDomain = extractDomain(request.getSourceUrl());
+
         post.update(
+                request.getTitle(),
+                request.getSourceUrl(),
+                sourceDomain,
+                request.getSummary(),
                 request.getContent(),
                 request.getImageUrl(),
                 request.getImagePublicId(),
@@ -72,5 +78,21 @@ public class EditPostService implements EditPostUseCase {
         }
 
         return postMapper.toPostUpdateResponse(updatedPost);
+    }
+
+    private String extractDomain(String url) {
+        if (url == null || url.isBlank()) {
+            return null;
+        }
+        try {
+            java.net.URI uri = java.net.URI.create(url.trim());
+            String host = uri.getHost();
+            if (host != null && host.startsWith("www.")) {
+                host = host.substring(4);
+            }
+            return host;
+        } catch (Exception e) {
+            return null;
+        }
     }
 }

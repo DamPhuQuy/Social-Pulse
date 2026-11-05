@@ -18,6 +18,7 @@ import lombok.extern.slf4j.Slf4j;
 public class SyncSchedule {
 
     private static final String SHARE_KEYS_SET = "share:delta:keys";
+    private static final String VIEW_KEYS_SET = "views:delta:keys";
 
     private final StringRedisTemplate redisTemplate;
     private final PostRepository postRepository;
@@ -74,6 +75,57 @@ public class SyncSchedule {
                     redisTemplate.opsForValue().increment(redisKey, delta);
                 });
             }
+        }
+    }
+
+    @Scheduled(fixedRate = 10000)
+    @Transactional
+    public void syncViewCount() {
+        Set<String> keys = redisTemplate.opsForSet().members(VIEW_KEYS_SET);
+
+        if (keys == null || keys.isEmpty()) {
+            return;
+        }
+
+        Map<Long, Long> updates = new HashMap<>();
+
+        for (String key : keys) {
+            String deltaStr = redisTemplate.opsForValue().getAndSet(key, "0");
+
+            if (deltaStr == null || deltaStr.equals("0")) {
+                redisTemplate.opsForSet().remove(VIEW_KEYS_SET, key);
+                continue;
+            }
+
+            try {
+                String[] parts = key.split(":");
+                Long postId = Long.parseLong(parts[1]);
+                Long delta = Long.parseLong(deltaStr);
+                if (delta > 0) {
+                    updates.put(postId, delta);
+                }
+            } catch (Exception e) {
+                log.error("Failed to parse view count delta for key: " + key, e);
+            }
+        }
+
+        if (updates.isEmpty()) return;
+
+        try {
+            postRepository.updateViewCount(updates);
+
+            updates.keySet().forEach(id -> {
+                String redisKey = String.format("post:%d:views:delta", id);
+                redisTemplate.opsForSet().remove(VIEW_KEYS_SET, redisKey);
+            });
+            log.info("Flushed buffered views to DB for {} posts", updates.size());
+        } catch (Exception e) {
+            log.error("Failed to update view counts in DB, rolling back to Redis", e);
+
+            updates.forEach((id, delta) -> {
+                String redisKey = String.format("post:%d:views:delta", id);
+                redisTemplate.opsForValue().increment(redisKey, delta);
+            });
         }
     }
 }

@@ -21,6 +21,10 @@ public class ViewPostResponse {
     private PostType type;
     private Long topicId;
 
+    private String title;
+    private String sourceUrl;
+    private String sourceDomain;
+    private String summary;
     private String content;
     private String imageUrl;
     private List<String> topicSlugs;
@@ -35,6 +39,7 @@ public class ViewPostResponse {
 
     private int cmtCount;
     private int shareCount;
+    private int viewCount;
 
     private Integer myVote;   // +1, -1, 0
     private com.socialpulse.app.feed.application.dto.response.OriginalPostData originalPost;
